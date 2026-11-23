@@ -26,5 +26,7 @@ jobs:
       - name: Playwright Chromium
         run: npx playwright install --with-deps chromium
       - run: npx playwright test --trace off
+      - name: Testmedien erzeugen
+        run: bash scripts/make-fixtures.sh
       - run: cargo test -p mw-media
       - run: cargo check -p medienwerkstatt
