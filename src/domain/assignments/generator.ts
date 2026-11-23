@@ -126,7 +126,8 @@ function planVideo(r: () => number, level: Level, catalogs: Catalogs, rules: Rul
     h =>
       h.appliesTo.includes('video') &&
       !(h.excludeKinds ?? []).includes(anlass.kind) &&
-      (h.minDurationSec ?? 0) <= durationSec,
+      (h.minDurationSec ?? 0) <= durationSec &&
+      (h.onlyChannels === undefined || h.onlyChannels.includes(anlass.kanal)),
   );
   const hakenEintrag = pick(r, candidates);
   const hook = toHook(hakenEintrag);
@@ -166,13 +167,12 @@ function videoDeliverables(plan: VideoPlan): Deliverable[] {
   }));
 }
 
-function videoBriefing(client: Assignment['client'], plan: VideoPlan, level: Level, kombi?: ResearchTemplateId): string {
+function videoBriefing(client: Assignment['client'], plan: VideoPlan, kombi?: ResearchTemplateId): string {
   const { anlass, kanal, zielgruppe, hook } = plan;
   const spec = plan.specs[0];
   const wants = [`mindestens ${spec.minShots} Einstellungen (${spec.requiredShotSizes.map(s => SIZE_LABEL[s]).join(', ')})`];
   if (spec.requireJCut) wants.push('einen J-Cut');
   if (spec.requireLowerThird) wants.push('eine Bauchbinde');
-  if (level >= 4) wants.push('ein Logo am Ende');
   const extra = kombi ? `, dazu ${TEMPLATE_PHRASE[kombi]} zum Film` : '';
   return [
     `${client.name} (${client.branche}) braucht ${anlass.satz}${extra}.`,
@@ -218,8 +218,6 @@ export function generateAssignment(
   if (mainType === 'research') {
     const template = pick(r, TEMPLATES);
     const topic = pick(r, catalogs.recherche[template]);
-    const kanal = pick(r, catalogs.kanaele);
-    const zielgruppe = pick(r, kanal.zielgruppen);
     const hook = toHook(pick(r, catalogs.haken.filter(h => h.appliesTo.includes('research'))));
     const label = TEMPLATE_LABEL[template];
     partial = {
@@ -229,7 +227,6 @@ export function generateAssignment(
       briefing: [
         `${client.name} (${client.branche}) braucht von dir ${TEMPLATE_PHRASE[template]}.`,
         `Es geht um ${topic}.`,
-        `Die Ergebnisse sind für die Zielgruppe gedacht: ${zielgruppe}.`,
         `Besonderheit: ${hook.text}.`,
       ].join(' '),
       hook,
@@ -253,7 +250,7 @@ export function generateAssignment(
       type: kombi ? 'kombi' : 'video',
       occasion: `${plan.kanal.name}: ${plan.anlass.name}`,
       title: `${plan.anlass.name} – ${client.name}`,
-      briefing: videoBriefing(client, plan, level, researchTemplate),
+      briefing: videoBriefing(client, plan, researchTemplate),
       hook: plan.hook,
       deliverables,
       shootingNotes: shootingNotesFor(plan.specs[0]),

@@ -49,6 +49,8 @@ const Haken = z.object({
   appliesTo: z.array(z.enum(['video', 'research'])).min(1),
   excludeKinds: z.array(AnlassArt).optional(),
   minDurationSec: z.number().optional(),
+  /** Nur für diese Kanäle (z. B. bothFormats nur, wo beide Formate Sinn ergeben). */
+  onlyChannels: z.array(z.string()).optional(),
 });
 
 const topics = z.array(z.string()).min(5);

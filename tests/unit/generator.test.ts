@@ -243,6 +243,40 @@ describe('generateAssignment', () => {
   });
 });
 
+describe('Fix-Runde 1', () => {
+  it('kein Briefing verlangt ein Logo (Stufen 1–5, Nummern 1..300)', () => {
+    for (const level of LEVELS) for (let n = 1; n <= 300; n++) expect(gen('x', n, level).briefing).not.toContain('Logo');
+  });
+  it('Recherche-Briefings enthalten keine Kanal-Zielgruppe', () => {
+    const audiences = catalogs.kanaele.flatMap(k => k.zielgruppen);
+    const seen = new Set<string>();
+    for (const level of LEVELS) {
+      for (let n = 1; n <= 300; n++) {
+        const a = gen('x', n, level, ['research']);
+        seen.add(a.deliverables[0].researchTemplate!);
+        for (const z of audiences) expect(a.briefing).not.toContain(z);
+      }
+    }
+    for (const t of ['kaufberatung', 'rechte', 'formatvergleich']) expect(seen.has(t)).toBe(true);
+  });
+  it('bothFormats nur auf erlaubten Kanälen, mit 16:9 und 9:16', () => {
+    const hook = catalogs.haken.find(h => h.autoRule === 'bothFormats')!;
+    let count = 0;
+    for (const level of LEVELS) {
+      for (let n = 1; n <= 300; n++) {
+        const a = gen('x', n, level);
+        if (a.hook.autoRule !== 'bothFormats') continue;
+        count++;
+        expect(hook.onlyChannels).toContain(anlassOf(a).kanal);
+        expect(a.deliverables.filter(d => d.kind === 'video').map(d => d.videoSpec!.aspect)).toEqual(['16:9', '9:16']);
+      }
+    }
+    expect(count).toBeGreaterThan(0);
+    expect(hook.onlyChannels).not.toContain('lokal-tv');
+    expect(hook.onlyChannels).not.toContain('messe-loop');
+  });
+});
+
 describe('Dateinamen', () => {
   const spec: VideoSpec = {
     aspect: '16:9', width: 1920, height: 1080, fps: 25, durationSec: 60, toleranceSec: 6, loudnessLufs: -14, truePeakMax: -1,
