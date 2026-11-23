@@ -210,3 +210,73 @@ describe('Aktionen und Selektoren', () => {
     expect(st().assignments.map((a) => a.number)).toEqual([1, 2]);
   });
 });
+
+describe('Formprüfung des Zustands', () => {
+  async function twoSaves(clock: Clock) {
+    await app().init(new MockBackend(), clock);
+    await app().flush();
+    app().toggleChecklist('A01', 'x');
+    await app().flush();
+  }
+
+  it('{version:1} als Hauptstand fällt auf gültige Sicherung zurück', async () => {
+    const clock = stubClock();
+    await twoSaves(clock);
+    localStorage.setItem('mw-state', JSON.stringify({ version: 1 }));
+    resetAppForTests();
+    await app().init(new MockBackend(), clock);
+    expect(app().ready).toBe(true);
+    expect(app().initError).toBeNull();
+    expect(app().restoredFromBackup).toBe(true);
+    expect(st().assignments[0].number).toBe(1);
+  });
+
+  it('Haupt- und Sicherungsstand ungültig: frischer Zustand', async () => {
+    localStorage.setItem('mw-state', JSON.stringify({ version: 1 }));
+    localStorage.setItem('mw-state.bak1', '{"version":1,"installId":5}');
+    await app().init(new MockBackend(), stubClock());
+    expect(app().ready).toBe(true);
+    expect(app().restoredFromBackup).toBe(false);
+    expect(st().installId).toMatch(/\S{8,}/);
+    expect(st().assignments).toHaveLength(1);
+  });
+
+  it('Ladefehler zeigt Fehlerzustand; „Neu starten“ legt frischen Zustand an', async () => {
+    const real = new MockBackend();
+    const b: Backend = Object.assign(Object.create(real) as Backend, {
+      loadState: async () => {
+        throw new Error('kaputt');
+      },
+    });
+    await app().init(b, stubClock());
+    expect(app().ready).toBe(false);
+    expect(app().initError).toBe('kaputt');
+    await app().restart();
+    expect(app().ready).toBe(true);
+    expect(app().initError).toBeNull();
+    expect(st().assignments).toHaveLength(1);
+  });
+});
+
+describe('Speicherfehler', () => {
+  it('lehnt einmal ab, versucht es erneut, speichert und löscht den Hinweis', async () => {
+    vi.useFakeTimers();
+    const unhandled = vi.fn();
+    process.on('unhandledRejection', unhandled);
+    const backend = new MockBackend();
+    await app().init(backend, stubClock());
+    const spy = vi.spyOn(backend, 'saveState').mockRejectedValueOnce(new Error('Platte voll'));
+    app().toggleChecklist('A01', 'a');
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(app().saveError).toBe(true);
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(spy).toHaveBeenCalledTimes(2);
+    expect(spy.mock.calls[1][0].checklist['A01']).toEqual(['a']);
+    expect(app().saveError).toBe(false);
+    expect(JSON.parse(localStorage.getItem('mw-state') ?? '{}').checklist.A01).toEqual(['a']);
+    await vi.advanceTimersByTimeAsync(10);
+    process.off('unhandledRejection', unhandled);
+    expect(unhandled).not.toHaveBeenCalled();
+  });
+});

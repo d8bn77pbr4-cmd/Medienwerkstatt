@@ -110,6 +110,18 @@ test('Hinweis „Letzte Sicherung geladen“ erscheint bei defektem Zustand und 
   await expect(banner).toHaveCount(0);
 });
 
+test('Zustand {version:1} mit gültiger Sicherung: Sicherung wird geladen, Seite hängt nicht', async ({ page }) => {
+  await page.goto(`/auftraege?seed=${VIDEO}`);
+  await expect(card(page)).toBeVisible();
+  await page.evaluate(() => {
+    localStorage.setItem('mw-state.bak1', localStorage.getItem('mw-state') ?? '');
+    localStorage.setItem('mw-state', '{"version":1}');
+  });
+  await page.goto('/auftraege');
+  await expect(card(page)).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Letzte Sicherung geladen' })).toBeVisible();
+});
+
 for (const scheme of ['light', 'dark'] as const) {
   test(`keine axe-Verstöße in Aufträgen, Detail und Formular (${scheme})`, async ({ page }) => {
     await page.emulateMedia({ colorScheme: scheme });

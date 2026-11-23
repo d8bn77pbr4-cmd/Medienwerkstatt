@@ -30,6 +30,7 @@ function AuftragCard({ a }: { a: Assignment }) {
 export function AuftraegeView({ lead }: { lead: string }) {
   const assignments = useApp((s) => s.state?.assignments);
   const ready = useApp((s) => s.ready);
+  const initError = useApp((s) => s.initError);
   const { current, archive } = useMemo(() => {
     const all = assignments ?? [];
     return {
@@ -48,7 +49,7 @@ export function AuftraegeView({ lead }: { lead: string }) {
         <section className="card auftrag-section" aria-labelledby="offen-h">
           <h2 id="offen-h">Offene Aufträge</h2>
           {!ready ? (
-            <p className="muted">Wird geladen …</p>
+            <p className="muted">{initError ? 'Laden fehlgeschlagen.' : 'Wird geladen …'}</p>
           ) : current.length === 0 ? (
             <p className="muted">Gerade ist nichts offen. Der nächste Auftrag kommt automatisch.</p>
           ) : (

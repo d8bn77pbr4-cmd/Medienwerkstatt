@@ -1,4 +1,5 @@
 import type { Backend } from './Backend';
+import { isValidState } from './schema';
 import type { AppState, Assignment, LoadResult, Measurements, MediaItem, Project } from './types';
 
 /**
@@ -27,7 +28,7 @@ function parseState(raw: string | null): AppState | null {
   if (raw === null) return null;
   try {
     const v: unknown = JSON.parse(raw);
-    if (typeof v === 'object' && v !== null && (v as { version?: unknown }).version === 1) return v as AppState;
+    if (isValidState(v)) return v;
   } catch {
     /* defekt */
   }

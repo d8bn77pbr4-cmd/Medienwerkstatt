@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { Backend } from '../backend/Backend';
+import { isValidState } from '../backend/schema';
 import type { AppState, Assignment } from '../backend/types';
 import { AVAILABLE_TYPES, generateAssignment, loadCatalogs } from '../domain/assignments/generator';
 import { canAddVacation, tick, type ScheduleState, type Vacation } from '../domain/assignments/schedule';
@@ -19,6 +20,10 @@ export interface AppStore {
   state: AppState | null;
   ready: boolean;
   restoredFromBackup: boolean;
+  /** Letzter Speicherversuch ist fehlgeschlagen (neuer Versuch folgt). */
+  saveError: boolean;
+  /** Laden ist fehlgeschlagen; „Neu starten“ legt einen frischen Zustand an. */
+  initError: string | null;
   clock: Clock | null;
   init(backend: Backend, clock: Clock, opts?: InitOptions): Promise<void>;
   /** Fällige Aufträge ausgeben, Fristen prüfen. Jede Minute und beim Fokussieren des Fensters. */
@@ -28,6 +33,8 @@ export interface AppStore {
   toggleChecklist(assignmentId: string, itemId: string): void;
   setDevTimeOffset(ms: number): void;
   dismissRestoredBanner(): void;
+  /** Nach Ladefehler: frischen Zustand mit neuer Installations-ID anlegen. */
+  restart(): Promise<void>;
   /** Sofort speichern (Debounce-Timer entfällt). */
   flush(): Promise<void>;
 }
@@ -100,7 +107,16 @@ export const useApp = create<AppStore>()((set, get) => {
     const s = get().state;
     if (!dirty || !backend || !s) return;
     dirty = false;
-    await backend.saveState(s);
+    try {
+      await backend.saveState(s);
+      if (get().saveError) set({ saveError: false });
+    } catch {
+      // Änderungen nicht verlieren: Zustand bleibt „unsaved“, neuer Versuch nach der Entprellzeit.
+      dirty = true;
+      set({ saveError: true });
+      cancelTimer();
+      timer = setTimeout(() => void flush(), SAVE_DEBOUNCE_MS);
+    }
   };
   const scheduleSave = () => {
     dirty = true;
@@ -122,16 +138,29 @@ export const useApp = create<AppStore>()((set, get) => {
     dirty = false;
     backend = b;
     set({ clock });
-    const loaded = await b.loadState();
+    set({ initError: null });
+    let loaded;
+    try {
+      loaded = await b.loadState();
+    } catch (e) {
+      set({ initError: e instanceof Error ? e.message : 'Laden fehlgeschlagen' });
+      return;
+    }
     let base: AppState;
     let fresh = false;
-    if (loaded.value) {
+    if (loaded.value && isValidState(loaded.value)) {
       base = normalize(loaded.value);
     } else {
       fresh = true;
       base = freshState(opts.installId ?? crypto.randomUUID(), clock.now());
     }
-    const state = ticked(base, clock.now());
+    let state: AppState;
+    try {
+      state = ticked(base, clock.now());
+    } catch (e) {
+      set({ initError: e instanceof Error ? e.message : 'Laden fehlgeschlagen' });
+      return;
+    }
     set({ state, ready: true, restoredFromBackup: loaded.restoredFromBackup });
     if (fresh) {
       // Die Installations-ID muss ein sofortiges Neuladen überleben.
@@ -146,6 +175,8 @@ export const useApp = create<AppStore>()((set, get) => {
     state: null,
     ready: false,
     restoredFromBackup: false,
+    saveError: false,
+    initError: null,
     clock: null,
 
     init(b, clock, opts = {}) {
@@ -195,6 +226,15 @@ export const useApp = create<AppStore>()((set, get) => {
       set({ restoredFromBackup: false });
     },
 
+    async restart() {
+      const clock = get().clock;
+      if (!clock || !backend) return;
+      const fresh = ticked(freshState(crypto.randomUUID(), clock.now()), clock.now());
+      set({ state: fresh, ready: true, restoredFromBackup: false, initError: null });
+      dirty = true;
+      await flush();
+    },
+
     flush,
   };
 });
@@ -205,7 +245,7 @@ export function resetAppForTests(): void {
   dirty = false;
   backend = null;
   initInFlight = null;
-  useApp.setState({ state: null, ready: false, restoredFromBackup: false, clock: null });
+  useApp.setState({ state: null, ready: false, restoredFromBackup: false, saveError: false, initError: null, clock: null });
 }
 
 // ---------- Selektoren (reine Funktionen; in Komponenten per useMemo über `state` nutzen) ----------
