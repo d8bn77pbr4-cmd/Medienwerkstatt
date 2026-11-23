@@ -71,7 +71,7 @@ README.md · docs/ABNAHME-CHECKLISTE.md
 **Interfaces – Produces:**
 - `type Area = 'werkstatt' | 'auftraege' | 'chefbuero' | 'einstellungen'`
 - `interface Backend` in `src/backend/Backend.ts` mit genau diesen Methoden (Typen in `src/backend/types.ts`, in späteren Tasks gefüllt):
-  `loadState(): Promise<LoadResult<AppState>>` · `saveState(s: AppState): Promise<void>` · `projectDir(a: Assignment): Promise<string>` · `loadProject(dir: string): Promise<LoadResult<Project>>` · `saveProject(dir: string, p: Project): Promise<void>` · `pickMediaFiles(): Promise<string[]>` · `importMedia(dir: string, paths: string[], mode: 'copy'|'link'): Promise<MediaItem[]>` · `createProxy(dir: string, m: MediaItem, onProgress: (p: number) => void): Promise<string>` · `mediaUrl(path: string): string` · `writeFile(dir: string, rel: string, bytes: Uint8Array): Promise<string>` · `runFfmpeg(args: string[], durationSec: number, onProgress: (p: number) => void): Promise<void>` · `analyze(path: string, segments: Segment[]): Promise<Measurements>` · `extractFrames(path: string, times: number[], maxWidth: number): Promise<string[]>` · `readFileBase64(path: string): Promise<string>` · `gemini: { hasKey(): Promise<boolean>; setKey(k: string | null): Promise<void>; listModels(): Promise<string[]>; generate(model: string, prompt: string, imagePaths: string[], schema: object): Promise<string> }` · `revealInFinder(path: string): Promise<void>`
+  `loadState(): Promise<LoadResult<AppState>>` · `saveState(s: AppState): Promise<void>` · `projectDir(a: Assignment): Promise<string>` · `loadProject(dir: string): Promise<LoadResult<Project>>` · `saveProject(dir: string, p: Project): Promise<void>` · `pickMediaFiles(): Promise<string[]>` · `importMedia(dir: string, paths: string[], mode: 'copy'|'link'): Promise<MediaItem[]>` · `createProxy(dir: string, m: MediaItem, onProgress: (p: number) => void): Promise<string>` · `mediaUrl(path: string): string` · `writeFile(dir: string, rel: string, bytes: Uint8Array): Promise<string>` · `runFfmpeg(args: string[], durationSec: number, onProgress: (p: number) => void): Promise<void>` · `analyze(path: string, segments: Segment[]): Promise<Measurements>` · `extractFrames(path: string, times: number[], maxWidth: number): Promise<string[]>` · `gemini: { hasKey(): Promise<boolean>; setKey(k: string | null): Promise<void>; listModels(): Promise<string[]>; generate(model: string, prompt: string, imagePaths: string[], schema: object): Promise<string> }` · `revealInFinder(path: string): Promise<void>`
 - `type LoadResult<T> = { value: T | null; restoredFromBackup: boolean }`
 - `getBackend(): Backend` in `src/backend/index.ts`: `TauriBackend` wenn `'__TAURI_INTERNALS__' in window`, sonst `MockBackend`.
 - CSS-Variablen exakt nach Spec §10.1, `[data-theme]` und `prefers-color-scheme`; Klasse `.werkstatt` setzt die dunklen Werkstatt-Werte unabhängig vom Modus.
@@ -102,7 +102,7 @@ test('keine axe-Verstöße in der Shell (hell und dunkel)', async ({ page }) => 
 
 ### Task 2: Zeit, Zufall, Auftrags-Fahrplan
 
-**Files:** Create `src/domain/time.ts`, `src/domain/rng.ts`, `src/domain/assignments/types.ts`, `src/domain/assignments/schedule.ts`, `rules.json` (vollständig mit allen Werten aus Spec §8.1, §8.2 und §9.2–9.5), `src/domain/chef/rules.ts`; Test `tests/unit/schedule.test.ts`, `tests/unit/rng.test.ts`.
+**Files:** Create `src/domain/time.ts`, `src/domain/rng.ts`, `src/domain/assignments/types.ts` (enthält schon alle Typen aus Task 3: `Assignment`, `Deliverable`, `VideoSpec`, `Hook`, `ShotSize`, `AssignmentType`, `ResearchTemplateId`, `Submission = { at: number; evaluationId: string | null; isCorrection: boolean }` – nur Typen), `src/domain/assignments/schedule.ts`, `rules.json` (vollständig mit allen Werten aus Spec §8.1, §8.2 und §9.2–9.5), `src/domain/chef/rules.ts`; Test `tests/unit/schedule.test.ts`, `tests/unit/rng.test.ts`.
 
 **Interfaces – Produces:**
 - `type Rules` (Zod-Schema + Typ) und `loadRules(): Rules` in `src/domain/chef/rules.ts` (importiert `rules.json`, validiert beim Start). Enthält u. a. `schedule: { intervalHours: 72, deadlineHour: 18, lateWindowHours: 72, maxOpen: 3, vacationDaysPerYear: 14 }`, `typeWeights`, `lengthTolerancePct: [10, 7.5, 5, 3, 2]`, `kombiShareFromLevel2: 0.3`, `levels: [{ min: 0, name: 'Probetag' }, { min: 300, name: 'Praktikum' }, { min: 800, name: '1. Lehrjahr' }, { min: 1500, name: '2. Lehrjahr' }, { min: 2500, name: '3. Lehrjahr' }]` sowie alle Abzüge aus §9.2 (Task 4 nutzt sie).
@@ -127,13 +127,14 @@ it('Frist 18:00 Ortszeit', () => {
 it('über Zeitumstellung bleibt 18:00', () => {
   expect(new Date(roundUpTo18(Date.parse('2027-03-26T20:00:00+01:00') + 72 * H)).getHours()).toBe(18);
 });
-it('10 Tage Abwesenheit: 4 Aufträge nachträglich, ältester per Limit verfallen, Fristen nach Original', () => {
+it('10 Tage Abwesenheit: 4 Aufträge nachträglich, #1 per Frist verfallen, Fristen nach Original', () => {
   const r = tick(start(t0), [], t0 + 10 * 24 * H, issueStub, rules);
   expect(r.assignments.map(a => a.number)).toEqual([1, 2, 3, 4]);
-  expect(r.assignments[0].status).toBe('expired');
+  expect(r.assignments[0]).toMatchObject({ status: 'expired', expiredReason: 'deadline' });
   expect(r.assignments[1].deadline).toBe(roundUpTo18(t0 + 72 * H + 72 * H));
 });
 it('Urlaub verschiebt Ausgabe und verlängert Fristen', () => { /* Urlaub über eine Ausgabezeit */ });
+it('Limit: 3 offene Aufträge mit fernem expiresAt + neue Ausgabe → ältester expired (limit)', () => { /* Sicherheitsnetz; im normalen 72-h-Takt nicht erreichbar */ });
 it('Urlaub > 14 Tage im Jahr oder rückwirkend wird abgelehnt', () => {
   expect(canAddVacation([], { start: now - H, end: now + 24 * H }, now)).toEqual({ ok: false, reason: 'past' });
 });
@@ -157,7 +158,7 @@ it('rng ist deterministisch', () => { expect(rng('a#1')()).toBe(rng('a#1')()); }
 - `type ResearchTemplateId = 'expose' | 'drehplan' | 'shotlist' | 'rechte' | 'kaufberatung' | 'formatvergleich'`
 - `Assignment` (in `types.ts`): `{ id, number, issuedAt, deadline, expiresAt, level: 1|2|3|4|5, type: AssignmentType | 'kombi', client: { name, branche }, occasion, title, briefing: string, hook: Hook, deliverables: Deliverable[], shootingNotes: string[], status, submissions: Submission[], expiredReason?: 'deadline'|'limit' }`
 - `generateAssignment(installId: string, number: number, issuedAt: number, level: Level, available: AssignmentType[], catalogs: Catalogs, rules: Rules): Assignment` – `seed = installId + '#' + number`. Typgewichte aus `rules.json` (`video 40, ton 15, bild 15, motion 10, research 20`), auf verfügbare normiert; ab Stufe 2 zu 30 % `kombi` (Video + Recherche-Abgabe). Toleranz Länge je Stufe `[10, 7.5, 5, 3, 2] %`. Drehhinweise immer: „HDR-Video aus“, „Bildrate {fps} fps“, „Querformat/Hochformat halten“.
-- `fileNameFor(a: Assignment, d: Deliverable, version: number): string` → `A07_Korn-und-Kruste_v01_1080p25.mp4` (Slug: Umlaute → ae/oe/ue/ss, Leerzeichen → `-`). `projectFolderFor(a): string` → `A07_Korn-und-Kruste`.
+- `fileNameFor(a: Assignment, d: Deliverable, version: number): string` → für Kunde „Bäckerei Korn & Kruste“ `A07_Baeckerei-Korn-und-Kruste_v01_1080p25.mp4` (Slug aus `client.name`: Umlaute → ae/oe/ue/ss, `&` → `und`, Leerzeichen → `-`, sonstige Sonderzeichen entfernt; Auflösungskürzel = kürzere Bildseite + `p` + fps, z. B. 9:16 → `1080p25`, 4K → `2160p25`). `projectFolderFor(a): string` → `A07_Baeckerei-Korn-und-Kruste`.
 - Kataloge: ≥ 20 Kunden, ≥ 8 Anlässe je Kanal, ≥ 15 Haken (davon ≥ 2 `auto`), Recherche-Themen je Vorlage ≥ 5.
 
 - [ ] **Step 1: Failing tests**
