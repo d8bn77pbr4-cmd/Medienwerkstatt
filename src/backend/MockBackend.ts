@@ -5,16 +5,56 @@ import type { AppState, Assignment, LoadResult, Measurements, MediaItem, Project
  * Browser-/Test-Backend. Spätere Tasks füllen die Methoden mit echtem
  * Verhalten; bis dahin liefern sie einfache Vorgabewerte.
  */
+const KEY = 'mw-state';
+const BAK1 = 'mw-state.bak1';
+
+function readItem(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+function writeItem(key: string, value: string): boolean {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+function parseState(raw: string | null): AppState | null {
+  if (raw === null) return null;
+  try {
+    const v: unknown = JSON.parse(raw);
+    if (typeof v === 'object' && v !== null && (v as { version?: unknown }).version === 1) return v as AppState;
+  } catch {
+    /* defekt */
+  }
+  return null;
+}
+
 export class MockBackend implements Backend {
-  private state: AppState | null = null;
+  /** Nur Rückfall, wenn localStorage nicht zur Verfügung steht. */
+  private memory: AppState | null = null;
   private projects = new Map<string, Project>();
   private geminiKey: string | null = null;
 
   async loadState(): Promise<LoadResult<AppState>> {
-    return { value: this.state, restoredFromBackup: false };
+    const raw = readItem(KEY);
+    const current = parseState(raw);
+    if (current) return { value: current, restoredFromBackup: false };
+    const backup = parseState(readItem(BAK1));
+    if (backup) return { value: backup, restoredFromBackup: true };
+    if (raw === null && this.memory) return { value: this.memory, restoredFromBackup: false };
+    return { value: null, restoredFromBackup: false };
   }
   async saveState(s: AppState): Promise<void> {
-    this.state = s;
+    this.memory = s;
+    const previous = readItem(KEY);
+    // Nur eine gültige Vorgängerversion wird zur Sicherung; ein defekter Stand überschreibt sie nicht.
+    if (previous !== null && parseState(previous)) writeItem(BAK1, previous);
+    writeItem(KEY, JSON.stringify(s));
   }
   async projectDir(a: Assignment): Promise<string> {
     return `/mock/Medienwerkstatt/${a.id}`;

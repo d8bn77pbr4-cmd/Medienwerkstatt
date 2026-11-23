@@ -1,9 +1,34 @@
-// Platzhalter-Typen: spätere Tasks füllen sie mit den echten Feldern.
+import type { Assignment } from '../domain/assignments/types';
+import type { ScheduleState } from '../domain/assignments/schedule';
+import type { Evaluation } from '../domain/chef/types';
+import type { ResearchDoc } from '../domain/chef/research';
+
+// Platzhalter-Typen (Project, MediaItem, Segment): spätere Tasks füllen sie mit den echten Feldern.
 
 export type LoadResult<T> = { value: T | null; restoredFromBackup: boolean };
 
-export type AppState = { version: 1 };
-export type { Assignment } from '../domain/assignments/types';
+export type Settings = {
+  theme: 'auto' | 'light' | 'dark';
+  gemini: { enabled: boolean; model: string | null };
+  /** Entwickler-Zeitsimulation: wird auf die Systemuhr addiert. */
+  devTimeOffsetMs: number;
+};
+
+export type AppState = {
+  version: 1;
+  installId: string;
+  createdAt: number;
+  schedule: ScheduleState;
+  assignments: Assignment[];
+  evaluations: Evaluation[];
+  showreel: string[];
+  settings: Settings;
+  /** Abgehakte Vorgaben je Auftrag (Komfort in der Oberfläche, überlebt Neuladen). */
+  checklist: Record<string, string[]>;
+  /** Recherche-Entwürfe, Schlüssel `${assignmentId}/${deliverableId}`. */
+  research: Record<string, ResearchDoc>;
+};
+export type { Assignment };
 export type Project = { version: 1 };
 export type MediaItem = { id: string; path: string };
 export type Segment = { start: number; end: number };
