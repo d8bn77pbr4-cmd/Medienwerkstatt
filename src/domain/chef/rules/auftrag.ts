@@ -3,9 +3,6 @@ import { fmtDe } from '../format';
 import type { Rules } from '../rules';
 import { makeDeduction, type Deduction, type VideoInput } from '../types';
 
-/** Der Haken „longShot8s“ verlangt eine Einstellung von mindestens dieser Länge (Teil des Haken-Namens). */
-export const LONG_SHOT_SEC = 8;
-
 /** Pflicht-Elemente einer Video-Abgabe (Mindestzahl Einstellungen, J-Cut, Bauchbinde). */
 export function elementRules(spec: VideoSpec, v: VideoInput, rules: Rules, prefix: string): Deduction[] {
   const r = rules.deductions.auftrag;
@@ -41,8 +38,8 @@ export function hookAndDeliverableRules(a: Assignment, videos: Record<string, Vi
     }
   } else if (a.hook.autoRule === 'longShot8s' && present.length > 0) {
     const longest = Math.max(...present.map(v => v.facts.longestShotSec));
-    if (longest < LONG_SHOT_SEC) {
-      out.push(makeDeduction('', 'hookNotMet', 'auftrag', 'Haken nicht umgesetzt: keine lange Einstellung', `eine Einstellung ≥ ${fmtDe(LONG_SHOT_SEC, 0)} s`, `längste ${fmtDe(longest, 1)} s`, r.hookNotMet, `Verlängere eine Einstellung in der Timeline auf mindestens ${LONG_SHOT_SEC} Sekunden.`, 'timeline'));
+    if (longest < r.longShotMinSec) {
+      out.push(makeDeduction('', 'hookNotMet', 'auftrag', 'Haken nicht umgesetzt: keine lange Einstellung', `eine Einstellung ≥ ${fmtDe(r.longShotMinSec, 0)} s`, `längste ${fmtDe(longest, 1)} s`, r.hookNotMet, `Verlängere eine Einstellung in der Timeline auf mindestens ${r.longShotMinSec} Sekunden.`, 'timeline'));
     }
   }
   return out;

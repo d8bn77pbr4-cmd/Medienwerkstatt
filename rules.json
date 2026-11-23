@@ -52,6 +52,7 @@
       "missingDeliverable": -15,
       "missingElement": -5,
       "hookNotMet": -8,
+      "longShotMinSec": 8,
       "researchEmptyField": -3,
       "researchMinSources": 2,
       "researchTooFewSources": -5,

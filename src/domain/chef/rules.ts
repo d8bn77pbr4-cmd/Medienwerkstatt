@@ -43,6 +43,7 @@ const auftrag = z.object({
   missingDeliverable: z.number(),
   missingElement: z.number(),
   hookNotMet: z.number(),
+  longShotMinSec: z.number(),
   researchEmptyField: z.number(),
   researchMinSources: z.number(),
   researchTooFewSources: z.number(),
