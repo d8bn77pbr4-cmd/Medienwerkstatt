@@ -8,6 +8,10 @@ describe('rng', () => {
     const b = rng('a#1');
     expect([a(), a(), a()]).toEqual([b(), b(), b()]);
   });
+  it('Golden Values: Seeds bleiben über Releases stabil', () => {
+    const r = rng('medienwerkstatt#1');
+    expect([r(), r(), r()]).toEqual([0.21548997703939676, 0.8662584091071039, 0.326404997613281]);
+  });
   it('verschiedene Seeds liefern verschiedene Folgen, Werte in [0,1)', () => {
     expect(rng('a#1')()).not.toBe(rng('a#2')());
     const r = rng('x');

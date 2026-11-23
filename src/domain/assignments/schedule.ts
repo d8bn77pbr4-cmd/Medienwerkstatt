@@ -19,6 +19,12 @@ export function roundUpTo18(ts: number, hour = 18): number {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, hour, 0, 0, 0).getTime();
 }
 
+/** ts + ms, aber Wanduhrzeit über Zeitumstellungen erhalten (18:00 bleibt 18:00). */
+function addWallClock(ts: number, ms: number): number {
+  const r = ts + ms;
+  return r + (new Date(r).getTimezoneOffset() - new Date(ts).getTimezoneOffset()) * 60_000;
+}
+
 function overlapWithVacations(from: number, to: number, vs: Vacation[]): number {
   let sum = 0;
   for (const v of vs) sum += Math.max(0, Math.min(to, v.end) - Math.max(from, v.start));
@@ -61,9 +67,15 @@ export function tick(
       expire(oldest, 'limit');
     }
     const rawDeadline = roundUpTo18(issuedAt + interval, rules.schedule.deadlineHour);
-    const deadline = rawDeadline + overlapWithVacations(issuedAt, rawDeadline, s.vacations);
-    const rawExpiry = deadline + lateWindow;
-    const expiresAt = rawExpiry + overlapWithVacations(deadline, rawExpiry, s.vacations);
+    const deadline = roundUpTo18(
+      rawDeadline + overlapWithVacations(issuedAt, rawDeadline, s.vacations),
+      rules.schedule.deadlineHour,
+    );
+    const rawExpiry = addWallClock(deadline, lateWindow);
+    const expiresAt = roundUpTo18(
+      rawExpiry + overlapWithVacations(deadline, rawExpiry, s.vacations),
+      rules.schedule.deadlineHour,
+    );
     const a = issue(nextNumber, issuedAt);
     list.push({ ...a, deadline, expiresAt, status: 'open' });
     events.push({ kind: 'issued', assignmentId: a.id });
@@ -75,12 +87,13 @@ export function tick(
   return { schedule: { nextIssueAt, nextNumber, vacations: s.vacations }, assignments: list, events };
 }
 
+/** Lokale Kalendertage, die [start, end) berührt, je Jahr (jedes Datum einmal). */
 function daysInYears(v: Vacation): Map<number, number> {
   const out = new Map<number, number>();
-  for (let y = new Date(v.start).getFullYear(); y <= new Date(v.end).getFullYear(); y++) {
-    const from = Math.max(v.start, new Date(y, 0, 1).getTime());
-    const to = Math.min(v.end, new Date(y + 1, 0, 1).getTime());
-    if (to > from) out.set(y, Math.ceil((to - from) / (24 * H)));
+  const first = new Date(v.start);
+  for (let d = new Date(first.getFullYear(), first.getMonth(), first.getDate()); d.getTime() < v.end; ) {
+    out.set(d.getFullYear(), (out.get(d.getFullYear()) ?? 0) + 1);
+    d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
   }
   return out;
 }
@@ -90,7 +103,8 @@ export function canAddVacation(
   v: Vacation,
   now: number,
   rules: Rules = loadRules(),
-): { ok: true } | { ok: false; reason: 'past' | 'over14days' | 'overlap' } {
+): { ok: true } | { ok: false; reason: 'past' | 'over14days' | 'overlap' | 'invalid' } {
+  if (v.end <= v.start) return { ok: false, reason: 'invalid' };
   if (v.start < now) return { ok: false, reason: 'past' };
   if (vs.some(o => v.start < o.end && o.start < v.end)) return { ok: false, reason: 'overlap' };
   const totals = new Map<number, number>();

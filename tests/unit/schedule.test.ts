@@ -58,17 +58,28 @@ describe('tick', () => {
     const s: ScheduleState = { ...start(t0), vacations: [{ start: vStart, end: vEnd }] };
     const r = tick(s, [], t0 + 9 * 24 * H, issueStub, rules);
     expect(r.assignments.map(a => a.issuedAt)).toEqual([t0, vEnd, vEnd + 72 * H]);
-    // Auftrag 1: Frist läuft in den Urlaub hinein, Überlappung wird addiert
-    const rawDeadline = roundUpTo18(t0 + 72 * H);
-    const overlap = rawDeadline - vStart;
-    expect(overlap).toBeGreaterThan(0);
-    expect(r.assignments[0].deadline).toBe(rawDeadline + overlap);
-    const deadline = rawDeadline + overlap;
-    const expiryOverlap = Math.max(0, Math.min(deadline + 72 * H, vEnd) - Math.max(deadline, vStart));
-    expect(expiryOverlap).toBeGreaterThan(0);
-    expect(r.assignments[0].expiresAt).toBe(deadline + 72 * H + expiryOverlap);
+    // Auftrag 1: Frist läuft in den Urlaub (32 h Überlappung) -> 28.11. 02:00, aufgerundet auf 18:00
+    expect(r.assignments[0].deadline).toBe(Date.parse('2026-11-28T18:00:00+01:00'));
+    expect(r.assignments[0].expiresAt).toBe(Date.parse('2026-12-01T18:00:00+01:00'));
     // Auftrag 2 liegt nach dem Urlaub: Frist unverändert
-    expect(r.assignments[1].deadline).toBe(roundUpTo18(vEnd + 72 * H));
+    expect(r.assignments[1].deadline).toBe(Date.parse('2026-12-01T18:00:00+01:00'));
+  });
+  it('verlängerte Frist über die Zeitumstellung (März 2027) endet 18:00', () => {
+    const issued = Date.parse('2027-03-24T10:00:00+01:00');
+    const s: ScheduleState = {
+      ...start(issued),
+      vacations: [{ start: Date.parse('2027-03-26T12:00:00+01:00'), end: Date.parse('2027-03-29T12:00:00+02:00') }],
+    };
+    const a = tick(s, [], issued, issueStub, rules).assignments[0];
+    expect(a.deadline).toBe(Date.parse('2027-03-29T18:00:00+02:00'));
+    expect(new Date(a.deadline).getHours()).toBe(18);
+    expect(a.expiresAt).toBe(Date.parse('2027-04-01T18:00:00+02:00'));
+  });
+  it('Verfallszeit bleibt über die Zeitumstellung (Oktober 2027) 18:00', () => {
+    const issued = Date.parse('2027-10-26T10:00:00+02:00');
+    const a = tick(start(issued), [], issued, issueStub, rules).assignments[0];
+    expect(a.deadline).toBe(Date.parse('2027-10-29T18:00:00+02:00'));
+    expect(a.expiresAt).toBe(Date.parse('2027-11-01T18:00:00+01:00'));
   });
   it('Limit: 3 offene Aufträge mit fernem expiresAt + neue Ausgabe → ältester expired (limit)', () => {
     const far = t0 + 365 * 24 * H;
@@ -111,6 +122,18 @@ describe('canAddVacation', () => {
       .toEqual({ ok: false, reason: 'over14days' });
     expect(canAddVacation(existing, { start: d('2026-12-07T00:00:00+01:00'), end: d('2026-12-09T00:00:00+01:00') }, now, rules))
       .toEqual({ ok: false, reason: 'overlap' });
+  });
+  it('zählt lokale Kalendertage über die Zeitumstellung (14 ok, 15 zu viel)', () => {
+    const before = Date.parse('2026-10-01T00:00:00+02:00');
+    const d = (iso: string) => Date.parse(iso);
+    expect(canAddVacation([], { start: d('2026-10-20T00:00:00+02:00'), end: d('2026-11-03T00:00:00+01:00') }, before, rules))
+      .toEqual({ ok: true });
+    expect(canAddVacation([], { start: d('2026-10-20T00:00:00+02:00'), end: d('2026-11-04T00:00:00+01:00') }, before, rules))
+      .toEqual({ ok: false, reason: 'over14days' });
+  });
+  it('end <= start ist ungültig', () => {
+    expect(canAddVacation([], { start: now + 24 * H, end: now + 24 * H }, now, rules)).toEqual({ ok: false, reason: 'invalid' });
+    expect(canAddVacation([], { start: now + 48 * H, end: now + 24 * H }, now, rules)).toEqual({ ok: false, reason: 'invalid' });
   });
   it('zählt Tage je Kalenderjahr getrennt (Jahreswechsel)', () => {
     const d = (iso: string) => Date.parse(iso);
