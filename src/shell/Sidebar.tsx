@@ -1,4 +1,4 @@
-import { Fragment, useLayoutEffect, useRef } from 'react';
+import { Fragment, useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Spring } from '../design/spring';
@@ -19,22 +19,59 @@ export function Sidebar() {
   const markerRef = useRef<HTMLDivElement>(null);
   const spring = useRef(new Spring({ damping: 1, response: 0.38 }, 0));
   const placed = useRef(false);
+  const instant = (useLocation().state as { instant?: boolean } | null)?.instant === true;
+
+  const linkTop = useCallback(() => navRef.current?.querySelector<HTMLElement>(`[data-area="${current}"]`)?.offsetTop, [current]);
 
   useLayoutEffect(() => {
-    const link = navRef.current?.querySelector<HTMLElement>(`[data-area="${current}"]`);
+    const top = linkTop();
     const marker = markerRef.current;
-    if (!link || !marker) return;
+    if (top === undefined || !marker) return;
     const apply = (y: number) => {
       marker.style.transform = `translateY(${y}px)`;
     };
+    const snap = () => {
+      spring.current.stop();
+      spring.current.value = top;
+      spring.current.velocity = 0;
+      apply(top);
+    };
     if (!placed.current) {
-      spring.current.value = link.offsetTop;
-      apply(link.offsetTop);
       placed.current = true;
-      return;
+      snap();
+    } else if (instant) {
+      // Tastenkürzel werden nie animiert.
+      snap();
+    } else if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      // Bewegung reduzieren: 150-ms-Überblendung statt Gleiten.
+      snap();
+      marker.classList.remove('is-fading');
+      void marker.offsetWidth;
+      marker.classList.add('is-fading');
+    } else {
+      spring.current.to(top, apply);
     }
-    spring.current.to(link.offsetTop, apply);
-  }, [current]);
+  }, [current, instant, linkTop]);
+
+  // Fensterhöhe ändert die Lage von „Einstellungen“: Markierung folgt sofort.
+  useEffect(() => {
+    const nav = navRef.current;
+    const marker = markerRef.current;
+    if (!nav || !marker || typeof ResizeObserver === 'undefined') return;
+    let lastHeight = nav.offsetHeight;
+    const ro = new ResizeObserver(() => {
+      if (nav.offsetHeight === lastHeight) return; // nur Höhenänderungen verschieben die Links
+      lastHeight = nav.offsetHeight;
+      const top = linkTop();
+      if (top === undefined) return;
+      spring.current.stop();
+      spring.current.value = top;
+      spring.current.velocity = 0;
+      marker.style.transform = `translateY(${top}px)`;
+    });
+    ro.observe(nav);
+    return () => ro.disconnect();
+  }, [linkTop]);
 
   return (
     <aside className="sidebar">

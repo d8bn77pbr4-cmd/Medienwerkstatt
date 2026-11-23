@@ -11,7 +11,7 @@ export function useAreaShortcuts(): void {
       const index = ['1', '2', '3'].indexOf(e.key);
       if (index < 0) return;
       e.preventDefault();
-      navigate(AREAS[index].path);
+      navigate(AREAS[index].path, { state: { instant: true } });
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);

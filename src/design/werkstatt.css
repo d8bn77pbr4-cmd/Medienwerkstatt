@@ -18,6 +18,7 @@
   --fs-sub: 13px;
   --fs-caption: 12px;
   color-scheme: dark;
+  font-size: var(--fs-body);
   background-color: #1c1c1e;
   color: var(--ink);
 }

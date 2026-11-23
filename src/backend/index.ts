@@ -12,3 +12,8 @@ export function getBackend(): Backend {
   }
   return instance;
 }
+
+/** Nur für Tests: verwirft die gemerkte Instanz. */
+export function resetBackendForTests(): void {
+  instance = null;
+}
