@@ -63,7 +63,12 @@ export const RulesSchema = z.object({
   kombiShareFromLevel2: z.number().min(0).max(1),
   levels: z.array(z.object({ min: z.number(), name: z.string() })).length(5),
   maxScore: z.number(),
-  deductions: z.object({ technik, gestaltung, auftrag }),
+  deductions: z.object({
+    technik,
+    gestaltung,
+    auftrag,
+    researchOnly: z.object({ max: z.number(), missingDeliverable: z.number(), emptyField: z.number(), tooFewSources: z.number(), lengthOutOfRange: z.number(), hookNotMet: z.number() }),
+  }),
   frist: z.object({ perDay: z.number(), maxDays: z.number(), expiredAccount: z.number() }),
   bonus: z.object({ max: z.number(), early24h: z.number(), earlyHours: z.number(), allTechPerfect: z.number() }),
   correction: z.object({ windowHours: z.number(), maxScore: z.number(), loops: z.number() }),

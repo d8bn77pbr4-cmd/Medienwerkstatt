@@ -84,8 +84,21 @@ export function validSources(sources: string[]): string[] {
   return sources.filter(s => /^https?:\/\/\S+$/.test(s.trim()));
 }
 
-export function evaluateResearch(doc: ResearchDoc, template: ResearchTemplate, rules: Rules): Deduction[] {
-  const r = rules.deductions.auftrag;
+export type ResearchPoints = { emptyField: number; tooFewSources: number; lengthOutOfRange: number; minSources: number };
+
+/** Punktwerte für Recherche in Kombi-Aufträgen (Kategorie Auftrag). */
+export function kombiResearchPoints(rules: Rules): ResearchPoints {
+  const a = rules.deductions.auftrag;
+  return { emptyField: a.researchEmptyField, tooFewSources: a.researchTooFewSources, lengthOutOfRange: a.researchLengthOutOfRange, minSources: a.researchMinSources };
+}
+
+/** Punktwerte für reine Recherche-Aufträge. */
+export function researchOnlyPoints(rules: Rules): ResearchPoints {
+  const o = rules.deductions.researchOnly;
+  return { emptyField: o.emptyField, tooFewSources: o.tooFewSources, lengthOutOfRange: o.lengthOutOfRange, minSources: rules.deductions.auftrag.researchMinSources };
+}
+
+export function evaluateResearch(doc: ResearchDoc, template: ResearchTemplate, rules: Rules, r: ResearchPoints = kombiResearchPoints(rules)): Deduction[] {
   const out: Deduction[] = [];
   const prefix = template.label;
   for (const f of template.fields) {
@@ -93,7 +106,7 @@ export function evaluateResearch(doc: ResearchDoc, template: ResearchTemplate, r
     if (text === '') {
       if (f.required) {
         out.push(
-          makeDeduction(prefix, 'researchEmptyField', 'auftrag', `Pflichtfeld „${f.label}“ leer`, 'ausgefüllt', 'leer', r.researchEmptyField, `Fülle das Feld „${f.label}“ aus.`),
+          makeDeduction(prefix, 'researchEmptyField', 'auftrag', `Pflichtfeld „${f.label}“ leer`, 'ausgefüllt', 'leer', r.emptyField, `Fülle das Feld „${f.label}“ aus.`),
         );
       }
       continue;
@@ -111,7 +124,7 @@ export function evaluateResearch(doc: ResearchDoc, template: ResearchTemplate, r
           `„${f.label}“ ${below ? 'zu kurz' : 'zu lang'}`,
           soll,
           `${n} Wörter`,
-          r.researchLengthOutOfRange,
+          r.lengthOutOfRange,
           below
             ? `Schreibe zum Feld „${f.label}“ mehr, bis du mindestens ${f.minWords} Wörter hast.`
             : `Kürze das Feld „${f.label}“ auf höchstens ${f.maxWords} Wörter.`,
@@ -120,17 +133,17 @@ export function evaluateResearch(doc: ResearchDoc, template: ResearchTemplate, r
     }
   }
   const sources = validSources(doc.sources).length;
-  if (sources < r.researchMinSources) {
+  if (sources < r.minSources) {
     out.push(
       makeDeduction(
         prefix,
         'researchSources',
         'auftrag',
         'Zu wenige Quellen',
-        `mindestens ${r.researchMinSources} Quellen mit http(s)-Link`,
+        `mindestens ${r.minSources} Quellen mit http(s)-Link`,
         `${sources} Quelle${sources === 1 ? '' : 'n'}`,
-        r.researchTooFewSources,
-        `Ergänze Quellen mit vollständigem Link (https://…), bis es mindestens ${r.researchMinSources} sind.`,
+        r.tooFewSources,
+        `Ergänze Quellen mit vollständigem Link (https://…), bis es mindestens ${r.minSources} sind.`,
       ),
     );
   }

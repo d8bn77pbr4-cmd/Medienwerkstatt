@@ -57,7 +57,8 @@
       "researchMinSources": 2,
       "researchTooFewSources": -5,
       "researchLengthOutOfRange": -3
-    }
+    },
+    "researchOnly": { "max": 100, "missingDeliverable": -100, "emptyField": -12, "tooFewSources": -20, "lengthOutOfRange": -10, "hookNotMet": -15 }
   },
   "frist": { "perDay": -10, "maxDays": 3, "expiredAccount": -20 },
   "bonus": { "max": 5, "early24h": 3, "earlyHours": 24, "allTechPerfect": 2 },

@@ -1,6 +1,6 @@
 import type { Assignment } from '../assignments/types';
 import { phraseFor } from './phrases';
-import { evaluateResearch, RESEARCH_TEMPLATES } from './research';
+import { evaluateResearch, kombiResearchPoints, RESEARCH_TEMPLATES, researchOnlyPoints } from './research';
 import { elementRules, hookAndDeliverableRules } from './rules/auftrag';
 import { gestaltungRules } from './rules/gestaltung';
 import { technikRules } from './rules/technik';
@@ -33,7 +33,10 @@ export function evaluate(input: EvaluationInput, rules: Rules): Evaluation {
 
   const technik: Deduction[] = [];
   const gestaltung: Deduction[] = [];
-  const auftrag: Deduction[] = hookAndDeliverableRules(a, input.videos, input.research, input.selfChecks.hookDone, rules);
+  const researchOnly = !a.deliverables.some(x => x.kind === 'video');
+  const ro = d.researchOnly;
+  const pts = researchOnly ? { missingDeliverable: ro.missingDeliverable, hookNotMet: ro.hookNotMet } : { missingDeliverable: d.auftrag.missingDeliverable, hookNotMet: d.auftrag.hookNotMet };
+  const auftrag: Deduction[] = hookAndDeliverableRules(a, input.videos, input.research, input.selfChecks.hookDone, rules, pts);
   let videosPresent = 0;
   for (const del of videoDeliverables) {
     const v = input.videos[del.id];
@@ -47,22 +50,27 @@ export function evaluate(input: EvaluationInput, rules: Rules): Evaluation {
   for (const del of a.deliverables) {
     if (del.kind !== 'research') continue;
     const doc = input.research[del.id];
-    if (doc) auftrag.push(...evaluateResearch(doc, RESEARCH_TEMPLATES[del.researchTemplate ?? doc.templateId], rules));
+    if (doc) auftrag.push(...evaluateResearch(doc, RESEARCH_TEMPLATES[del.researchTemplate ?? doc.templateId], rules, researchOnly ? researchOnlyPoints(rules) : kombiResearchPoints(rules)));
+  }
+
+  if (videoDeliverables.length > 0 && videosPresent === 0) {
+    const none = (id: string, cat: 'technik' | 'gestaltung', max: number) =>
+      makeDeduction('', id, cat, 'Kein Film abgegeben', 'Film nach Vorgabe', 'fehlt', -max, 'Exportiere den Film in der Werkstatt und gib ihn erneut ab.', 'export');
+    technik.push(none('noVideoTechnik', 'technik', d.technik.max));
+    gestaltung.push(none('noVideoGestaltung', 'gestaltung', d.gestaltung.max));
   }
 
   const bonus: Deduction[] = [];
   if (input.submittedAt <= a.deadline - rules.bonus.earlyHours * HOUR_MS) {
     bonus.push(makeDeduction('', 'early24h', 'bonus', 'Früh abgegeben', `≥ ${rules.bonus.earlyHours} h vor der Frist`, 'erfüllt', rules.bonus.early24h, ''));
   }
-  if (videosPresent > 0 && technik.length === 0) {
+  if (videosPresent > 0 && videosPresent === videoDeliverables.length && technik.length === 0) {
     bonus.push(makeDeduction('', 'allTechPerfect', 'bonus', 'Alle Technikwerte perfekt', 'keine Technik-Abzüge', 'erfüllt', rules.bonus.allTechPerfect, ''));
   }
 
-  const categories = {
-    technik: category(d.technik.max, technik),
-    gestaltung: category(d.gestaltung.max, gestaltung),
-    auftrag: category(d.auftrag.max, auftrag),
-  };
+  const categories = researchOnly
+    ? { technik: category(0, []), gestaltung: category(0, []), auftrag: category(ro.max, auftrag) }
+    : { technik: category(d.technik.max, technik), gestaltung: category(d.gestaltung.max, gestaltung), auftrag: category(d.auftrag.max, auftrag) };
   const late = applyLate(a, input.submittedAt, rules);
   const bonusSum = Math.min(rules.bonus.max, bonus.reduce((s, b) => s + b.points, 0));
   const sum = categories.technik.points + categories.gestaltung.points + categories.auftrag.points + bonusSum;

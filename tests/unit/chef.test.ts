@@ -4,6 +4,7 @@ import type { Assignment, Deliverable, VideoSpec } from '../../src/domain/assign
 import { applyLate, evaluate } from '../../src/domain/chef/evaluate';
 import { fmtDe } from '../../src/domain/chef/format';
 import { phraseFor } from '../../src/domain/chef/phrases';
+import type { ResearchDoc } from '../../src/domain/chef/research';
 import { loadRules } from '../../src/domain/chef/rules';
 import type { Deduction, Evaluation, EvaluationInput, ProjectFacts } from '../../src/domain/chef/types';
 import black from '../fixtures/measurements/black.json';
@@ -183,11 +184,43 @@ describe('Auftrag', () => {
     const e2 = evaluate(i, rules);
     expect(find(e2, 'loudness').label).toBe('Hochformat: Ton zu laut');
   });
-  it('Recherche-Abgabe wird bewertet', () => {
-    const a = assignment({ type: 'research', deliverables: [{ id: 'r', kind: 'research', label: 'Exposé', researchTemplate: 'expose' }] });
-    const e = evaluate({ ...input(perfectM, {}, goodFacts(), a), videos: {}, research: { r: { templateId: 'expose', fields: {}, sources: [] } } }, rules);
-    expect(e.categories.auftrag.deductions.filter(d => d.ruleId === 'researchEmptyField')).toHaveLength(6);
-    expect(e.categories.auftrag.points).toBe(2);
+  it('einziger Film fehlt: Technik und Gestaltung 0, höchstens 10 Punkte', () => {
+    const e = evaluate(input(perfectM, { videos: { v: null } }), rules);
+    expect(e.categories.technik).toMatchObject({ points: 0, deductions: [{ ruleId: 'noVideoTechnik', points: -40, label: 'Kein Film abgegeben', ist: 'fehlt' }] });
+    expect(e.categories.gestaltung).toMatchObject({ points: 0, deductions: [{ ruleId: 'noVideoGestaltung', points: -35 }] });
+    expect(e.total).toBeLessThanOrEqual(10);
+  });
+  it('bothFormats, ein Film fehlt: vorhandener wird bewertet, −15 Auftrag, kein allTechPerfect', () => {
+    const spec2 = { ...spec, aspect: '9:16' as const, width: 1080, height: 1920 };
+    const a = assignment({ hook: { id: 'h', text: 'beide', verify: 'auto', autoRule: 'bothFormats' }, deliverables: [videoD('v', spec, 'Querformat'), videoD('w', spec2, 'Hochformat')] });
+    const e = evaluate(input(perfectM, {}, goodFacts(), a), rules);
+    expect(e.categories.technik.points).toBe(40);
+    expect(e.categories.auftrag.points).toBe(10);
+    expect(e.bonus.map(b => b.ruleId)).not.toContain('allTechPerfect');
+  });
+  const researchA = () => assignment({ type: 'research', deliverables: [{ id: 'r', kind: 'research', label: 'Exposé', researchTemplate: 'expose' }] });
+  const researchIn = (doc: ResearchDoc | null, a = researchA()): EvaluationInput => ({ ...input(perfectM, {}, goodFacts(), a), videos: {}, research: { r: doc } });
+  const words = (n: number) => Array.from({ length: n }, (_, i) => `w${i}`).join(' ');
+  const goodDoc = (): ResearchDoc => ({ templateId: 'expose', fields: { arbeitstitel: 'T', logline: words(20), zielgruppe: 'Z', inhalt: words(120), gestaltung: words(60), laenge: '90 s' }, sources: ['https://a.de/x', 'https://b.de/y'] });
+  it('Recherche-only: perfekt → 100, Technik/Gestaltung nicht anwendbar', () => {
+    const e = evaluate(researchIn(goodDoc()), rules);
+    expect(e.categories.technik).toEqual({ max: 0, points: 0, deductions: [] });
+    expect(e.categories.gestaltung).toEqual({ max: 0, points: 0, deductions: [] });
+    expect(e.categories.auftrag.max).toBe(100);
+    expect(e.total).toBe(100);
+  });
+  it('Recherche-only: ein leeres Pflichtfeld → 88', () => {
+    const d = goodDoc(); d.fields.zielgruppe = '';
+    expect(evaluate(researchIn(d), rules).total).toBe(88);
+  });
+  it('Recherche-only: Abgabe fehlt → 0', () => {
+    expect(evaluate(researchIn(null), rules).total).toBe(0);
+  });
+  it('Kombi: Recherche-Regel bleibt −3', () => {
+    const a = assignment({ type: 'kombi', deliverables: [videoD('v'), { id: 'r', kind: 'research', label: 'Exposé', researchTemplate: 'expose' }] });
+    const d = goodDoc(); d.fields.zielgruppe = '';
+    const e = evaluate({ ...input(perfectM, {}, goodFacts(), a), research: { r: d } }, rules);
+    expect(find(e, 'researchEmptyField').points).toBe(-3);
   });
 });
 
