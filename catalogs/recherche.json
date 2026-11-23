@@ -1,0 +1,50 @@
+{
+  "expose": [
+    "einen Imagefilm über das Team",
+    "ein Porträt der Gründerin oder des Gründers",
+    "eine Dokumentation über einen ganz normalen Arbeitstag",
+    "eine Kurzserie über Menschen im Stadtteil",
+    "einen Jahresrückblick in Bildern",
+    "einen Film zu einem anstehenden Jubiläum"
+  ],
+  "drehplan": [
+    "einen Drehtag am Standort des Kunden",
+    "ein Interview mit zwei Personen an zwei Orten",
+    "einen Außendreh bei einer Veranstaltung",
+    "einen Produktdreh im Schaufenster",
+    "einen Drehtag mit Ausweichplan bei schlechtem Wetter",
+    "einen Dreh mit Kindern und Jugendlichen"
+  ],
+  "shotlist": [
+    "den Ablauf eines Festes in acht Stationen",
+    "eine Produktvorstellung in zehn Einstellungen",
+    "ein Interview mit Zwischenschnitten",
+    "eine Werkstattführung",
+    "einen Aufbau im Zeitraffer",
+    "einen Spaziergang durch den Stadtteil"
+  ],
+  "rechte": [
+    "Musik für Social-Media-Clips",
+    "Bilder aus dem Stadtarchiv",
+    "Stockfotos für den Messestand",
+    "Hintergrundmusik für den Messe-Loop",
+    "Fotos von Passanten im öffentlichen Raum",
+    "Schriften und Logos Dritter in einem Film"
+  ],
+  "kaufberatung": [
+    "ein Mikrofon für Interviews mit 150 Euro Budget",
+    "ein Stativ für unter 100 Euro",
+    "einen Smartphone-Gimbal mit 120 Euro Budget",
+    "eine Leuchte für Innenaufnahmen mit 200 Euro Budget",
+    "einen Laptop zum Schneiden mit 900 Euro Budget",
+    "eine Speicherkarte und eine Festplatte mit 80 Euro Budget"
+  ],
+  "formatvergleich": [
+    "den Vergleich von h264 und ProRes für die Abgabe an den Kunden",
+    "die Frage, ob 25 oder 50 Bilder pro Sekunde besser passen",
+    "den Unterschied zwischen 16:9, 9:16 und 1:1 für Social Media",
+    "die Wahl zwischen MP4 und MOV für die Messe",
+    "den Einfluss der Bitrate auf Dateigröße und Bildqualität",
+    "den Vergleich von 1080p und 4K für Website und YouTube"
+  ]
+}

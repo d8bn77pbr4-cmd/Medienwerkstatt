@@ -1,0 +1,21 @@
+[
+  { "id": "v-ohne-text", "text": "Ohne gesprochenen Text – nur Bild, Musik und Atmo", "verify": "self", "appliesTo": ["video"], "excludeKinds": ["interview"] },
+  { "id": "v-tageslicht", "text": "Nur Tageslicht, kein Kunstlicht beim Dreh", "verify": "self", "appliesTo": ["video"] },
+  { "id": "v-longshot", "text": "Mindestens eine Einstellung ist 8 Sekunden oder länger", "verify": "auto", "autoRule": "longShot8s", "appliesTo": ["video"], "minDurationSec": 30 },
+  { "id": "v-both", "text": "Der Kunde will Hochformat und Querformat vom selben Film", "verify": "auto", "autoRule": "bothFormats", "appliesTo": ["video"] },
+  { "id": "v-atmo", "text": "Ton nur aus Atmo, keine Musik und kein Sprecher", "verify": "self", "appliesTo": ["video"], "excludeKinds": ["interview"] },
+  { "id": "v-handy", "text": "Alles mit dem Handy gedreht, keine Kamera", "verify": "self", "appliesTo": ["video"] },
+  { "id": "v-schwenk", "text": "Keine Schwenks, nur feste Bildausschnitte", "verify": "self", "appliesTo": ["video"] },
+  { "id": "v-farbe", "text": "Eine Farbstimmung durchziehen, warm oder kühl, aber nicht mischen", "verify": "self", "appliesTo": ["video"] },
+  { "id": "v-logo", "text": "Das Logo des Kunden steht am Ende groß im Bild", "verify": "self", "appliesTo": ["video"] },
+  { "id": "v-musik", "text": "Musik nur aus rechtefreier Quelle, die Quelle steht im Abspann", "verify": "self", "appliesTo": ["video"] },
+  { "id": "v-start", "text": "Die ersten drei Sekunden müssen neugierig machen", "verify": "self", "appliesTo": ["video"] },
+  { "id": "v-zeitlupe", "text": "Eine Einstellung läuft bewusst in Zeitlupe", "verify": "self", "appliesTo": ["video"] },
+  { "id": "v-untertitel", "text": "Untertitel einblenden, weil der Film oft ohne Ton geschaut wird", "verify": "self", "appliesTo": ["video"] },
+  { "id": "v-gesichter", "text": "Keine erkennbaren Gesichter im Bild", "verify": "self", "appliesTo": ["video"], "excludeKinds": ["interview", "bericht"] },
+  { "id": "r-eineseite", "text": "Das Ergebnis passt auf eine Seite", "verify": "self", "appliesTo": ["research"] },
+  { "id": "r-quellen", "text": "Mindestens drei Quellen, jeweils mit Link", "verify": "self", "appliesTo": ["research"] },
+  { "id": "r-klar", "text": "Klare Sprache, sodass der Kunde keine Rückfrage braucht", "verify": "self", "appliesTo": ["research"] },
+  { "id": "r-alternative", "text": "Mit einer Alternative für den Fall, dass der erste Vorschlag scheitert", "verify": "self", "appliesTo": ["research"] },
+  { "id": "r-euro", "text": "Alle Kosten in Euro, nichts ohne Preis", "verify": "self", "appliesTo": ["research"] }
+]
