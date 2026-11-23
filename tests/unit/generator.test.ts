@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { CatalogsSchema } from '../../src/domain/assignments/catalogs';
 import { AVAILABLE_TYPES, generateAssignment, loadCatalogs } from '../../src/domain/assignments/generator';
 import { fileNameFor, projectFolderFor, slugify } from '../../src/domain/assignments/naming';
 import type { Assignment, AssignmentType, Deliverable, VideoSpec } from '../../src/domain/assignments/types';
@@ -171,17 +172,17 @@ describe('generateAssignment', () => {
       }
     }
   });
-  it('bothFormats → zwei Video-Abgaben 16:9 und 9:16 desselben Films', () => {
+  it('bothFormats → Kanal-Format zuerst, zweite Abgabe im anderen Format mit passendem Suffix', () => {
     const list = range(400).map(n => gen('x', n, 3)).filter(a => a.hook.autoRule === 'bothFormats');
     expect(list.length).toBeGreaterThan(0);
     for (const a of list) {
       const v = a.deliverables.filter(d => d.kind === 'video');
-      expect(v.map(d => d.videoSpec!.aspect)).toEqual(['16:9', '9:16']);
+      const vertical = ['instagram-reel', 'tiktok'].includes(anlassOf(a).kanal);
+      expect(v.map(d => d.videoSpec!.aspect)).toEqual(vertical ? ['9:16', '16:9'] : ['16:9', '9:16']);
       expect(v[0].videoSpec!.durationSec).toBe(v[1].videoSpec!.durationSec);
       expect(v[0].id).not.toBe(v[1].id);
-      expect(v[0].videoSpec!.fileName).not.toBe(v[1].videoSpec!.fileName);
-      expect(v[1].videoSpec!.fileName).toContain('_9x16_v01_');
-      expect(v[0].videoSpec!.fileName).not.toContain('9x16');
+      expect(v[0].videoSpec!.fileName).not.toMatch(/_(9x16|16x9)_v/);
+      expect(v[1].videoSpec!.fileName).toContain(vertical ? '_16x9_v01_' : '_9x16_v01_');
     }
   });
   it('Recherche-Auftrag: eine Recherche-Abgabe, keine Drehhinweise, Thema im Briefing', () => {
@@ -259,7 +260,7 @@ describe('Fix-Runde 1', () => {
     }
     for (const t of ['kaufberatung', 'rechte', 'formatvergleich']) expect(seen.has(t)).toBe(true);
   });
-  it('bothFormats nur auf erlaubten Kanälen, mit 16:9 und 9:16', () => {
+  it('bothFormats nur auf erlaubten Kanälen, Kanal-Format zuerst', () => {
     const hook = catalogs.haken.find(h => h.autoRule === 'bothFormats')!;
     let count = 0;
     for (const level of LEVELS) {
@@ -268,12 +269,29 @@ describe('Fix-Runde 1', () => {
         if (a.hook.autoRule !== 'bothFormats') continue;
         count++;
         expect(hook.onlyChannels).toContain(anlassOf(a).kanal);
-        expect(a.deliverables.filter(d => d.kind === 'video').map(d => d.videoSpec!.aspect)).toEqual(['16:9', '9:16']);
+        const kanal = anlassOf(a).kanal;
+        const aspects = a.deliverables.filter(d => d.kind === 'video').map(d => d.videoSpec!.aspect);
+        const second = a.deliverables.filter(d => d.kind === 'video')[1].videoSpec!.fileName;
+        if (kanal === 'instagram-reel' || kanal === 'tiktok') {
+          expect(aspects).toEqual(['9:16', '16:9']);
+          expect(second).toContain('_16x9_v01_');
+        } else {
+          expect(aspects).toEqual(['16:9', '9:16']);
+          expect(second).toContain('_9x16_v01_');
+        }
       }
     }
     expect(count).toBeGreaterThan(0);
     expect(hook.onlyChannels).not.toContain('lokal-tv');
     expect(hook.onlyChannels).not.toContain('messe-loop');
+  });
+});
+
+describe('Katalog-Validierung', () => {
+  it('onlyChannels mit unbekanntem Kanal wird abgelehnt', () => {
+    const bad = { ...catalogs, haken: [...catalogs.haken, { ...catalogs.haken[0], id: 'bad', onlyChannels: ['gibt-es-nicht'] }] };
+    expect(CatalogsSchema.safeParse(bad).success).toBe(false);
+    expect(CatalogsSchema.safeParse(catalogs).success).toBe(true);
   });
 });
 
@@ -298,9 +316,12 @@ describe('Dateinamen', () => {
   });
   it('bothFormats: zweite Abgabe mit _9x16', () => {
     const both: Assignment = { ...a, hook: { id: 'b', text: 'b', verify: 'auto', autoRule: 'bothFormats' } };
-    const v = { ...d, videoSpec: { ...spec, aspect: '9:16' as const, width: 1080, height: 1920 } };
-    expect(fileNameFor(both, v, 1)).toBe('A07_Baeckerei-Korn-und-Kruste_9x16_v01_1080p25.mp4');
-    expect(fileNameFor(both, d, 1)).toBe('A07_Baeckerei-Korn-und-Kruste_v01_1080p25.mp4');
+    const v = { id: 'film-9x16', kind: 'video' as const, label: 'v', videoSpec: { ...spec, aspect: '9:16' as const, width: 1080, height: 1920 } };
+    expect(fileNameFor({ ...both, deliverables: [d, v] }, v, 1)).toBe('A07_Baeckerei-Korn-und-Kruste_9x16_v01_1080p25.mp4');
+    expect(fileNameFor({ ...both, deliverables: [d, v] }, d, 1)).toBe('A07_Baeckerei-Korn-und-Kruste_v01_1080p25.mp4');
+    // vertikaler Kanal: Hochformat ist die Hauptabgabe, die Querformat-Abgabe trägt _16x9
+    expect(fileNameFor({ ...both, deliverables: [v, d] }, v, 1)).toBe('A07_Baeckerei-Korn-und-Kruste_v01_1080p25.mp4');
+    expect(fileNameFor({ ...both, deliverables: [v, d] }, d, 1)).toBe('A07_Baeckerei-Korn-und-Kruste_16x9_v01_1080p25.mp4');
   });
   it('Slug-Regeln', () => {
     expect(slugify('Café Morgenrot')).toBe('Cafe-Morgenrot');

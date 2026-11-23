@@ -27,13 +27,15 @@ export function projectFolderFor(a: Assignment): string {
 
 /**
  * `A07_Baeckerei-Korn-und-Kruste_v01_1080p25.mp4`. Auflösungskürzel = kürzere Bildseite + „p“ + fps.
- * Die zweite Abgabe eines „bothFormats“-Hakens (9:16) bekommt `_9x16` vor der Version.
+ * Die zweite Abgabe eines „bothFormats“-Hakens (das andere Format) bekommt `_9x16` bzw. `_16x9` vor der Version.
  * Nur für Video-Abgaben; für Recherche-Abgaben gibt es keinen Dateinamen (wirft).
  */
 export function fileNameFor(a: Assignment, d: Deliverable, version: number): string {
   const spec = d.videoSpec;
   if (d.kind !== 'video' || !spec) throw new Error(`fileNameFor: „${d.id}“ ist keine Video-Abgabe`);
-  const suffix = a.hook.autoRule === 'bothFormats' && spec.aspect === '9:16' ? '_9x16' : '';
+  const firstVideo = a.deliverables.find(x => x.kind === 'video');
+  const isExtra = a.hook.autoRule === 'bothFormats' && firstVideo !== undefined && firstVideo.id !== d.id;
+  const suffix = isExtra ? `_${spec.aspect.replace(':', 'x')}` : '';
   const ext = spec.codec === 'prores' ? 'mov' : 'mp4';
   const res = `${Math.min(spec.width, spec.height)}p${spec.fps}`;
   return `${projectFolderFor(a)}${suffix}_v${padNumber(version)}_${res}.${ext}`;

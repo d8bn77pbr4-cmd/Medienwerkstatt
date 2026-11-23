@@ -150,19 +150,21 @@ function planVideo(r: () => number, level: Level, catalogs: Catalogs, rules: Rul
     return { aspect: a, width, height, ...base, requiredShotSizes: [...base.requiredShotSizes], fileName: '' };
   };
 
+  // bothFormats: Hauptabgabe im eigenen Format des Kanals, zweite Abgabe im jeweils anderen Format
+  const other = aspect === '9:16' ? '16:9' : '9:16';
   const specs =
     hook.autoRule === 'bothFormats'
-      ? [spec('16:9', uhd), spec('9:16', false)]
+      ? [spec(aspect, aspect === '16:9' && uhd), spec(other, other === '16:9' && uhd)]
       : [spec(aspect, aspect === '16:9' && uhd)];
   return { anlass, kanal, zielgruppe, hook, specs };
 }
 
 function videoDeliverables(plan: VideoPlan): Deliverable[] {
   if (plan.specs.length === 1) return [{ id: 'film', kind: 'video', label: 'Film', videoSpec: plan.specs[0] }];
-  return plan.specs.map(s => ({
-    id: s.aspect === '9:16' ? 'film-9x16' : 'film-16x9',
+  return plan.specs.map((s, i) => ({
+    id: i === 0 ? 'film' : `film-${s.aspect.replace(':', 'x')}`,
     kind: 'video' as const,
-    label: s.aspect === '9:16' ? 'Film 9:16 (Hochformat)' : 'Film 16:9 (Querformat)',
+    label: `Film ${s.aspect} (${s.aspect === '9:16' ? 'Hochformat' : 'Querformat'})`,
     videoSpec: s,
   }));
 }

@@ -63,13 +63,17 @@ const Recherche = z.object({
   formatvergleich: topics,
 });
 
-export const CatalogsSchema = z.object({
-  kunden: z.array(Kunde).min(20),
-  kanaele: z.array(Kanal),
-  anlaesse: z.array(Anlass),
-  haken: z.array(Haken).min(15),
-  recherche: Recherche,
-});
+export const CatalogsSchema = z
+  .object({
+    kunden: z.array(Kunde).min(20),
+    kanaele: z.array(Kanal),
+    anlaesse: z.array(Anlass),
+    haken: z.array(Haken).min(15),
+    recherche: Recherche,
+  })
+  .refine(c => c.haken.every(h => (h.onlyChannels ?? []).every(id => c.kanaele.some(k => k.id === id))), {
+    message: 'haken.onlyChannels verweist auf einen unbekannten Kanal',
+  });
 
 export type Catalogs = z.infer<typeof CatalogsSchema>;
 export type Kanal = z.infer<typeof Kanal>;
