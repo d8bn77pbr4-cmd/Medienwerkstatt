@@ -38,8 +38,12 @@
       "shotLengthMinSec": 0.5,
       "shotLengthMaxSec": 10,
       "shotLengthOutOfRange": -2,
+    "shotLengthOutOfRangeMax": -8,
       "missingShotSize": -4,
       "colorJump": -2,
+    "colorJumpMax": -6,
+    "colorJumpLumaThreshold": 0.12,
+    "colorJumpChromaThreshold": 0.05,
       "audioCutNoFade": -1,
       "audioCutNoFadeMax": -5
     },

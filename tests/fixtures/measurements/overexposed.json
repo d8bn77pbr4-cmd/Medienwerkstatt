@@ -1,0 +1,73 @@
+{
+  "format": {
+    "width": 1920,
+    "height": 1080,
+    "fps": 25,
+    "durationSec": 60,
+    "videoCodec": "h264",
+    "audioCodec": "aac"
+  },
+  "audio": {
+    "integratedLufs": -14.0,
+    "truePeakDbtp": -2.0,
+    "clippedSamples": 0,
+    "silences": []
+  },
+  "video": {
+    "black": [],
+    "freeze": [],
+    "detectedCuts": [
+      12,
+      24,
+      36,
+      48
+    ],
+    "segments": [
+      {
+        "start": 0,
+        "end": 12,
+        "meanLuma": 0.45,
+        "highlightsPct": 1.0,
+        "shadowsPct": 1.5,
+        "meanU": 0.0,
+        "meanV": 0.0
+      },
+      {
+        "start": 12,
+        "end": 24,
+        "meanLuma": 0.45,
+        "highlightsPct": 12.5,
+        "shadowsPct": 1.5,
+        "meanU": 0.0,
+        "meanV": 0.0
+      },
+      {
+        "start": 24,
+        "end": 36,
+        "meanLuma": 0.45,
+        "highlightsPct": 1.0,
+        "shadowsPct": 1.5,
+        "meanU": 0.0,
+        "meanV": 0.0
+      },
+      {
+        "start": 36,
+        "end": 48,
+        "meanLuma": 0.45,
+        "highlightsPct": 7.0,
+        "shadowsPct": 1.5,
+        "meanU": 0.0,
+        "meanV": 0.0
+      },
+      {
+        "start": 48,
+        "end": 60,
+        "meanLuma": 0.45,
+        "highlightsPct": 1.0,
+        "shadowsPct": 1.5,
+        "meanU": 0.0,
+        "meanV": 0.0
+      }
+    ]
+  }
+}

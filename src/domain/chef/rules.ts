@@ -29,8 +29,12 @@ const gestaltung = z.object({
   shotLengthMinSec: z.number(),
   shotLengthMaxSec: z.number(),
   shotLengthOutOfRange: z.number(),
+  shotLengthOutOfRangeMax: z.number(),
   missingShotSize: z.number(),
   colorJump: z.number(),
+  colorJumpMax: z.number(),
+  colorJumpLumaThreshold: z.number(),
+  colorJumpChromaThreshold: z.number(),
   audioCutNoFade: z.number(),
   audioCutNoFadeMax: z.number(),
 });

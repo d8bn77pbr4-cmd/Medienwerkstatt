@@ -45,7 +45,11 @@ export class MockBackend implements Backend {
     onProgress(1);
   }
   async analyze(): Promise<Measurements> {
-    return {};
+    return {
+      format: { width: 1920, height: 1080, fps: 25, durationSec: 0, videoCodec: 'h264', audioCodec: null },
+      audio: { integratedLufs: null, truePeakDbtp: null, clippedSamples: 0, silences: [] },
+      video: { black: [], freeze: [], detectedCuts: [], segments: [] },
+    };
   }
   async extractFrames(): Promise<string[]> {
     return [];
