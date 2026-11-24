@@ -1,6 +1,6 @@
 import type { Backend } from './Backend';
 import { isValidState } from './schema';
-import type { AppState, Assignment, LoadResult, Measurements, MediaItem, Project, Segment } from './types';
+import type { AppState, LoadResult, Measurements, MediaItem, Project, Segment } from './types';
 import { uuid } from '../domain/uuid';
 
 /**
@@ -112,8 +112,8 @@ export class MockBackend implements Backend {
     if (previous !== null && parseState(previous)) writeItem(BAK1, previous);
     writeItem(KEY, JSON.stringify(s));
   }
-  async projectDir(a: Assignment): Promise<string> {
-    return `/mock/Medienwerkstatt/${a.id}`;
+  async projectDir(folder: string): Promise<string> {
+    return `/mock/Medienwerkstatt/${folder}`;
   }
   async loadProject(dir: string): Promise<LoadResult<Project>> {
     const raw = readItem(PROJECT_KEY(dir));

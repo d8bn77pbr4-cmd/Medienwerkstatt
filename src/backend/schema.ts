@@ -14,6 +14,9 @@ export const AppStateSchema = z.looseObject({
   assignments: z.array(z.looseObject({ id: z.string(), number: z.number() })),
   evaluations: z.array(z.looseObject({})),
   settings: z.looseObject({}),
+  // Phase 1.1: optional, damit ältere Stände weiter laden (Standard: keine freien Projekte).
+  projects: z.array(z.looseObject({ id: z.string(), name: z.string() })).optional(),
+  lastOpened: z.looseObject({ kind: z.enum(['free', 'assignment']), id: z.string() }).optional(),
 });
 
 export function isValidState(v: unknown): v is AppState {

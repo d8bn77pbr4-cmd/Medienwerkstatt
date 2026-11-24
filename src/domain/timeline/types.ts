@@ -114,9 +114,11 @@ export type ProjectSettings = {
   safetyLimiter?: boolean;
 };
 
+/** Genau eines von `assignmentId` (Auftragsprojekt) und `freeProjectId` (freies Projekt) ist gesetzt. */
 export type Project = {
   version: 1;
-  assignmentId: string;
+  assignmentId?: string;
+  freeProjectId?: string;
   media: MediaItem[];
   sequences: Sequence[];
   activeSequenceId: string;

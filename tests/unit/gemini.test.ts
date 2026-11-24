@@ -17,6 +17,7 @@ import type { Clip, MediaItem, Project } from '../../src/domain/timeline/types';
 import { resetAppForTests, useApp } from '../../src/state/appStore';
 import { resetProjectForTests } from '../../src/state/projectStore';
 import perfect from '../fixtures/measurements/perfect.json';
+import { projectFolderFor } from '../../src/domain/assignments/naming';
 
 const rules = loadRules();
 const HOUR = 3_600_000;
@@ -180,7 +181,7 @@ describe('buildGeminiPrompt', () => {
 
 describe('Gemini im App-Zustand', () => {
   const app = () => useApp.getState();
-  const dirFor = (a: Assignment) => `/mock/Medienwerkstatt/${a.id}`;
+  const dirFor = (a: Assignment) => `/mock/Medienwerkstatt/${projectFolderFor(a)}`;
   let backend: MockBackend;
   let now = t0;
   const clock: Clock = { now: () => now };

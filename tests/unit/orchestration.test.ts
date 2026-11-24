@@ -13,6 +13,7 @@ import { exportRows } from '../../src/state/exportRun';
 import { sequenceHash } from '../../src/state/hash';
 import { resetProjectForTests, useProject } from '../../src/state/projectStore';
 import { exportSnapshot, exportStale, factsForExport } from '../../src/state/submission';
+import { projectFolderFor } from '../../src/domain/assignments/naming';
 
 const rules = loadRules();
 const HOUR = 3_600_000;
@@ -57,7 +58,7 @@ describe('Abgabe: Messung, Fehler, Schutz vor Doppelaufruf', () => {
   const app = () => useApp.getState();
   let backend: SpyBackend;
   let clock: ReturnType<typeof clockAt>;
-  const dirOf = (a: Assignment) => `/mock/Medienwerkstatt/${a.id}`;
+  const dirOf = (a: Assignment) => `/mock/Medienwerkstatt/${projectFolderFor(a)}`;
   const save = (a: Assignment, p: Project) => backend.saveProject(dirOf(a), p);
 
   beforeEach(async () => {
@@ -220,7 +221,7 @@ describe('Export: Momentaufnahme, veraltet, Fehler', () => {
 
     it('kein ExportRecord, Projekt unverändert; danach klappt es', async () => {
       const backend = new SpyBackend();
-      await useProject.getState().open(seedA, backend);
+      await useProject.getState().open({ kind: 'assignment', assignment: seedA }, backend);
       useProject.getState().apply((s) => ({ ...s, clips: [clip('c1', 0, 125)] }));
       useProject.setState({ project: { ...useProject.getState().project!, media: [media] } });
       const before = useProject.getState().project;
@@ -243,7 +244,7 @@ describe('Sequenzen im Projekt-Store', () => {
   beforeEach(async () => {
     localStorage.clear();
     resetProjectForTests();
-    await useProject.getState().open(bothA, new MockBackend());
+    await useProject.getState().open({ kind: 'assignment', assignment: bothA }, new MockBackend());
     useProject.setState({ project: { ...useProject.getState().project!, media: [media] } });
     useProject.getState().apply((s) => ({ ...s, clips: [clip('c1', 0, 125)] }));
   });

@@ -3,7 +3,7 @@ import { MockBackend } from '../../src/backend/MockBackend';
 import type { Assignment, Deliverable, VideoSpec } from '../../src/domain/assignments/types';
 import { insertEdit } from '../../src/domain/timeline/ops';
 import type { Sequence } from '../../src/domain/timeline/types';
-import { PROJECT_SAVE_DEBOUNCE_MS, projectSetting, resetProjectForTests, useProject } from '../../src/state/projectStore';
+import { PROJECT_SAVE_DEBOUNCE_MS, projectSetting, resetProjectForTests, useProject, type OpenTarget } from '../../src/state/projectStore';
 
 const spec = (o: Partial<VideoSpec> = {}): VideoSpec => ({
   aspect: '9:16',
@@ -26,7 +26,8 @@ const spec = (o: Partial<VideoSpec> = {}): VideoSpec => ({
 function assignment(deliverables: Deliverable[], id = 'A03'): Assignment {
   return {
     id,
-    number: 3,
+    // Nummer aus der ID (A03 → 3): Der Projektordner hängt an der Nummer.
+    number: Number(id.slice(1)),
     issuedAt: 0,
     deadline: 1,
     expiresAt: 2,
@@ -47,6 +48,9 @@ const film = (o: Partial<VideoSpec> = {}): Deliverable => ({ id: 'film', kind: '
 const research: Deliverable = { id: 'recherche', kind: 'research', label: 'Exposé', researchTemplate: 'expose' };
 
 const store = () => useProject.getState();
+/** Ziel „Projekt des Auftrags“ für `open`. */
+const at = (a: Assignment): OpenTarget => ({ kind: 'assignment', assignment: a });
+const DIR_A03 = '/mock/Medienwerkstatt/A03_Cafe-Muehle';
 const seq = (): Sequence => {
   const s = store().seq;
   if (!s) throw new Error('keine Sequenz');
@@ -66,9 +70,9 @@ describe('open', () => {
   it('legt ohne gespeichertes Projekt eine Sequenz nach der ersten Video-Abgabe an und sichert sofort', async () => {
     const b = new MockBackend();
     const save = vi.spyOn(b, 'saveProject');
-    await store().open(assignment([research, film()]), b);
+    await store().open(at(assignment([research, film()])), b);
     expect(store().status).toBe('ready');
-    expect(store().dir).toBe('/mock/Medienwerkstatt/A03');
+    expect(store().dir).toBe(DIR_A03);
     const s = seq();
     expect([s.width, s.height, s.fps, s.name]).toEqual([1080, 1920, 30, 'Reel']);
     expect(s.tracks.map((t) => t.name)).toEqual(['V1', 'V2', 'A1', 'A2', 'A3', 'A4']);
@@ -77,17 +81,17 @@ describe('open', () => {
     expect(p.activeSequenceId).toBe(s.id);
     expect(p.media).toEqual([]);
     expect(save).toHaveBeenCalledTimes(1);
-    expect(save.mock.calls[0][0]).toBe('/mock/Medienwerkstatt/A03');
+    expect(save.mock.calls[0][0]).toBe(DIR_A03);
     expect(store().canUndo).toBe(false);
   });
 
   it('lädt ein vorhandenes Projekt (auch nach Neuladen der Seite)', async () => {
-    await store().open(assignment([film()]), new MockBackend());
+    await store().open(at(assignment([film()])), new MockBackend());
     await store().import(['/fixtures/e2e-clip.webm']);
     const id = seq().id;
     await store().flush();
     resetProjectForTests();
-    await store().open(assignment([film()]), new MockBackend());
+    await store().open(at(assignment([film()])), new MockBackend());
     expect(seq().id).toBe(id);
     expect(store().project!.media.map((m) => m.name)).toEqual(['e2e-clip.webm']);
   });
@@ -95,7 +99,7 @@ describe('open', () => {
   it('reiner Recherche-Auftrag braucht keine Werkstatt', async () => {
     const b = new MockBackend();
     const save = vi.spyOn(b, 'saveProject');
-    await store().open(assignment([research]), b);
+    await store().open(at(assignment([research])), b);
     expect(store().status).toBe('noVideo');
     expect(store().project).toBeNull();
     expect(save).not.toHaveBeenCalled();
@@ -105,7 +109,7 @@ describe('open', () => {
     const b = new MockBackend();
     vi.spyOn(b, 'loadProject').mockRejectedValueOnce(new Error('Platte weg'));
     const save = vi.spyOn(b, 'saveProject');
-    await store().open(assignment([film()]), b);
+    await store().open(at(assignment([film()])), b);
     expect(store().status).toBe('error');
     expect(store().loadError).toContain('Platte weg');
     expect(save).not.toHaveBeenCalled();
@@ -115,10 +119,10 @@ describe('open', () => {
     const b = new MockBackend();
     const save = vi.spyOn(b, 'saveProject');
     const a = assignment([film()]);
-    await Promise.all([store().open(a, b), store().open(a, b)]);
+    await Promise.all([store().open(at(a), b), store().open(at(a), b)]);
     expect(save).toHaveBeenCalledTimes(1);
     store().apply((s) => ({ ...s, inPoint: 5 }));
-    await store().open(a, b);
+    await store().open(at(a), b);
     expect(seq().inPoint).toBe(5);
     expect(store().canUndo).toBe(true);
   });
@@ -126,7 +130,7 @@ describe('open', () => {
 
 describe('apply / undo / redo', () => {
   it('legt Verlaufsschritte an und stellt sie wieder her', async () => {
-    await store().open(assignment([film()]), new MockBackend());
+    await store().open(at(assignment([film()])), new MockBackend());
     const [m] = await store().import(['/fixtures/e2e-clip.webm']);
     const before = seq();
     expect(store().apply((s, media) => insertEdit(s, media.find((x) => x.id === m.id)!, 0, 5, 0, { video: 'V1', audio: 'A1' }, 'insert'))).toBe(true);
@@ -141,13 +145,13 @@ describe('apply / undo / redo', () => {
   });
 
   it('unveränderte Sequenz legt keinen Schritt an', async () => {
-    await store().open(assignment([film()]), new MockBackend());
+    await store().open(at(assignment([film()])), new MockBackend());
     expect(store().apply((s) => s)).toBe(false);
     expect(store().canUndo).toBe(false);
   });
 
   it('zusammengefasste Schritte (Regler ziehen) ergeben einen Verlaufsschritt', async () => {
-    await store().open(assignment([film()]), new MockBackend());
+    await store().open(at(assignment([film()])), new MockBackend());
     const before = seq();
     for (const f of [1, 2, 3]) store().apply((s) => ({ ...s, inPoint: f }), { coalesce: 'in' });
     store().endGesture();
@@ -164,7 +168,7 @@ describe('Autosave', () => {
   it('ist 2 s entprellt', async () => {
     vi.useFakeTimers();
     const b = new MockBackend();
-    await store().open(assignment([film()]), b);
+    await store().open(at(assignment([film()])), b);
     const save = vi.spyOn(b, 'saveProject');
     store().apply((s) => ({ ...s, inPoint: 4 }));
     await vi.advanceTimersByTimeAsync(PROJECT_SAVE_DEBOUNCE_MS - 10);
@@ -182,7 +186,7 @@ describe('Autosave', () => {
   it('Fehler: Hinweis, neuer Versuch nach 2 s, danach gelöscht', async () => {
     vi.useFakeTimers();
     const b = new MockBackend();
-    await store().open(assignment([film()]), b);
+    await store().open(at(assignment([film()])), b);
     const save = vi.spyOn(b, 'saveProject').mockRejectedValueOnce(new Error('voll'));
     store().apply((s) => ({ ...s, inPoint: 7 }));
     await vi.advanceTimersByTimeAsync(PROJECT_SAVE_DEBOUNCE_MS);
@@ -196,7 +200,7 @@ describe('Autosave', () => {
 
   it('flush speichert sofort', async () => {
     const b = new MockBackend();
-    await store().open(assignment([film()]), b);
+    await store().open(at(assignment([film()])), b);
     const save = vi.spyOn(b, 'saveProject');
     store().apply((s) => ({ ...s, inPoint: 2 }));
     await store().flush();
@@ -209,7 +213,7 @@ describe('Autosave', () => {
 describe('Medien', () => {
   it('import übernimmt Probe-Daten, erstellt Proxies und meldet Fortschritt', async () => {
     const b = new MockBackend();
-    await store().open(assignment([film()]), b);
+    await store().open(at(assignment([film()])), b);
     const seen: number[] = [];
     const unsub = useProject.subscribe((s) => {
       for (const p of Object.values(s.proxyProgress)) seen.push(p);
@@ -225,7 +229,7 @@ describe('Medien', () => {
 
   it('setShotSize beschriftet den Clip und wird gespeichert', async () => {
     const b = new MockBackend();
-    await store().open(assignment([film()]), b);
+    await store().open(at(assignment([film()])), b);
     const [m] = await store().import(['/fixtures/e2e-clip.webm']);
     store().setShotSize(m.id, 'halbnah');
     expect(store().project!.media[0].shotSize).toBe('halbnah');
@@ -236,7 +240,7 @@ describe('Medien', () => {
 
   it('Proxies laufen in einer Warteschlange mit höchstens 2 gleichzeitig; Wartende sind markiert', async () => {
     const b = new MockBackend();
-    await store().open(assignment([film()]), b);
+    await store().open(at(assignment([film()])), b);
     let running = 0;
     let maxRunning = 0;
     const started: string[] = [];
@@ -279,7 +283,7 @@ describe('Medien', () => {
 
   it('Projekt-Einstellung Sicherheits-Limiter: standardmäßig an, Änderung wird gespeichert', async () => {
     const b = new MockBackend();
-    await store().open(assignment([film()]), b);
+    await store().open(at(assignment([film()])), b);
     expect(projectSetting(store().project, 'safetyLimiter')).toBe(true);
     store().setProjectSetting('safetyLimiter', false);
     await store().flush();
@@ -297,11 +301,11 @@ describe('Auftragswechsel', () => {
   it('scheitert das Sichern vor dem Wechsel, bleibt das alte Projekt offen und nichts geht verloren', async () => {
     vi.useFakeTimers();
     const b = new MockBackend();
-    await store().open(assignment([film()], 'A03'), b);
+    await store().open(at(assignment([film()], 'A03')), b);
     const save = vi.spyOn(b, 'saveProject').mockRejectedValue(new Error('voll'));
     store().apply((s) => ({ ...s, inPoint: 7 }));
-    expect(await store().open(assignment([film()], 'A04'), b)).toBe(false);
-    expect(store().assignment!.id).toBe('A03');
+    expect(await store().open(at(assignment([film()], 'A04')), b)).toBe(false);
+    expect(store().target).toMatchObject({ kind: 'assignment', assignment: { id: 'A03' } });
     expect(store().status).toBe('ready');
     expect(store().seq!.inPoint).toBe(7);
     expect(store().saveError).toBe(true);
@@ -313,9 +317,9 @@ describe('Auftragswechsel', () => {
     expect(store().saveError).toBe(true);
     // Platte wieder frei: Wechsel gelingt, der alte Stand ist gesichert
     save.mockRestore();
-    expect(await store().open(assignment([film()], 'A04'), b)).toBe(true);
-    expect(store().assignment!.id).toBe('A04');
+    expect(await store().open(at(assignment([film()], 'A04')), b)).toBe(true);
+    expect(store().target).toMatchObject({ kind: 'assignment', assignment: { id: 'A04' } });
     expect(store().switchError).toBeNull();
-    expect((await b.loadProject('/mock/Medienwerkstatt/A03')).value!.sequences[0].inPoint).toBe(7);
+    expect((await b.loadProject(DIR_A03)).value!.sequences[0].inPoint).toBe(7);
   });
 });

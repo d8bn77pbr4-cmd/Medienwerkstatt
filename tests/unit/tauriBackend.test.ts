@@ -26,6 +26,7 @@ vi.mock('@tauri-apps/api/event', () => ({
 
 import { TauriBackend } from '../../src/backend/TauriBackend';
 import type { AppState, Assignment, MediaItem, Project } from '../../src/backend/types';
+import { projectFolderFor } from '../../src/domain/assignments/naming';
 
 function emit(payload: unknown) {
   for (const cb of listeners.get('mw://progress') ?? []) cb({ payload });
@@ -69,7 +70,7 @@ describe('TauriBackend', () => {
     const a = { number: 7, client: { name: 'Bäckerei Korn' } } as unknown as Assignment;
     await b.loadState();
     await b.saveState(state);
-    await b.projectDir(a);
+    await b.projectDir(projectFolderFor(a));
     await b.loadProject('/p');
     await b.saveProject('/p', { version: 1 } as Project);
     await b.pickMediaFiles();

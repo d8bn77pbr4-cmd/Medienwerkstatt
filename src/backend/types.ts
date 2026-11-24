@@ -2,6 +2,7 @@ import type { Assignment } from '../domain/assignments/types';
 import type { ScheduleState } from '../domain/assignments/schedule';
 import type { Evaluation } from '../domain/chef/types';
 import type { ResearchDoc } from '../domain/chef/research';
+import type { FreeProject, OpenedRef } from '../domain/projects';
 import type { ExportPresetId, ExportRecord, MediaItem, Project } from '../domain/timeline/types';
 
 export type { Project, MediaItem, ExportRecord, ExportPresetId };
@@ -42,8 +43,12 @@ export type AppState = {
   checklist: Record<string, string[]>;
   /** Recherche-Entwürfe, Schlüssel `${assignmentId}/${deliverableId}`. */
   research: Record<string, ResearchDoc>;
+  /** Freie Projekte (ohne Auftrag). Fehlt in älteren Ständen (= keine). */
+  projects?: FreeProject[];
+  /** Zuletzt in der Werkstatt geöffnetes Projekt; geht beim Start wieder auf. */
+  lastOpened?: OpenedRef;
 };
-export type { Assignment };
+export type { Assignment, FreeProject, OpenedRef };
 export type Segment = { start: number; end: number };
 export type Interval = { start: number; end: number };
 /** Luma 0–1, Prozentwerte 0–100, U/V −0,5…0,5. */

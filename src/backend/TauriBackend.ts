@@ -1,9 +1,8 @@
 import { convertFileSrc, invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { projectFolderFor } from '../domain/assignments/naming';
 import type { Backend } from './Backend';
 import { isValidState } from './schema';
-import type { AppState, Assignment, LoadResult, Measurements, MediaItem, Project, Segment } from './types';
+import type { AppState, LoadResult, Measurements, MediaItem, Project, Segment } from './types';
 import { uuid } from '../domain/uuid';
 
 /** Fehler eines Tauri-Befehls: `code` ist einer von tool_missing, tool_failed, io, parse, invalid_key, rate_limited, offline, invalid_path. */
@@ -62,8 +61,8 @@ export class TauriBackend implements Backend {
   saveState(s: AppState): Promise<void> {
     return call('save_state', { state: s });
   }
-  projectDir(a: Assignment): Promise<string> {
-    return call('project_dir', { folder: projectFolderFor(a) });
+  projectDir(folder: string): Promise<string> {
+    return call('project_dir', { folder });
   }
   loadProject(dir: string): Promise<LoadResult<Project>> {
     return call('load_project', { dir });

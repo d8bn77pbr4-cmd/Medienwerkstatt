@@ -1,9 +1,10 @@
-import type { AppState, Assignment, LoadResult, Measurements, MediaItem, Project, Segment } from './types';
+import type { AppState, LoadResult, Measurements, MediaItem, Project, Segment } from './types';
 
 export interface Backend {
   loadState(): Promise<LoadResult<AppState>>;
   saveState(s: AppState): Promise<void>;
-  projectDir(a: Assignment): Promise<string>;
+  /** Projektordner `folder` unter dem Projekt-Stamm (wird bei Bedarf angelegt); gibt den Pfad zurück. */
+  projectDir(folder: string): Promise<string>;
   loadProject(dir: string): Promise<LoadResult<Project>>;
   saveProject(dir: string, p: Project): Promise<void>;
   pickMediaFiles(): Promise<string[]>;

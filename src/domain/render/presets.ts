@@ -101,3 +101,8 @@ export function defaultPresetFor(spec: VideoSpec): ExportPresetId {
 export function presetForSize(width: number, height: number): ExportPreset | undefined {
   return EXPORT_PRESETS.find((p) => p.size?.width === width && p.size?.height === height);
 }
+
+/** Voreinstellung im freien Projekt: das Preset in der Größe des Projektformats (sonst Social 16:9). */
+export function freePresetFor(format: { width: number; height: number }): ExportPresetId {
+  return presetForSize(format.width, format.height)?.id ?? 'social169';
+}

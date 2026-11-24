@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 import { getBackend } from '../backend';
 import type { Backend } from '../backend/Backend';
+import { projectFolderFor } from '../domain/assignments/naming';
 import type { Assignment, ShotSize } from '../domain/assignments/types';
+import { folderOf, type FreeProject, type OpenedRef } from '../domain/projects';
 import { History } from '../domain/timeline/history';
 import { newSequence, withFormat } from '../domain/timeline/sequence';
 import { projectSetting } from '../domain/timeline/settings';
@@ -19,9 +21,34 @@ export const SWITCH_ERROR = 'Wechsel nicht möglich – Projekt konnte nicht ges
 export type ProjectStatus = 'idle' | 'loading' | 'ready' | 'noVideo' | 'error';
 export type SeqOp = (seq: Sequence, media: MediaItem[]) => Sequence;
 
+/** Was die Werkstatt öffnet: das Projekt eines Auftrags oder ein freies Projekt. */
+export type OpenTarget = { kind: 'assignment'; assignment: Assignment } | { kind: 'free'; project: FreeProject };
+
+/** Kurzform für `lastOpened` und Vergleiche. */
+export function refOf(t: OpenTarget): OpenedRef {
+  return t.kind === 'assignment' ? { kind: 'assignment', id: t.assignment.id } : { kind: 'free', id: t.project.id };
+}
+
+/** Eindeutiger Schlüssel eines Ziels (`assignment:A01`, `free:p-…`). */
+export function targetKey(t: OpenTarget | OpenedRef): string {
+  const r = 'id' in t ? t : refOf(t);
+  return `${r.kind}:${r.id}`;
+}
+
+/** Schlüssel des offenen Ziels im Store (oder `null`). */
+export function currentKey(s: Pick<ProjectStore, 'target'>): string | null {
+  return s.target ? targetKey(s.target) : null;
+}
+
+/** Projektordner des Ziels (unter dem Projekt-Stamm). */
+export function targetFolder(t: OpenTarget): string {
+  return t.kind === 'assignment' ? projectFolderFor(t.assignment) : folderOf(t.project);
+}
+
 export interface ProjectStore {
   status: ProjectStatus;
-  assignment: Assignment | null;
+  /** Offenes (bzw. gerade öffnendes) Ziel. */
+  target: OpenTarget | null;
   dir: string | null;
   project: Project | null;
   /** Aktive Sequenz (= aktueller Stand des Verlaufs). */
@@ -37,14 +64,14 @@ export interface ProjectStore {
   /** Medien, deren Proxy in der Warteschlange wartet (Reihenfolge der Abarbeitung). */
   proxyQueue: string[];
   importError: string | null;
-  /** Wechsel zu einem anderen Auftrag abgelehnt, weil der offene Stand nicht gesichert werden konnte. */
+  /** Wechsel zu einem anderen Projekt abgelehnt, weil der offene Stand nicht gesichert werden konnte. */
   switchError: string | null;
   /**
-   * Öffnet das Projekt des Auftrags (legt es bei Bedarf an). Ungesicherte Änderungen eines anderen
-   * offenen Projekts werden vorher gesichert; schlägt das fehl, bleibt das alte Projekt offen,
+   * Öffnet das Projekt des Auftrags bzw. das freie Projekt (legt es bei Bedarf an). Ungesicherte Änderungen
+   * eines anderen offenen Projekts werden vorher gesichert; schlägt das fehl, bleibt das alte Projekt offen,
    * `switchError` ist gesetzt und das Ergebnis ist `false`.
    */
-  open(a: Assignment, backend?: Backend): Promise<boolean>;
+  open(target: OpenTarget, backend?: Backend): Promise<boolean>;
   import(paths: string[]): Promise<MediaItem[]>;
   setShotSize(mediaId: string, s: ShotSize | null): void;
   /** Projekt-Einstellung setzen (wird mit dem Projekt gespeichert). */
@@ -74,7 +101,7 @@ let history: History<Sequence[]> | null = null;
 let timer: ReturnType<typeof setTimeout> | null = null;
 let dirty = false;
 let gesture: string | null = null;
-let inFlight: { id: string; promise: Promise<boolean> } | null = null;
+let inFlight: { key: string; promise: Promise<boolean> } | null = null;
 /** Zählt Öffnungen hoch: verspätete Ergebnisse eines älteren `open` werden verworfen. */
 let openToken = 0;
 /** Proxy-Warteschlange des offenen Projekts. */
@@ -94,7 +121,14 @@ function isProject(v: unknown): v is Project {
   return !!p && p.version === 1 && Array.isArray(p.media) && Array.isArray(p.sequences) && p.sequences.length > 0;
 }
 
-function freshProject(a: Assignment): Project | null {
+/** Neues Projekt: Aufträge nach der ersten Video-Abgabe (ohne: `null`), freie Projekte im gewählten Format. */
+function freshProject(t: OpenTarget): Project | null {
+  if (t.kind === 'free') {
+    const { format, name, id } = t.project;
+    const seq = newSequence({ width: format.width, height: format.height, fps: format.fps, name });
+    return { version: 1, freeProjectId: id, media: [], sequences: [seq], activeSequenceId: seq.id, exports: [] };
+  }
+  const a = t.assignment;
   const d = a.deliverables.find((x) => x.kind === 'video' && x.videoSpec);
   if (!d?.videoSpec) return null;
   const seq = newSequence({ width: d.videoSpec.width, height: d.videoSpec.height, fps: d.videoSpec.fps, name: d.label });
@@ -105,7 +139,7 @@ const activeOf = (p: Project): Sequence => p.sequences.find((s) => s.id === p.ac
 
 const EMPTY = {
   status: 'idle' as ProjectStatus,
-  assignment: null,
+  target: null,
   dir: null,
   project: null,
   seq: null,
@@ -164,15 +198,15 @@ export const useProject = create<ProjectStore>()((set, get) => {
     scheduleSave();
   };
 
-  const doOpen = async (a: Assignment, b: Backend, token: number) => {
+  const doOpen = async (t: OpenTarget, b: Backend, token: number) => {
     cancelTimer();
     dirty = false;
     gesture = null;
     history = null;
     backend = b;
     proxyJobs = [];
-    set({ ...EMPTY, status: 'loading', assignment: a });
-    const fresh = freshProject(a);
+    set({ ...EMPTY, status: 'loading', target: t });
+    const fresh = freshProject(t);
     if (!fresh) {
       set({ status: 'noVideo' });
       return;
@@ -180,7 +214,7 @@ export const useProject = create<ProjectStore>()((set, get) => {
     let dir: string;
     let loaded;
     try {
-      dir = await b.projectDir(a);
+      dir = await b.projectDir(targetFolder(t));
       loaded = await b.loadProject(dir);
     } catch (e) {
       if (token === openToken) set({ status: 'error', loadError: e instanceof Error ? e.message : String(e) });
@@ -212,16 +246,17 @@ export const useProject = create<ProjectStore>()((set, get) => {
   return {
     ...EMPTY,
 
-    open(a, b = getBackend()) {
+    open(t, b = getBackend()) {
       const cur = get();
-      if (cur.assignment?.id === a.id && cur.status === 'ready' && backend === b) {
+      const key = targetKey(t);
+      if (currentKey(cur) === key && cur.status === 'ready' && backend === b) {
         if (cur.switchError) set({ switchError: null });
         return Promise.resolve(true);
       }
-      if (inFlight && inFlight.id === a.id) return inFlight.promise;
+      if (inFlight && inFlight.key === key) return inFlight.promise;
       const token = ++openToken;
       const run = async (): Promise<boolean> => {
-        // Wechsel des Auftrags: offenen Stand vorher sichern. Gelingt das nicht, nicht wechseln –
+        // Wechsel des Projekts: offenen Stand vorher sichern. Gelingt das nicht, nicht wechseln –
         // sonst gingen die Änderungen verloren (Zeitgeber, „dirty“ und Hinweis bleiben).
         if (dirty) {
           await flush();
@@ -230,13 +265,13 @@ export const useProject = create<ProjectStore>()((set, get) => {
             return false;
           }
         }
-        await doOpen(a, b, token);
+        await doOpen(t, b, token);
         return token === openToken;
       };
       const promise = run().finally(() => {
         if (inFlight?.promise === promise) inFlight = null;
       });
-      inFlight = { id: a.id, promise };
+      inFlight = { key, promise };
       return promise;
     },
 

@@ -1,4 +1,5 @@
 import type { Backend } from '../backend/Backend';
+import { projectFolderFor } from '../domain/assignments/naming';
 import type { Assignment } from '../domain/assignments/types';
 import type { Project } from '../domain/timeline/types';
 import { useProject } from './projectStore';
@@ -9,11 +10,11 @@ import { useProject } from './projectStore';
  */
 export async function loadProjectFor(a: Assignment, backend: Backend): Promise<{ dir: string; project: Project | null }> {
   const open = useProject.getState();
-  if (open.assignment?.id === a.id && open.status === 'ready' && open.project && open.dir) {
+  if (open.target?.kind === 'assignment' && open.target.assignment.id === a.id && open.status === 'ready' && open.project && open.dir) {
     await open.flush();
     return { dir: open.dir, project: useProject.getState().project };
   }
-  const dir = await backend.projectDir(a);
+  const dir = await backend.projectDir(projectFolderFor(a));
   const loaded = await backend.loadProject(dir);
   return { dir, project: loaded.value };
 }

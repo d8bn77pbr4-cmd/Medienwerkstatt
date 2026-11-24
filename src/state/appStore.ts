@@ -10,6 +10,7 @@ import type { Evaluation } from '../domain/chef/types';
 import type { ResearchDoc } from '../domain/chef/research';
 import { loadRules } from '../domain/chef/rules';
 import type { Clock } from '../domain/time';
+import { checkProjectName, freeProjectsOf, newFreeProject, type FreeProject, type OpenedRef, type ProjectFormat } from '../domain/projects';
 import { prepareFrames, type GeminiPreparation } from './geminiFrames';
 import type { GeminiChoice } from './gemini';
 import { loadProjectFor } from './projectAccess';
@@ -59,6 +60,12 @@ export interface AppStore {
   setGeminiModel(model: string | null): void;
   toggleChecklist(assignmentId: string, itemId: string): void;
   setDevTimeOffset(ms: number): void;
+  /** Freies Projekt anlegen (Name wird getrimmt, 1–60 Zeichen); `null` bei ungültigem Namen. Sichert sofort. */
+  createProject(name: string, format: ProjectFormat): FreeProject | null;
+  /** Anzeigenamen eines freien Projekts ändern (der Ordner bleibt). `false` bei ungültigem Namen. */
+  renameProject(id: string, name: string): boolean;
+  /** Ein Projekt wurde in der Werkstatt geöffnet: `lastOpened` setzen, bei freien Projekten auch `openedAt`. */
+  noteOpened(ref: OpenedRef): void;
   dismissRestoredBanner(): void;
   /** Nach Ladefehler: frischen Zustand mit neuer Installations-ID anlegen. */
   restart(): Promise<void>;
@@ -80,19 +87,24 @@ function cancelTimer() {
 
 /** Fehlende Felder älterer Stände auffüllen. */
 function normalize(s: AppState): AppState {
-  return {
+  const lastOpened = s.lastOpened && (s.lastOpened.kind === 'free' || s.lastOpened.kind === 'assignment') && typeof s.lastOpened.id === 'string' ? s.lastOpened : undefined;
+  const out: AppState = {
     ...s,
     evaluations: s.evaluations ?? [],
     assignments: s.assignments ?? [],
     showreel: s.showreel ?? [],
     checklist: s.checklist ?? {},
     research: s.research ?? {},
+    projects: freeProjectsOf(s.projects),
     settings: {
       theme: s.settings?.theme ?? 'auto',
       gemini: { enabled: s.settings?.gemini?.enabled ?? false, model: s.settings?.gemini?.model ?? null },
       devTimeOffsetMs: s.settings?.devTimeOffsetMs ?? 0,
     },
   };
+  if (lastOpened) out.lastOpened = lastOpened;
+  else delete out.lastOpened;
+  return out;
 }
 
 function freshState(installId: string, now: number): AppState {
@@ -107,6 +119,7 @@ function freshState(installId: string, now: number): AppState {
     settings: { theme: 'auto', gemini: { enabled: false, model: null }, devTimeOffsetMs: 0 },
     checklist: {},
     research: {},
+    projects: [],
   });
 }
 
@@ -360,6 +373,46 @@ export const useApp = create<AppStore>()((set, get) => {
     setDevTimeOffset(ms) {
       commit((s) => ({ ...s, settings: { ...s.settings, devTimeOffsetMs: ms } }));
       get().tickNow();
+    },
+
+    createProject(name, format) {
+      const s = get().state;
+      const clock = get().clock;
+      const check = checkProjectName(name);
+      if (!s || !clock || !check.ok) return null;
+      const p = newFreeProject(check.name, format, clock.now());
+      commit((cur) => ({ ...cur, projects: [...(cur.projects ?? []), p] }));
+      // Der neue Eintrag muss ein sofortiges Beenden überleben (das Projekt selbst sichert der projectStore sofort).
+      void flush();
+      return p;
+    },
+
+    renameProject(id, name) {
+      const check = checkProjectName(name);
+      if (!check.ok || !get().state?.projects?.some((p) => p.id === id)) return false;
+      commit((s) => {
+        const list = s.projects ?? [];
+        const cur = list.find((p) => p.id === id);
+        if (!cur || cur.name === check.name) return s;
+        return { ...s, projects: list.map((p) => (p.id === id ? { ...p, name: check.name } : p)) };
+      });
+      return true;
+    },
+
+    noteOpened(ref) {
+      const now = get().clock?.now() ?? 0;
+      commit((s) => {
+        const list = s.projects ?? [];
+        if (ref.kind === 'free' && !list.some((p) => p.id === ref.id)) return s;
+        if (ref.kind === 'assignment' && !s.assignments.some((a) => a.id === ref.id)) return s;
+        const same = s.lastOpened?.kind === ref.kind && s.lastOpened.id === ref.id;
+        if (ref.kind === 'assignment') return same ? s : { ...s, lastOpened: { kind: ref.kind, id: ref.id } };
+        return {
+          ...s,
+          lastOpened: same ? s.lastOpened : { kind: ref.kind, id: ref.id },
+          projects: list.map((p) => (p.id === ref.id ? { ...p, openedAt: now } : p)),
+        };
+      });
     },
 
     dismissRestoredBanner() {

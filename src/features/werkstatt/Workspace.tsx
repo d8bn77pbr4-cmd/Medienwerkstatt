@@ -1,14 +1,13 @@
-import { ChevronsLeftRight, Hand, Keyboard, Magnet, MousePointer2, Scissors, UnfoldHorizontal, X, type LucideIcon } from 'lucide-react';
+import { ChevronsLeftRight, Hand, Keyboard, LayoutGrid, Magnet, MousePointer2, Scissors, UnfoldHorizontal, X, type LucideIcon } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getBackend } from '../../backend';
-import type { Assignment } from '../../domain/assignments/types';
 import { newSequence } from '../../domain/timeline/sequence';
 import type { MediaItem, Sequence } from '../../domain/timeline/types';
-import { useProject } from '../../state/projectStore';
+import { targetKey, useProject, type OpenTarget } from '../../state/projectStore';
 import { COMMANDS, type CommandCtx } from './commands';
 import { SubmitSheet } from '../chefbuero/SubmitSheet';
-import { ExportSheet } from './ExportSheet';
+import { ExportSheet, FreeExportSheet } from './ExportSheet';
 import { Inspector } from './Inspector';
 import { onKind, primaryClip } from './inspectorParts';
 import { COMMAND_IDS, bindingFor, tooltipFor, type CommandId } from './keymap';
@@ -72,8 +71,11 @@ function previewSequence(): () => Sequence {
   };
 }
 
-/** Die Arbeitsfläche: Medien links, Quelle + Programm oben, Inspektor rechts, Timeline unten. Immer dunkel. */
-export function Workspace({ assignment, heading }: { assignment: Assignment; heading: string }) {
+/**
+ * Die Arbeitsfläche: Medien links, Quelle + Programm oben, Inspektor rechts, Timeline unten. Immer dunkel.
+ * Für Aufträge mit Vorgaben, Export nach Abgabe und „Abgeben“; für freie Projekte ohne Vorgaben.
+ */
+export function Workspace({ target, heading }: { target: OpenTarget; heading: string }) {
   const seq = useProject((s) => s.seq) ?? FALLBACK;
   const saveError = useProject((s) => s.saveError);
   const restored = useProject((s) => s.restoredFromBackup);
@@ -91,7 +93,9 @@ export function Workspace({ assignment, heading }: { assignment: Assignment; hea
   const [scopes, setScopes] = useState(false);
   const binRef = useRef<HTMLDivElement>(null);
   const tlRef = useRef<HTMLDivElement>(null);
-  const spec = assignment.deliverables.find((d) => d.kind === 'video' && d.videoSpec)?.videoSpec ?? null;
+  const assignment = target.kind === 'assignment' ? target.assignment : null;
+  const spec = assignment?.deliverables.find((d) => d.kind === 'video' && d.videoSpec)?.videoSpec ?? null;
+  const key = targetKey(target);
 
   useEffect(() => {
     const backend = getBackend();
@@ -115,7 +119,7 @@ export function Workspace({ assignment, heading }: { assignment: Assignment; hea
       source.dispose();
       setEngines(null);
     };
-  }, [assignment.id]);
+  }, [key]);
 
   const ctxRef = useRef<CommandCtx>({ program: null, source: null, active: () => useWerkstatt.getState().activeMonitor });
   ctxRef.current.program = engines?.program ?? null;
@@ -149,6 +153,17 @@ export function Workspace({ assignment, heading }: { assignment: Assignment; hea
     <main className="main werkstatt">
       <div className="ws">
         <header className="ws-bar">
+          <button
+            type="button"
+            className="btn btn-small"
+            title="Zur Projektübersicht"
+            onClick={() => {
+              void useProject.getState().flush();
+              navigate('/projekte');
+            }}
+          >
+            <LayoutGrid aria-hidden="true" /> Projekte
+          </button>
           <h1 className="ws-title">{heading}</h1>
           <div className="ws-tools" role="group" aria-label="Werkzeuge">
             {TOOLS.map(({ tool: t, command, icon: Icon }) => (
@@ -242,7 +257,8 @@ export function Workspace({ assignment, heading }: { assignment: Assignment; hea
         </div>
       </div>
       {shortcutsOpen && <ShortcutOverlay onClose={() => useWerkstatt.getState().setShortcutsOpen(false)} />}
-      {exportOpen && (
+      {exportOpen && target.kind === 'free' && <FreeExportSheet freeProject={target.project} onClose={() => useWerkstatt.getState().setExportOpen(false)} />}
+      {exportOpen && assignment && (
         <ExportSheet
           assignment={assignment}
           onClose={() => useWerkstatt.getState().setExportOpen(false)}
@@ -252,7 +268,7 @@ export function Workspace({ assignment, heading }: { assignment: Assignment; hea
           }}
         />
       )}
-      {submitOpen && (
+      {submitOpen && assignment && (
         <SubmitSheet
           assignment={assignment}
           onClose={() => useWerkstatt.getState().setSubmitOpen(false)}

@@ -14,7 +14,10 @@ export type ExportDeps = {
   backend: Backend;
   /** Projektordner (ein Pfad unter dem Projekt-Stamm). */
   dir: string;
-  assignment: Assignment;
+  /** Auftrag: Dateiname nach `fileNameFor`. Für freie Projekte stattdessen `fileName`. */
+  assignment?: Assignment;
+  /** Freies Projekt: Dateiname je Version und Ausgabeformat (Größe des Presets, Bildrate der Sequenz). */
+  fileName?: (version: number, out: { width: number; height: number; fps: number }) => string;
   now: () => number;
   /** `h264_videotoolbox` im Tauri-Fenster, sonst `libx264`. */
   h264Encoder: 'h264_videotoolbox' | 'libx264';
@@ -82,7 +85,11 @@ export async function exportDeliverable(
   const preset = getPreset(presetId);
   const { backend, dir } = deps;
   const version = Math.max(0, ...project.exports.filter((r) => r.deliverableId === deliverable.id).map((r) => r.version)) + 1;
-  let fileName = fileNameFor(deps.assignment, deliverable, version);
+  const { width, height } = exportSize(seq, preset);
+  let fileName: string;
+  if (deps.fileName) fileName = deps.fileName(version, { width, height, fps: seq.fps });
+  else if (deps.assignment) fileName = fileNameFor(deps.assignment, deliverable, version);
+  else throw new Error('Export: Dateiname unbekannt (weder Auftrag noch freies Projekt).');
   const ext = preset.container;
   if (!fileName.endsWith(`.${ext}`)) fileName = fileName.replace(/\.[^.]+$/, `.${ext}`);
   const output = `${dir}/Export/${fileName}`;
@@ -100,7 +107,6 @@ export async function exportDeliverable(
     }
     assets.lutPathByClipId[c.id] = path;
   }
-  const { width, height } = exportSize(seq, preset);
   const render = deps.renderTitlePng ?? renderTitlePngDefault;
   const pngs = new Map<string, string>();
   for (const c of seq.clips) {

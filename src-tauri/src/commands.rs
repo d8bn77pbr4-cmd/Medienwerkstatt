@@ -94,8 +94,10 @@ fn valid_project_shape(bytes: &[u8]) -> bool {
     let Ok(v) = serde_json::from_slice::<Value>(bytes) else {
         return false;
     };
+    // Auftragsprojekt (`assignmentId`) oder freies Projekt (`freeProjectId`, Phase 1.1).
     v.get("version") == Some(&json!(1))
-        && json_has(&v, "assignmentId", Value::is_string)
+        && (json_has(&v, "assignmentId", Value::is_string)
+            || json_has(&v, "freeProjectId", Value::is_string))
         && json_has(&v, "media", Value::is_array)
         && json_has(&v, "sequences", Value::is_array)
 }
@@ -563,6 +565,11 @@ mod tests {
     fn project_shape_needs_media_and_sequences() {
         let ok = json!({"version":1,"assignmentId":"a","media":[],"sequences":[]});
         assert!(valid_project_shape(ok.to_string().as_bytes()));
+        let free = json!({"version":1,"freeProjectId":"p-1","media":[],"sequences":[]});
+        assert!(valid_project_shape(free.to_string().as_bytes()));
+        assert!(!valid_project_shape(
+            json!({"version":1,"media":[],"sequences":[]}).to_string().as_bytes()
+        ));
         assert!(!valid_project_shape(
             json!({"version":1}).to_string().as_bytes()
         ));

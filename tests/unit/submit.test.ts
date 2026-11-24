@@ -18,6 +18,7 @@ import { resetAppForTests, useApp } from '../../src/state/appStore';
 import { resetProjectForTests } from '../../src/state/projectStore';
 import { exportSegments, factsForExport, latestExport } from '../../src/state/submission';
 import perfect from '../fixtures/measurements/perfect.json';
+import { projectFolderFor } from '../../src/domain/assignments/naming';
 
 const rules = loadRules();
 const HOUR = 3_600_000;
@@ -216,7 +217,7 @@ describe('Korrektur-Regeln', () => {
 
 describe('Abgabe und Korrektur im App-Zustand', () => {
   const app = () => useApp.getState();
-  const dirFor = (a: Assignment) => `/mock/Medienwerkstatt/${a.id}`;
+  const dirFor = (a: Assignment) => `/mock/Medienwerkstatt/${projectFolderFor(a)}`;
   let backend: MockBackend;
   let clock: ReturnType<typeof stubClock>;
 
