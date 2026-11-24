@@ -152,6 +152,32 @@ test('Entwickler-Abschnitt nur mit ?dev=1', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Entwickler' })).toBeVisible();
 });
 
+test('Entwickler-Abschnitt per ⌥-Klick auf die Versionszeile (ohne Adressleiste), bleibt für die Sitzung', async ({ page }) => {
+  await page.goto('/einstellungen');
+  const version = page.getByTestId('app-version');
+  await expect(version).toContainText('Medienwerkstatt');
+  await version.click();
+  await expect(page.getByRole('heading', { name: 'Entwickler' })).toHaveCount(0);
+  await version.click({ modifiers: ['Alt'] });
+  await expect(page.getByRole('heading', { name: 'Entwickler' })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Entwickler' })).toBeVisible();
+  await page.getByTestId('app-version').click({ modifiers: ['Alt'] });
+  await expect(page.getByRole('heading', { name: 'Entwickler' })).toHaveCount(0);
+});
+
+test('Über: Version, ffmpeg-GPL-Hinweis mit Quelltext-Links, Lucide (ISC), Adobe nur beschreibend', async ({ page }) => {
+  await page.goto('/einstellungen');
+  const about = page.getByRole('region', { name: 'Über' });
+  await expect(about).toContainText('ffmpeg 9.1 (evermeet.cx), lizenziert unter der GNU GPL');
+  await expect(about).toContainText('separates Programm im App-Bundle');
+  await expect(about.getByRole('link', { name: /ffmpeg\.org/ })).toHaveAttribute('href', 'https://ffmpeg.org/download.html');
+  await expect(about.getByRole('link', { name: /evermeet\.cx/ })).toHaveAttribute('href', 'https://evermeet.cx/ffmpeg/');
+  await expect(about).toContainText('Lucide');
+  await expect(about).toContainText('ISC');
+  await expect(about).toContainText('Adobe');
+});
+
 test('Einstellungen ohne axe-Verstöße (hell, dunkel, mit Gemini und Hinweis)', async ({ page }) => {
   await page.goto('/einstellungen?dev=1');
   await page.getByRole('region', { name: 'Urlaub' }).getByLabel('Von').fill('2026-12-01');

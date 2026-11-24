@@ -51,3 +51,6 @@ input[type='password'], select {
 
 .set-warn { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-top: 12px; padding: 10px 14px; border: 1px solid var(--sig-care); border-radius: var(--r-sm); background: var(--surface-2); font-size: var(--fs-sub); font-weight: 600; }
 .set-warn svg { width: 18px; height: 18px; flex: none; color: var(--sig-care); }
+
+.about-version { font-variant-numeric: tabular-nums; color: var(--ink-2); user-select: none; }
+.about-list { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 6px; }
