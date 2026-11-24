@@ -18,6 +18,18 @@ pub enum Error {
     },
     #[error("Ausgabe nicht lesbar: {0}")]
     Parse(String),
+    /// Gemini lehnt den Schlüssel ab (HTTP 401/403).
+    #[error("Gemini-Schlüssel ungültig")]
+    InvalidKey,
+    /// Gemini begrenzt die Anfragen (HTTP 429).
+    #[error("Gemini: zu viele Anfragen")]
+    RateLimited,
+    /// Keine Verbindung zum Netz.
+    #[error("Keine Verbindung: {0}")]
+    Offline(String),
+    /// Anderer HTTP-Fehler.
+    #[error("Gemini-Fehler: {0}")]
+    Http(String),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

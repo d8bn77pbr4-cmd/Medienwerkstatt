@@ -29,4 +29,5 @@ jobs:
       - name: Testmedien erzeugen
         run: bash scripts/make-fixtures.sh
       - run: cargo test -p mw-media
+      - run: bash scripts/link-dev-ffmpeg.sh
       - run: cargo check -p medienwerkstatt

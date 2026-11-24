@@ -5,6 +5,7 @@ pub mod analyze;
 pub mod error;
 pub mod frames;
 pub mod fsx;
+pub mod gemini;
 pub mod probe;
 pub mod proxy;
 pub mod run;
@@ -16,6 +17,7 @@ pub use analyze::{
 pub use error::{Error, Result};
 pub use frames::extract_frames;
 pub use fsx::{read_with_backup, write_atomic};
+pub use gemini::{gemini_generate, gemini_models, gemini_request_body};
 pub use probe::{probe, MediaInfo, MediaKind};
 pub use proxy::{default_h264_encoder, proxy_args};
 pub use run::run_ffmpeg;
