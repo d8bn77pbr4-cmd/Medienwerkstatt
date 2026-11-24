@@ -32,6 +32,9 @@ export function insertEdit(
   opts: OpOpts = {},
 ): Sequence {
   const idGen = gen(opts);
+  srcIn = Math.max(0, srcIn);
+  if (media.kind !== 'image') srcOut = Math.min(srcOut, media.durationSec);
+  if (!(srcOut > srcIn)) return seq;
   const len = Math.max(1, Math.round((srcOut - srcIn) * seq.fps));
   const ok = (id: TrackId | undefined, kind: 'video' | 'audio') =>
     id !== undefined && trackKind(seq, id) === kind && !isLocked(seq, id) ? id : undefined;

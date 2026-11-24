@@ -1,6 +1,6 @@
 import { produce, type Draft } from 'immer';
 import { defaultIdGen, type IdGen } from '../sequence';
-import type { Clip, Frames, Sequence } from '../types';
+import type { Clip, Frames, MediaItem, Sequence } from '../types';
 
 export type OpOpts = { idGen?: IdGen; ignoreLinks?: boolean };
 export const EPS = 1e-6;
@@ -11,14 +11,26 @@ export const isLocked = (s: Sequence, trackId: string): boolean => s.tracks.find
 export const unlockedIds = (s: Sequence): string[] => s.tracks.filter((t) => !t.locked).map((t) => t.id);
 
 /** Wendet `recipe` auf einen Entwurf an und räumt danach Überblendungen und Verknüpfungen auf. */
-export function edit(seq: Sequence, recipe: (d: Draft<Sequence>) => void): Sequence {
+export function edit(seq: Sequence, recipe: (d: Draft<Sequence>) => void, media: MediaItem[] = []): Sequence {
   return produce(seq, (d) => {
     recipe(d);
-    tidy(d);
+    tidy(d, media);
   });
 }
 
-export function tidy(d: Draft<Sequence>): void {
+/** Größtmögliche Überblendungsdauer: zweifacher kleinster Überhang, höchstens die kürzere Clip-Länge. */
+export function maxTransition(fps: number, media: MediaItem[], l: Clip, r: Clip): Frames {
+  const src = (c: Clip) => (c.kind === 'media' ? media.find((m) => m.id === c.mediaId) : undefined);
+  const tail = (c: Clip) => {
+    const m = src(c);
+    return !m || m.kind === 'image' ? Infinity : Math.floor((m.durationSec - c.sourceIn - c.duration / fps) * fps + EPS);
+  };
+  const head = (c: Clip) => (c.kind === 'title' ? Infinity : Math.floor(c.sourceIn * fps + EPS));
+  const handles = Math.max(0, Math.min(tail(l), head(r)));
+  return Math.min(handles * 2, l.duration, r.duration);
+}
+
+export function tidy(d: Draft<Sequence>, media: MediaItem[] = []): void {
   const byId = new Map(d.clips.map((c) => [c.id, c]));
   const keep = d.transitions.filter((t) => {
     const l = byId.get(t.leftClipId);
@@ -27,9 +39,12 @@ export function tidy(d: Draft<Sequence>): void {
   });
   if (keep.length !== d.transitions.length) d.transitions = keep;
   for (const t of d.transitions) {
-    const tid = byId.get(t.leftClipId)!.trackId;
-    if (t.trackId !== tid) t.trackId = tid;
+    const l = byId.get(t.leftClipId)!;
+    if (t.trackId !== l.trackId) t.trackId = l.trackId;
+    const max = maxTransition(d.fps, media, l, byId.get(t.rightClipId)!);
+    if (t.duration > max) t.duration = max;
   }
+  if (d.transitions.some((t) => t.duration < 1)) d.transitions = d.transitions.filter((t) => t.duration >= 1);
   const counts = new Map<string, number>();
   for (const c of d.clips) if (c.linkId) counts.set(c.linkId, (counts.get(c.linkId) ?? 0) + 1);
   for (const c of d.clips) if (c.linkId && (counts.get(c.linkId) ?? 0) < 2) c.linkId = null;
@@ -92,7 +107,7 @@ export function splitAtOnTracks(d: Draft<Sequence>, at: Frames, trackIds: string
     const c = d.clips.find((x) => x.id === id)!;
     const link = c.linkId;
     const right = splitClip(d, c, at, idGen);
-    if (link) right.linkId = newLinks.get(link) ?? link;
+    if (link) right.linkId = newLinks.get(link) ?? null;
   }
 }
 

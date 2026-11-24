@@ -183,6 +183,64 @@ describe('trim / roll', () => {
   });
 });
 
+describe('Fix-Runde 1', () => {
+  it('Roll mit verknüpftem Ton bleibt synchron, Ton wird mitgerollt', () => {
+    const s = base([
+      mkClip('v1', 'V1', 0, 50, { linkId: 'L1' }), mkClip('a1', 'A1', 0, 50, { linkId: 'L1' }),
+      mkClip('v2', 'V1', 50, 50, { linkId: 'L2', sourceIn: 2 }), mkClip('a2', 'A1', 50, 50, { linkId: 'L2', sourceIn: 2 }),
+    ]);
+    const r = roll(s, M, 'v1', 'v2', 10);
+    expect(on(r, 'V1').map(span)).toEqual([[0, 60], [60, 100]]);
+    expect(on(r, 'A1').map(span)).toEqual([[0, 60], [60, 100]]);
+    expect(projectFacts(r, M).hasJOrLCut).toBe(false);
+  });
+  it('Roll mit ignoreLinks auf dem Ton erzeugt J-Cut auf einer einzigen Tonspur', () => {
+    const s = base([
+      mkClip('v1', 'V1', 0, 100, { linkId: 'L1' }), mkClip('a1', 'A1', 0, 100, { linkId: 'L1' }),
+      mkClip('v2', 'V1', 100, 100, { linkId: 'L2', sourceIn: 2 }), mkClip('a2', 'A1', 100, 100, { linkId: 'L2', sourceIn: 2 }),
+    ]);
+    const r = roll(s, M, 'a1', 'a2', -25, { ignoreLinks: true });
+    expect(on(r, 'A1').map(span)).toEqual([[0, 75], [75, 200]]);
+    expect(on(r, 'V1').map(span)).toEqual([[0, 100], [100, 200]]);
+    expect(projectFacts(r, M).hasJOrLCut).toBe(true);
+  });
+  const tr = () => {
+    const s = base([mkClip('a', 'V1', 0, 50), mkClip('b', 'V1', 50, 50, { sourceIn: 0.4 })]);
+    const t = addTransition(s, M, 'a', 'b', 20);
+    expect(t.seq.transitions[0].duration).toBe(20);
+    return t.seq;
+  };
+  it('Ripple-Trimmen, das den Überhang frisst, kürzt die Überblendung', () => {
+    const r = trim(tr(), M, 'b', 'in', -5, 'ripple');
+    expect(r.transitions[0].duration).toBe(10);
+  });
+  it('Roll, der den Überhang entfernt, löscht die Überblendung', () => {
+    expect(roll(tr(), M, 'a', 'b', -10).transitions).toHaveLength(0);
+  });
+  it('Razor mit Partner auf gesperrter Spur: Verknüpfung nur mit der linken Hälfte', () => {
+    let s = base([mkClip('v', 'V1', 0, 100, { linkId: 'L' }), mkClip('a', 'A1', 0, 100, { linkId: 'L' })]);
+    s = { ...s, tracks: s.tracks.map((t) => (t.id === 'A1' ? { ...t, locked: true } : t)) };
+    const r = razor(s, 40, ['V1'], { idGen: counter() });
+    expect(r.clips).toHaveLength(3);
+    const counts = new Map<string, number>();
+    for (const c of r.clips) if (c.linkId) counts.set(c.linkId, (counts.get(c.linkId) ?? 0) + 1);
+    expect([...counts.values()].every((n) => n === 2)).toBe(true);
+    expect(on(r, 'V1')[1].linkId).toBeNull();
+    expect(on(r, 'V1')[0].linkId).toBe('L');
+  });
+  it('insertEdit begrenzt den Quellbereich', () => {
+    const empty = base([]);
+    const past = insertEdit(empty, M[0], 8, 15, 0, { video: 'V1' }, 'overwrite', { idGen: counter() });
+    expect(past.clips[0].duration).toBe(50);
+    expect(insertEdit(empty, M[0], 11, 15, 0, { video: 'V1' }, 'overwrite')).toBe(empty);
+    expect(insertEdit(empty, M[0], 5, 3, 0, { video: 'V1' }, 'overwrite')).toBe(empty);
+    const neg = insertEdit(empty, M[0], -2, 1, 0, { video: 'V1' }, 'overwrite', { idGen: counter() });
+    expect([neg.clips[0].sourceIn, neg.clips[0].duration]).toEqual([0, 25]);
+    const img = mkMedia('i', { kind: 'image', durationSec: 0, fps: null, hasAudio: false });
+    expect(insertEdit(empty, img, 0, 4, 0, { video: 'V1' }, 'overwrite', { idGen: counter() }).clips[0].duration).toBe(100);
+  });
+});
+
 describe('moveClips', () => {
   it('überschreibt das Ziel, Partner folgen', () => {
     const s = base([mkClip('a', 'V1', 0, 50, { linkId: 'L' }), mkClip('x', 'A1', 0, 50, { linkId: 'L' }), mkClip('b', 'V1', 60, 50)]);

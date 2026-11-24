@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { newSequence } from '../../src/domain/timeline/sequence';
 import type { Clip, MediaItem, Sequence } from '../../src/domain/timeline/types';
 import { projectFacts } from '../../src/domain/timeline/facts';
-import { addTransition } from '../../src/domain/timeline/ops';
+import { addTransition, razor, rippleDelete } from '../../src/domain/timeline/ops';
 
 const mkMedia = (id: string, over: Partial<MediaItem> = {}): MediaItem => ({
   kind: 'video', durationSec: 60, width: 1920, height: 1080, fps: 25, hasAudio: true, hdr: false,
@@ -62,5 +62,23 @@ describe('projectFacts', () => {
     expect(projectFacts(near, media).hasJOrLCut).toBe(false);
     const far = base([mkClip('v', 'V1', 0, 50, { linkId: 'L' }), mkClip('a', 'A1', 0, 53, { linkId: 'L' })]);
     expect(projectFacts(far, media).hasJOrLCut).toBe(true);
+  });
+  it('Durchschnitte (Razor ohne Änderung) erzeugen keine neue Einstellung', () => {
+    let n = 0;
+    const idGen = () => `r${++n}`;
+    let s = base([mkClip('a', 'V1', 0, 500)]);
+    for (const at of [125, 250, 375]) s = razor(s, at, ['V1'], { idGen });
+    expect(s.clips).toHaveLength(4);
+    const f = projectFacts(s, media);
+    expect(f.shots).toEqual([{ start: 0, end: 20, mediaId: 'm', shotSize: 'nah' }]);
+    expect(f.longestShotSec).toBe(20);
+  });
+  it('Razor mit entfernter Sekunde ergibt zwei Einstellungen', () => {
+    let n = 0;
+    const idGen = () => `r${++n}`;
+    let s = razor(razor(base([mkClip('a', 'V1', 0, 500)]), 200, ['V1'], { idGen }), 225, ['V1'], { idGen });
+    const mid = s.clips.find((c) => c.start === 200)!;
+    s = rippleDelete(s, [mid.id]);
+    expect(projectFacts(s, media).shots).toHaveLength(2);
   });
 });

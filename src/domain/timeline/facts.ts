@@ -3,6 +3,15 @@ import type { Clip, MediaItem, Sequence } from './types';
 
 const end = (c: Clip) => c.start + c.duration;
 
+/** Gleicher Clip oder Durchschnitt: gleiche Spur und Quelle, Quellzeit läuft (≤ 1 Bild Abweichung) weiter. */
+function continues(run: { clip: Clip; to: number }, next: Clip, at: number, fps: number): boolean {
+  if (run.clip.id === next.id) return true;
+  if (run.clip.trackId !== next.trackId || run.clip.mediaId !== next.mediaId) return false;
+  const prevSrc = run.clip.sourceIn + (run.to - run.clip.start) / fps;
+  const nextSrc = next.sourceIn + (at - next.start) / fps;
+  return Math.abs(nextSrc - prevSrc) <= 1 / fps + 1e-6;
+}
+
 /** Einstellungen: maximale Läufe desselben sichtbaren Clips auf der obersten nicht stummen Videospur (Titel zählen nicht). */
 function shotsOf(seq: Sequence, media: MediaItem[]): ProjectFacts['shots'] {
   const videoTracks = seq.tracks.filter((t) => t.kind === 'video' && !t.muted).map((t) => t.id);
@@ -18,8 +27,10 @@ function shotsOf(seq: Sequence, media: MediaItem[]): ProjectFacts['shots'] {
     }
     if (!visible) continue;
     const last = runs[runs.length - 1];
-    if (last && last.clip.id === visible.id && last.to === from) last.to = to;
-    else runs.push({ clip: visible, from, to });
+    if (last && last.to === from && continues(last, visible, from, seq.fps)) {
+      last.to = to;
+      last.clip = visible;
+    } else runs.push({ clip: visible, from, to });
   }
   return runs.map((r) => {
     const mediaId = r.clip.mediaId ?? '';

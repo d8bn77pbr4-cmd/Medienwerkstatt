@@ -68,28 +68,50 @@ export function trim(
       }
     }
     if (ripple) shiftAfter(d, oldEnd, edge === 'out' ? dlt : -dlt, ids);
-  });
+  }, media);
 }
 
-/** Schnitt zwischen zwei aneinanderstoßenden Clips verschieben (Roll). */
-export function roll(seq: Sequence, media: MediaItem[], leftId: string, rightId: string, delta: Frames): Sequence {
+/**
+ * Schnitt zwischen zwei aneinanderstoßenden Clips verschieben (Roll). Verknüpfte Partnerschnitte rollen mit,
+ * außer `ignoreLinks` (⌥: nur die angegebene Spur → J-/L-Cut).
+ */
+export function roll(seq: Sequence, media: MediaItem[], leftId: string, rightId: string, delta: Frames, opts: OpOpts = {}): Sequence {
   const l = seq.clips.find((c) => c.id === leftId);
   const r = seq.clips.find((c) => c.id === rightId);
   if (!l || !r || l.trackId !== r.trackId || clipEnd(l) !== r.start || isLocked(seq, l.trackId)) return seq;
-  const lb = bounds(seq, media, l, 'out', true);
-  const rb = bounds(seq, media, r, 'in', true);
-  const dlt = Math.round(Math.max(Math.max(lb.min, rb.min), Math.min(Math.min(lb.max, rb.max), delta)));
-  if (dlt === 0 || Math.max(lb.min, rb.min) > Math.min(lb.max, rb.max)) return seq;
+  const pairs: [Clip, Clip][] = [[l, r]];
+  if (!opts.ignoreLinks && l.linkId && r.linkId) {
+    for (const pl of seq.clips) {
+      if (pl.id === l.id || pl.linkId !== l.linkId || isLocked(seq, pl.trackId)) continue;
+      const pr = seq.clips.find((c) => c.id !== r.id && c.linkId === r.linkId && c.trackId === pl.trackId && c.start === clipEnd(pl));
+      if (pr) pairs.push([pl, pr]);
+    }
+  }
+  let lo = -Infinity;
+  let hi = Infinity;
+  for (const [pl, pr] of pairs) {
+    const lb = bounds(seq, media, pl, 'out', true);
+    const rb = bounds(seq, media, pr, 'in', true);
+    lo = Math.max(lo, lb.min, rb.min);
+    hi = Math.min(hi, lb.max, rb.max);
+  }
+  const dlt = lo > hi ? 0 : Math.round(Math.max(lo, Math.min(hi, delta)));
+  if (dlt === 0) return seq;
+  const left = new Set(pairs.map((p) => p[0].id));
+  const right = new Set(pairs.map((p) => p[1].id));
   return edit(seq, (d) => {
-    const dl = d.clips.find((c) => c.id === leftId)!;
-    const dr = d.clips.find((c) => c.id === rightId)!;
-    dl.duration += dlt;
-    dl.fadeOut = 0;
-    dr.start += dlt;
-    dr.duration -= dlt;
-    if (dr.kind === 'media') dr.sourceIn += dlt / d.fps;
-    dr.fadeIn = 0;
-  });
+    for (const c of d.clips) {
+      if (left.has(c.id)) {
+        c.duration += dlt;
+        c.fadeOut = 0;
+      } else if (right.has(c.id)) {
+        c.start += dlt;
+        c.duration -= dlt;
+        if (c.kind === 'media') c.sourceIn += dlt / d.fps;
+        c.fadeIn = 0;
+      }
+    }
+  }, media);
 }
 
 /** Q/W: Kopf (prev) bzw. Ende (next) des Clips unter dem Abspielkopf bis zur Position wegschneiden und nachrücken. */
