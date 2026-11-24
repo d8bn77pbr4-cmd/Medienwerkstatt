@@ -42,6 +42,7 @@ type Props = {
 export function MediaBin({ seqFps, loadedId, onLoad }: Props) {
   const media = useProject((s) => s.project?.media ?? EMPTY);
   const progress = useProject((s) => s.proxyProgress);
+  const queue = useProject((s) => s.proxyQueue);
   const importError = useProject((s) => s.importError);
   const importPaths = useProject((s) => s.import);
   const setShotSize = useProject((s) => s.setShotSize);
@@ -106,11 +107,13 @@ export function MediaBin({ seqFps, loadedId, onLoad }: Props) {
                     </span>
                   )}
                 </p>
-                {p !== undefined && (
+                {p !== undefined ? (
                   <label className="bin-proxy">
                     <span>Proxy {Math.round(p * 100)} %</span>
                     <progress max={1} value={p} aria-label={`Proxy für ${m.name}`} />
                   </label>
+                ) : (
+                  queue.includes(m.id) && <p className="bin-proxy bin-wait">Proxy: Wartet …</p>
                 )}
                 {warnings.map((w) => (
                   <p key={w} className="ws-warn">

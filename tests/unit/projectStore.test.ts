@@ -3,7 +3,7 @@ import { MockBackend } from '../../src/backend/MockBackend';
 import type { Assignment, Deliverable, VideoSpec } from '../../src/domain/assignments/types';
 import { insertEdit } from '../../src/domain/timeline/ops';
 import type { Sequence } from '../../src/domain/timeline/types';
-import { PROJECT_SAVE_DEBOUNCE_MS, resetProjectForTests, useProject } from '../../src/state/projectStore';
+import { PROJECT_SAVE_DEBOUNCE_MS, projectSetting, resetProjectForTests, useProject } from '../../src/state/projectStore';
 
 const spec = (o: Partial<VideoSpec> = {}): VideoSpec => ({
   aspect: '9:16',
@@ -232,6 +232,60 @@ describe('Medien', () => {
     await store().flush();
     const loaded = await b.loadProject(store().dir!);
     expect(loaded.value!.media[0].shotSize).toBe('halbnah');
+  });
+
+  it('Proxies laufen in einer Warteschlange mit höchstens 2 gleichzeitig; Wartende sind markiert', async () => {
+    const b = new MockBackend();
+    await store().open(assignment([film()]), b);
+    let running = 0;
+    let maxRunning = 0;
+    const started: string[] = [];
+    const release = new Map<string, () => void>();
+    vi.spyOn(b, 'importMedia').mockImplementation(async (_dir, paths) =>
+      paths.map((path, i) => ({
+        id: `m${i}`, name: path, path, proxyPath: null, shotSize: null, kind: 'video' as const, durationSec: 5, width: 1920, height: 1080,
+        fps: 25, hasAudio: true, hdr: false, videoCodec: 'h264', audioCodec: 'aac', rotation: 0,
+      })),
+    );
+    vi.spyOn(b, 'createProxy').mockImplementation((_dir, m, progress) => {
+      running++;
+      maxRunning = Math.max(maxRunning, running);
+      started.push(m.id);
+      progress(0.5);
+      return new Promise<string>((res) =>
+        release.set(m.id, () => {
+          running--;
+          res(`/proxy/${m.id}.mp4`);
+        }),
+      );
+    });
+    await store().import(['/a.mov', '/b.mov', '/c.mov', '/d.mov', '/e.mov']);
+    expect(started).toEqual(['m0', 'm1']);
+    expect(store().proxyQueue).toEqual(['m2', 'm3', 'm4']);
+    expect(store().proxyProgress).toEqual({ m0: 0.5, m1: 0.5 });
+    release.get('m0')!();
+    await vi.waitFor(() => expect(started).toEqual(['m0', 'm1', 'm2']));
+    expect(store().proxyQueue).toEqual(['m3', 'm4']);
+    release.get('m1')!();
+    release.get('m2')!();
+    await vi.waitFor(() => expect(started).toHaveLength(5));
+    release.get('m3')!();
+    release.get('m4')!();
+    await vi.waitFor(() => expect(store().proxyProgress).toEqual({}));
+    expect(maxRunning).toBe(2);
+    expect(store().proxyQueue).toEqual([]);
+    expect(store().project!.media.map((m) => m.proxyPath)).toEqual(['/proxy/m0.mp4', '/proxy/m1.mp4', '/proxy/m2.mp4', '/proxy/m3.mp4', '/proxy/m4.mp4']);
+  });
+
+  it('Projekt-Einstellung Sicherheits-Limiter: standardmäßig an, Änderung wird gespeichert', async () => {
+    const b = new MockBackend();
+    await store().open(assignment([film()]), b);
+    expect(projectSetting(store().project, 'safetyLimiter')).toBe(true);
+    store().setProjectSetting('safetyLimiter', false);
+    await store().flush();
+    const loaded = await b.loadProject(store().dir!);
+    expect(loaded.value!.settings).toEqual({ safetyLimiter: false });
+    expect(projectSetting(loaded.value, 'safetyLimiter')).toBe(false);
   });
 
   it('import ohne offenes Projekt tut nichts', async () => {

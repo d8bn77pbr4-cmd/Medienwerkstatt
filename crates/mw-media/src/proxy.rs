@@ -15,14 +15,17 @@ pub fn default_h264_encoder() -> &'static str {
 }
 
 /// Argumente (ohne globale Optionen) für einen aufrechten 720p-SDR-Proxy.
+///
+/// Bei HDR wird zuerst verkleinert und erst dann in Gleitkomma tongemappt: Die `gbrpf32le`-Kette
+/// auf 720p statt auf 4K-Vollbildern spart grob das Neunfache an Speicher und Rechenzeit.
 pub fn proxy_args(input: &Path, output: &Path, info: &MediaInfo, encoder: &str) -> Vec<String> {
     let scale = if info.height > info.width {
-        "scale=720:-2"
+        "scale=720:-2:flags=bicubic"
     } else {
-        "scale=-2:720"
+        "scale=-2:720:flags=bicubic"
     };
     let vf = if info.hdr {
-        format!("{HDR_CHAIN},{scale}")
+        format!("{scale},{HDR_CHAIN}")
     } else {
         scale.to_string()
     };
@@ -68,4 +71,46 @@ pub fn proxy_args(input: &Path, output: &Path, info: &MediaInfo, encoder: &str) 
     push("+faststart");
     a.push(output.to_string_lossy().into_owned());
     a
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::probe::MediaKind;
+
+    fn info(width: u32, height: u32, hdr: bool) -> MediaInfo {
+        MediaInfo {
+            kind: MediaKind::Video,
+            duration_sec: 2.0,
+            width,
+            height,
+            fps: Some(25.0),
+            has_audio: false,
+            hdr,
+            video_codec: Some("hevc".into()),
+            audio_codec: None,
+            rotation: 0,
+        }
+    }
+
+    fn vf(i: &MediaInfo) -> String {
+        let a = proxy_args(Path::new("/in.mov"), Path::new("/out.mp4"), i, "libx264");
+        let k = a.iter().position(|x| x == "-vf").unwrap();
+        a[k + 1].clone()
+    }
+
+    #[test]
+    fn hdr_scales_down_before_the_float_tonemap_chain() {
+        let land = vf(&info(3840, 2160, true));
+        assert!(land.starts_with("scale=-2:720:flags=bicubic,zscale=t=linear"), "{land}");
+        assert!(land.ends_with("format=yuv420p"), "{land}");
+        let port = vf(&info(2160, 3840, true));
+        assert!(port.starts_with("scale=720:-2:flags=bicubic,zscale="), "{port}");
+    }
+
+    #[test]
+    fn sdr_only_scales() {
+        assert_eq!(vf(&info(1920, 1080, false)), "scale=-2:720:flags=bicubic");
+        assert_eq!(vf(&info(1080, 1920, false)), "scale=720:-2:flags=bicubic");
+    }
 }

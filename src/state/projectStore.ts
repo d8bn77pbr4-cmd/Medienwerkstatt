@@ -4,9 +4,15 @@ import type { Backend } from '../backend/Backend';
 import type { Assignment, ShotSize } from '../domain/assignments/types';
 import { History } from '../domain/timeline/history';
 import { newSequence, withFormat } from '../domain/timeline/sequence';
-import type { ExportRecord, MediaItem, Project, Sequence } from '../domain/timeline/types';
+import { projectSetting } from '../domain/timeline/settings';
+import type { ExportRecord, MediaItem, Project, ProjectSettings, Sequence } from '../domain/timeline/types';
 
 export const PROJECT_SAVE_DEBOUNCE_MS = 2000;
+/** Höchstens so viele Proxies werden gleichzeitig erstellt (ffmpeg ist schwer; der Rest wartet). */
+export const PROXY_CONCURRENCY = 2;
+
+
+export { projectSetting };
 export const SWITCH_ERROR = 'Wechsel nicht möglich – Projekt konnte nicht gespeichert werden';
 
 export type ProjectStatus = 'idle' | 'loading' | 'ready' | 'noVideo' | 'error';
@@ -27,6 +33,8 @@ export interface ProjectStore {
   restoredFromBackup: boolean;
   /** Proxy-Fortschritt 0–1 je Medium, solange er läuft. */
   proxyProgress: Record<string, number>;
+  /** Medien, deren Proxy in der Warteschlange wartet (Reihenfolge der Abarbeitung). */
+  proxyQueue: string[];
   importError: string | null;
   /** Wechsel zu einem anderen Auftrag abgelehnt, weil der offene Stand nicht gesichert werden konnte. */
   switchError: string | null;
@@ -38,6 +46,8 @@ export interface ProjectStore {
   open(a: Assignment, backend?: Backend): Promise<boolean>;
   import(paths: string[]): Promise<MediaItem[]>;
   setShotSize(mediaId: string, s: ShotSize | null): void;
+  /** Projekt-Einstellung setzen (wird mit dem Projekt gespeichert). */
+  setProjectSetting<K extends keyof ProjectSettings>(key: K, value: boolean): void;
   /** Export-Eintrag anhängen und das Projekt sofort sichern. */
   recordExport(rec: ExportRecord): Promise<void>;
   /** Wechselt die aktive Sequenz (nicht rückgängig zu machen; der Verlauf gilt projektweit). */
@@ -66,6 +76,11 @@ let gesture: string | null = null;
 let inFlight: { id: string; promise: Promise<boolean> } | null = null;
 /** Zählt Öffnungen hoch: verspätete Ergebnisse eines älteren `open` werden verworfen. */
 let openToken = 0;
+/** Proxy-Warteschlange des offenen Projekts. */
+let proxyJobs: { dir: string; m: MediaItem }[] = [];
+let proxyRunning = 0;
+/** Zählt Rücksetzungen hoch (nur Tests): Abschlüsse älterer Läufe zählen dann nicht mehr. */
+let proxyGen = 0;
 
 function cancelTimer() {
   if (timer !== null) clearTimeout(timer);
@@ -99,6 +114,7 @@ const EMPTY = {
   loadError: null,
   restoredFromBackup: false,
   proxyProgress: {},
+  proxyQueue: [] as string[],
   importError: null,
   switchError: null,
 };
@@ -153,6 +169,7 @@ export const useProject = create<ProjectStore>()((set, get) => {
     gesture = null;
     history = null;
     backend = b;
+    proxyJobs = [];
     set({ ...EMPTY, status: 'loading', assignment: a });
     const fresh = freshProject(a);
     if (!fresh) {
@@ -236,7 +253,9 @@ export const useProject = create<ProjectStore>()((set, get) => {
       if (get().dir !== dir) return [];
       set({ importError: null });
       commitProject((p) => ({ ...p, media: [...p.media, ...items] }));
-      for (const m of items.filter((x) => x.kind === 'video' && !x.proxyPath)) void makeProxy(b, dir, m);
+      for (const m of items.filter((x) => x.kind === 'video' && !x.proxyPath)) proxyJobs.push({ dir, m });
+      set({ proxyQueue: proxyJobs.filter((j) => j.dir === dir).map((j) => j.m.id) });
+      pumpProxies(b);
       return items;
     },
 
@@ -274,6 +293,12 @@ export const useProject = create<ProjectStore>()((set, get) => {
       history.push(history.present.map((s) => (s.id === id ? fresh : s)));
       syncFromHistory();
       return true;
+    },
+
+    setProjectSetting(key, value) {
+      const p = get().project;
+      if (!p || p.settings?.[key] === value) return;
+      commitProject((cur) => ({ ...cur, settings: { ...cur.settings, [key]: value } }));
     },
 
     setShotSize(mediaId, s) {
@@ -320,6 +345,21 @@ export const useProject = create<ProjectStore>()((set, get) => {
     },
   };
 
+  /** Startet wartende Proxy-Aufträge, bis `PROXY_CONCURRENCY` laufen. */
+  function pumpProxies(b: Backend) {
+    while (proxyRunning < PROXY_CONCURRENCY && proxyJobs.length > 0) {
+      const job = proxyJobs.shift()!;
+      if (get().dir === job.dir) set({ proxyQueue: get().proxyQueue.filter((id) => id !== job.m.id) });
+      proxyRunning++;
+      const gen = proxyGen;
+      void makeProxy(b, job.dir, job.m).finally(() => {
+        if (gen !== proxyGen) return;
+        proxyRunning--;
+        pumpProxies(b);
+      });
+    }
+  }
+
   async function makeProxy(b: Backend, dir: string, m: MediaItem) {
     const progress = (v: number) => {
       if (get().dir !== dir) return;
@@ -352,5 +392,8 @@ export function resetProjectForTests(): void {
   gesture = null;
   inFlight = null;
   openToken++;
+  proxyJobs = [];
+  proxyRunning = 0;
+  proxyGen++;
   useProject.setState({ ...EMPTY });
 }

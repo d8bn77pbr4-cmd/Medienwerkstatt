@@ -9,7 +9,18 @@ export type ExportAssets = {
   titlePngByClipId: Record<string, string>;
 };
 
-export type ExportOpts = { h264Encoder: 'h264_videotoolbox' | 'libx264' };
+export type ExportOpts = {
+  h264Encoder: 'h264_videotoolbox' | 'libx264';
+  /** Sicherheits-Limiter (≈ −2 dBFS Spitze) als letzter Tonfilter. Keine Lautheits-Normalisierung. */
+  limiter?: boolean;
+};
+
+/**
+ * Spitzenbegrenzer bei 0,79 (≈ −2,0 dBFS): lässt Platz für Zwischenwert-Spitzen nach dem AAC-Kodieren, damit
+ * −1 dBTP hält. `level=false` – keine Pegel-Automatik (sonst würde er auf 0 dB hochziehen); `latency=true` gleicht
+ * die Vorausschau (attack) aus, Bild und Ton bleiben synchron.
+ */
+export const SAFETY_LIMITER = 'alimiter=limit=0.79:level=false:latency=true';
 
 const AUDIO_RATE = 48000;
 /** Tonemapping HDR (PQ/HLG, BT.2020) → SDR BT.709. */
@@ -170,7 +181,7 @@ export function buildExport(
       mixed.push(`[a${mixed.length}]`);
     }
   }
-  const trimA = `atrim=start=${num(inSec)}:end=${num(outSec)},asetpts=PTS-STARTPTS[aout]`;
+  const trimA = `atrim=start=${num(inSec)}:end=${num(outSec)},asetpts=PTS-STARTPTS${opts.limiter && mixed.length > 0 ? `,${SAFETY_LIMITER}` : ''}[aout]`;
   if (mixed.length > 0) {
     g.chains.push(`${mixed.join('')}amix=inputs=${mixed.length}:normalize=0:duration=longest[mix]`);
     g.chains.push(`[mix]apad,${trimA}`);

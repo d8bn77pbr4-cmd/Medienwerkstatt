@@ -151,6 +151,21 @@ describe('Export: Momentaufnahme, veraltet, Fehler', () => {
     expect(r.sequenceHash).toBe(sequenceHash(seq));
   });
 
+  it('Sicherheits-Limiter: standardmäßig an, aus der Projekteinstellung abschaltbar', async () => {
+    const seq = seqOf('s1', [clip('c1', 0, 125), clip('a1', 0, 125, { trackId: 'A1' })]);
+    const graphs: string[] = [];
+    const backend = {
+      writeFile: async (d: string, r: string) => `${d}/${r}`,
+      runFfmpeg: async (args: string[]) => void graphs.push(args[args.indexOf('-filter_complex') + 1]),
+    } as unknown as MockBackend;
+    const deps = { backend, dir: '/p', assignment: seedA, now: () => 1, h264Encoder: 'libx264' as const };
+    const project: Project = { version: 1, assignmentId: seedA.id, media: [media], sequences: [seq], activeSequenceId: 's1', exports: [] };
+    await exportDeliverable(project, seq, seedA.deliverables[0], 'social169', deps);
+    await exportDeliverable({ ...project, settings: { safetyLimiter: false } }, seq, seedA.deliverables[0], 'social169', deps);
+    await exportDeliverable({ ...project, settings: { safetyLimiter: true } }, seq, seedA.deliverables[0], 'social169', deps);
+    expect(graphs.map((g) => g.includes('alimiter=limit=0.79:level=false'))).toEqual([true, false, true]);
+  });
+
   it('(e) exportStale: erst nach einer Änderung der Sequenz; alte Einträge nie', () => {
     const seq = seqOf('s1', [clip('c1', 0, 125)]);
     const p: Project = { version: 1, assignmentId: 'x', media: [media], sequences: [seq], activeSequenceId: 's1', exports: [] };

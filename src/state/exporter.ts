@@ -5,6 +5,7 @@ import { buildExport, exportRange, exportSize, type ExportAssets } from '../doma
 import { buildCubeLut } from '../domain/render/lut';
 import { getPreset } from '../domain/render/presets';
 import { renderTitle, type TitleCtx } from '../domain/render/titles';
+import { projectSetting } from '../domain/timeline/settings';
 import { hashOf, sequenceHash } from './hash';
 import { factsForExport } from './submission';
 import type { ExportPresetId, ExportRecord, Project, Sequence, TitleParams } from '../domain/timeline/types';
@@ -17,20 +18,47 @@ export type ExportDeps = {
   now: () => number;
   /** `h264_videotoolbox` im Tauri-Fenster, sonst `libx264`. */
   h264Encoder: 'h264_videotoolbox' | 'libx264';
+  /** Sicherheits-Limiter (−2 dBFS); ohne Angabe gilt die Projekt-Einstellung (Standard an). */
+  limiter?: boolean;
   /** Titel als PNG mit Transparenz; Standard: OffscreenCanvas. */
   renderTitlePng?: (t: TitleParams, width: number, height: number) => Promise<Uint8Array>;
   onProgress?: (p: number) => void;
 };
 
-/** Titel-PNG im Browser (OffscreenCanvas); in Umgebungen ohne Canvas wirft es. */
+/** Blob → Bytes; `Blob.arrayBuffer` fehlt in älterem WebKit, dann über FileReader. */
+async function blobBytes(blob: Blob): Promise<Uint8Array> {
+  if (typeof blob.arrayBuffer === 'function') return new Uint8Array(await blob.arrayBuffer());
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(new Uint8Array(r.result as ArrayBuffer));
+    r.onerror = () => reject(r.error ?? new Error('Titel-PNG ließ sich nicht lesen.'));
+    r.readAsArrayBuffer(blob);
+  });
+}
+
+/**
+ * Titel-PNG im Browser: OffscreenCanvas mit `convertToBlob`, sonst (macOS 12 / Safari 15 kennt beides nicht)
+ * ein DOM-Canvas mit `toBlob`. In Umgebungen ganz ohne Canvas wirft es.
+ */
 export async function renderTitlePngDefault(t: TitleParams, width: number, height: number): Promise<Uint8Array> {
-  if (typeof OffscreenCanvas === 'undefined') throw new Error('Titel lassen sich in dieser Umgebung nicht rendern.');
-  const canvas = new OffscreenCanvas(width, height);
+  if (typeof OffscreenCanvas !== 'undefined' && typeof OffscreenCanvas.prototype?.convertToBlob === 'function') {
+    const canvas = new OffscreenCanvas(width, height);
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      renderTitle(t, width, height, ctx as unknown as TitleCtx);
+      return blobBytes(await canvas.convertToBlob({ type: 'image/png' }));
+    }
+  }
+  if (typeof document === 'undefined') throw new Error('Titel lassen sich in dieser Umgebung nicht rendern.');
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Titel lassen sich nicht rendern (kein 2D-Kontext).');
   renderTitle(t, width, height, ctx as unknown as TitleCtx);
-  const blob = await canvas.convertToBlob({ type: 'image/png' });
-  return new Uint8Array(await blob.arrayBuffer());
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+  if (!blob) throw new Error('Titel lassen sich nicht rendern (kein PNG).');
+  return blobBytes(blob);
 }
 
 /** Im Tauri-Fenster der Hardware-Encoder, im Browser/Mock-Modus `libx264`. */
@@ -86,7 +114,8 @@ export async function exportDeliverable(
     assets.titlePngByClipId[c.id] = path;
   }
 
-  const { args, durationSec } = buildExport(seq, project.media, preset, assets, output, { h264Encoder: deps.h264Encoder });
+  const limiter = deps.limiter ?? projectSetting(project, 'safetyLimiter');
+  const { args, durationSec } = buildExport(seq, project.media, preset, assets, output, { h264Encoder: deps.h264Encoder, limiter });
   await backend.runFfmpeg(args, durationSec, (p) => deps.onProgress?.(p));
 
   const { inF, outF } = exportRange(seq);

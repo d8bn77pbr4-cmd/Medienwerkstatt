@@ -5,8 +5,11 @@ import type { Clip, ColorParams, ExportPresetId, MediaItem, Sequence, TitleParam
 import { applyColor } from '../../src/domain/render/color';
 import { buildCubeLut } from '../../src/domain/render/lut';
 import { TITLE_FONTS, renderTitle, type TitleCtx } from '../../src/domain/render/titles';
-import { buildExport, escapeFilterPath } from '../../src/domain/render/filtergraph';
-import { EXPORT_PRESETS, getPreset } from '../../src/domain/render/presets';
+import { buildExport, escapeFilterPath, exportSize } from '../../src/domain/render/filtergraph';
+import { EXPORT_PRESETS, defaultPresetFor, getPreset } from '../../src/domain/render/presets';
+import { AVAILABLE_TYPES, generateAssignment, loadCatalogs } from '../../src/domain/assignments/generator';
+import { fileNameFor } from '../../src/domain/assignments/naming';
+import { loadRules } from '../../src/domain/chef/rules';
 
 const NEUTRAL: ColorParams = { exposure: 0, contrast: 0, highlights: 0, shadows: 0, temperature: 0, tint: 0, saturation: 0 };
 const color = (o: Partial<ColorParams>): ColorParams => ({ ...NEUTRAL, ...o });
@@ -194,14 +197,47 @@ describe('escapeFilterPath', () => {
 });
 
 describe('Presets', () => {
-  it('vier Presets nach Spec', () => {
-    expect(EXPORT_PRESETS.map((p) => p.id)).toEqual(['social169', 'social916', 'rundfunk', 'prores']);
+  it('Presets nach Spec plus 1:1 und UHD', () => {
+    expect(EXPORT_PRESETS.map((p) => p.id)).toEqual(['social169', 'social916', 'social11', 'uhd', 'rundfunk', 'prores']);
     const p = (id: Parameters<typeof getPreset>[0]) => getPreset(id);
     expect(p('social169')).toMatchObject({ container: 'mp4', video: { codec: 'h264', bitrateMbps: 16 }, audio: { codec: 'aac', rateHz: 48000 }, loudnessHint: -14, size: { width: 1920, height: 1080 } });
     expect(p('social916')).toMatchObject({ video: { bitrateMbps: 12 }, loudnessHint: -14, size: { width: 1080, height: 1920 } });
     expect(p('rundfunk')).toMatchObject({ video: { bitrateMbps: 25 }, loudnessHint: -23, size: { width: 1920, height: 1080 } });
-    expect(p('prores')).toMatchObject({ container: 'mov', video: { codec: 'prores' }, audio: { codec: 'pcm_s24le' }, loudnessHint: -23, size: null });
+    expect(p('social11')).toMatchObject({ container: 'mp4', video: { codec: 'h264', bitrateMbps: 12 }, audio: { codec: 'aac' }, loudnessHint: -14, size: { width: 1080, height: 1080 } });
+    expect(p('social11').label).toMatch(/^Social 1:1/);
+    expect(p('uhd')).toMatchObject({ container: 'mp4', video: { codec: 'h264', bitrateMbps: 40 }, audio: { codec: 'aac' }, loudnessHint: -14, size: { width: 3840, height: 2160 } });
+    expect(p('uhd').label).toMatch(/^UHD 4K \(H\.264/);
+    expect(p('prores')).toMatchObject({ container: 'mov', video: { codec: 'prores' }, audio: { codec: 'pcm_s24le' }, loudnessHint: null, size: null });
     expect(EXPORT_PRESETS.every((x) => x.label.length > 0)).toBe(true);
+  });
+
+  it('jede erzeugte Video-Vorgabe hat ein Standard-Preset mit genau ihrer Größe, ihrem Codec, Container und Lautheitsziel', () => {
+    const catalogs = loadCatalogs();
+    const rules = loadRules();
+    const seen = new Set<string>();
+    for (const level of [1, 2, 3, 4, 5] as const) {
+      for (let n = 1; n <= 500; n++) {
+        const a = generateAssignment('preset-check', n, 1_700_000_000_000, level, AVAILABLE_TYPES, catalogs, rules);
+        for (const d of a.deliverables) {
+          const spec = d.videoSpec;
+          if (!spec) continue;
+          const preset = getPreset(defaultPresetFor(spec));
+          // Ausgabegröße: feste Größe des Presets oder (ProRes) die Sequenz, die „Sequenz für … anlegen“ in Vorgabengröße anlegt
+          const seq = { width: spec.width, height: spec.height } as Sequence;
+          expect(exportSize(seq, preset), `${a.id} ${d.id}`).toEqual({ width: spec.width, height: spec.height });
+          if (preset.size) expect(preset.size).toEqual({ width: spec.width, height: spec.height });
+          expect(preset.video.codec).toBe(spec.codec);
+          expect(preset.container).toBe(spec.codec === 'prores' ? 'mov' : 'mp4');
+          expect(fileNameFor(a, d, 1).endsWith(`.${preset.container}`)).toBe(true);
+          if (preset.loudnessHint !== null) expect(preset.loudnessHint).toBe(spec.loudnessLufs);
+          else expect(spec.codec).toBe('prores');
+          seen.add(`${spec.codec} ${spec.width}x${spec.height} ${spec.loudnessLufs} → ${preset.id}`);
+        }
+      }
+    }
+    // Die Messe-Formate 1:1 und UHD kommen tatsächlich vor
+    expect([...seen].some((x) => x.startsWith('h264 1080x1080'))).toBe(true);
+    expect([...seen].some((x) => x.startsWith('h264 3840x2160'))).toBe(true);
   });
 });
 
@@ -282,6 +318,15 @@ describe('buildExport', () => {
     expect(g).toMatch(/aresample=48000,aformat=channel_layouts=stereo/);
     expect(g).toContain('afade=t=out:st=2:d=0.4');
     expect(g).toMatch(/amix=[^;]*;\[[a-z0-9]+\]apad,atrim=start=0:end=4,asetpts=PTS-STARTPTS\[aout\]/);
+  });
+  it('Sicherheits-Limiter: alimiter (≈ −2 dBFS, ohne Pegel-Automatik) als letzter Tonfilter, nur wenn eingeschaltet', () => {
+    const on = graphOf(build(fixtureSeq(), [mkMedia('m')], 'social169', { h264Encoder: 'libx264', limiter: true }).args);
+    expect(on).toMatch(/\[mix\]apad,atrim=start=0:end=4,asetpts=PTS-STARTPTS,alimiter=limit=0\.79:level=false:latency=true\[aout\]/);
+    expect(on.match(/alimiter/g)).toHaveLength(1);
+    expect(on).not.toMatch(/loudnorm|dynaudnorm/);
+    expect(g).not.toContain('alimiter');
+    const off = graphOf(build(fixtureSeq(), [mkMedia('m')], 'social169', { h264Encoder: 'libx264', limiter: false }).args);
+    expect(off).not.toContain('alimiter');
   });
   it('h264 libx264 / videotoolbox / prores', () => {
     const x = r.args.join(' ');
@@ -448,6 +493,8 @@ describe('Export-Argumente gegen die gemeinsame Positivliste', () => {
     ['Fixture videotoolbox', fixtureSeq(), [mkMedia('m')], 'rundfunk', { h264Encoder: 'h264_videotoolbox' }],
     ['Fixture prores', fixtureSeq(), [mkMedia('m', { hdr: true })], 'prores', { h264Encoder: 'libx264' }],
     ['ohne Ton', seqOf([mkClip('a', 'V1', 0, 50)]), [mkMedia('m')], 'social916', undefined],
+    ['mit Sicherheits-Limiter', fixtureSeq(), [mkMedia('m')], 'social169', { h264Encoder: 'libx264', limiter: true }],
+    ['UHD und 1:1', fixtureSeq(), [mkMedia('m')], 'uhd', { h264Encoder: 'h264_videotoolbox', limiter: true }],
   ];
   for (const [name, s, m, p, o] of cases) {
     it(name, () => {

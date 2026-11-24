@@ -12,3 +12,7 @@
 .exp-done::before { content: '✓ '; }
 @media (prefers-reduced-motion: reduce) { .exp-progress span { transition: none; } }
 @media (max-width: 640px) { .exp-fields { grid-template-columns: 1fr; } }
+.exp-limiter { margin: 2px 0 10px; }
+.exp-limiter .check { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
+.exp-limiter input[type='checkbox'] { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
+.exp-hint { font-size: 12px; margin: 2px 0 0 24px; }

@@ -164,6 +164,29 @@ describe.skipIf(!hasFfmpeg)('Export mit echtem ffmpeg', () => {
     expect(p.streams.filter((s) => s.codec_type === 'audio')).toHaveLength(1);
     expect(Math.abs(Number(p.format.duration) - 2)).toBeLessThanOrEqual(1 / 25 + 1e-6);
   }, 120_000);
+  it('Sicherheits-Limiter: +24 dB Gain bleibt unter −1 dBTP, Länge unverändert; ohne Limiter darüber', () => {
+    const idGen = counter();
+    let s = newSequence({ width: 1920, height: 1080, fps: 25, name: 'Laut' }, idGen);
+    s = insertEdit(s, m1, 0, 2, 0, { video: 'V1', audio: 'A1' }, 'overwrite', { idGen });
+    const a = s.clips.find((c) => c.trackId === 'A1')!;
+    s = setClipProps(s, a.id, { gainDb: 24 });
+    const peak = (file: string): number => {
+      const r = spawnSync('ffmpeg', ['-hide_banner', '-nostats', '-i', file, '-af', 'ebur128=peak=true', '-f', 'null', '-'], { encoding: 'utf8' });
+      const m = [...r.stderr.matchAll(/Peak:\s+(-?[\d.]+|-inf) dBFS/g)].at(-1);
+      return m ? Number(m[1]) : NaN;
+    };
+    const run = (limiter: boolean, name: string) => {
+      const out = join(dir, name);
+      const { args, durationSec } = buildExport(s, [m1], getPreset('social169'), { lutPathByClipId: {}, titlePngByClipId: {} }, out, { h264Encoder: 'libx264', limiter });
+      const r = runLikeRunner(args);
+      expect(r.stderr.split('\n').filter((l) => /error|invalid|no such/i.test(l))).toEqual([]);
+      expect(r.status).toBe(0);
+      expect(Math.abs(Number(probe(out).format.duration) - durationSec)).toBeLessThanOrEqual(1 / 25 + 1e-6);
+      return peak(out);
+    };
+    expect(run(false, 'laut-ohne.mp4')).toBeGreaterThan(-1);
+    expect(run(true, 'laut-mit.mp4')).toBeLessThanOrEqual(-1);
+  }, 120_000);
   it('HDR-Quelle (Tonemapping) mit ProRes-Preset', () => {
     const idGen = counter();
     const hdr = mkMedia('m4', 'hdr-hlg.mov', { hdr: true, fps: 30000 / 1001 });

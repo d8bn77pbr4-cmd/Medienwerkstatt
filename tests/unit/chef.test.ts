@@ -92,6 +92,30 @@ describe('Technik', () => {
     expect(find(e, 'resolution')).toMatchObject({ points: -10, soll: '1920×1080', ist: '1280×720' });
     expect(find(e, 'fps').points).toBe(-8);
   });
+  it('Auflösungs-Hinweis nennt die passende Export-Vorlage und die Sequenz-Einstellung', () => {
+    const m = M(perfectM); m.format.width = 1920; m.format.height = 1080;
+    const square: VideoSpec = { ...spec, aspect: '1:1', width: 1080, height: 1080 };
+    const e = evaluate(input(m, {}, goodFacts(), assignment({ deliverables: [videoD('v', square)] })), rules);
+    expect(find(e, 'resolution').fix).toBe('Wähle im Export die Vorlage „Social 1:1 (1080×1080, H.264, 12 Mbit/s)“ bzw. stelle die Sequenz (Inspektor → Reiter „Sequenz“) auf 1080×1080 (1:1).');
+    const uhd: VideoSpec = { ...spec, width: 3840, height: 2160 };
+    const e2 = evaluate(input(m, {}, goodFacts(), assignment({ deliverables: [videoD('v', uhd)] })), rules);
+    expect(find(e2, 'resolution').fix).toContain('Vorlage „UHD 4K (H.264');
+  });
+  it('alle Technik-Hinweise zeigen auf vorhandene Bedienelemente', () => {
+    const m = M(loud); m.format.width = 1280; m.format.fps = 30; m.audio.clippedSamples = 3; m.format.videoCodec = 'prores';
+    const e = evaluate(input(m, {}, { ...goodFacts(), fpsMismatch: true }), rules);
+    const hints = e.categories.technik.deductions.map((d) => `${d.ruleId}: ${d.fix}`);
+    for (const h of hints) {
+      expect(h).not.toMatch(/Ton-Inspektor|Master-Pegel|Wandle|umwandeln|Codec .* im Export/);
+    }
+    expect(find(e, 'loudness').fix).toContain('„Pegel (Gain)“');
+    expect(find(e, 'loudness').fix).toContain('Reiter „Clip“');
+    expect(find(e, 'truePeak').fix).toContain('„Sicherheits-Limiter (−2 dBFS)“');
+    expect(find(e, 'clipping').fix).toContain('„Pegel (Gain)“');
+    expect(find(e, 'mixedFps').fix).toContain('Drehe am Handy mit 25 fps');
+    expect(find(e, 'fps').fix).toContain('Reiter „Sequenz“');
+    expect(find(e, 'codecOrFileName').fix).toContain('Vorlage „Social 16:9');
+  });
   it('Bildraten gemischt → −4', () => {
     expect(find(evaluate(input(perfectM, {}, { ...goodFacts(), fpsMismatch: true }), rules), 'mixedFps').points).toBe(-4);
   });

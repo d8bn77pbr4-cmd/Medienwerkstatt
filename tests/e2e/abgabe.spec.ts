@@ -47,7 +47,9 @@ async function exportAndSubmit(page: Page) {
   await page.keyboard.press('Meta+m');
   const sheet = page.getByRole('dialog', { name: 'Exportieren' });
   await expect(sheet).toBeVisible();
-  await sheet.getByLabel('Preset').selectOption('social169');
+  await sheet.getByLabel('Vorlage (Preset)').selectOption('social169');
+  // Sicherheits-Limiter ist standardmäßig an und sichtbar beschriftet
+  await expect(sheet.getByRole('checkbox', { name: 'Sicherheits-Limiter (−2 dBFS)' })).toBeChecked();
   await sheet.getByRole('button', { name: 'Exportieren', exact: true }).click();
   await expect(sheet.getByRole('progressbar')).toBeVisible();
   await expect(sheet.getByText('Export fertig.')).toBeVisible();

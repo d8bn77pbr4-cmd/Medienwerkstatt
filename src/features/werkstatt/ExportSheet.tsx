@@ -3,23 +3,21 @@ import { getBackend } from '../../backend';
 import type { Assignment, Deliverable, VideoSpec } from '../../domain/assignments/types';
 import { canCorrect } from '../../domain/chef/correction';
 import { loadRules } from '../../domain/chef/rules';
-import { EXPORT_PRESETS } from '../../domain/render/presets';
+import { EXPORT_PRESETS, defaultPresetFor } from '../../domain/render/presets';
 import type { ExportPresetId } from '../../domain/timeline/types';
 import { useApp } from '../../state/appStore';
 import { useNow } from '../../state/useNow';
 import { defaultEncoder } from '../../state/exporter';
 import { exportRows } from '../../state/exportRun';
-import { useProject } from '../../state/projectStore';
+import { projectSetting, useProject } from '../../state/projectStore';
+import { LIMITER_LABEL } from '../../domain/chef/rules/technik';
 import { latestExport } from '../../state/submission';
 import { Sheet } from '../../shell/Sheet';
 import './exportSheet.css';
 
-/** Voreinstellung aus der Vorgabe: ProRes → Zwischenformat, Hochformat → 9:16, −23 LUFS → Rundfunk, sonst Social 16:9. */
+/** Voreinstellung aus der Vorgabe: das Preset, das in Größe, Codec, Container und Lautheitsziel genau passt. */
 export function defaultPreset(spec: VideoSpec): ExportPresetId {
-  if (spec.codec === 'prores') return 'prores';
-  if (spec.aspect === '9:16') return 'social916';
-  if (spec.loudnessLufs === -23) return 'rundfunk';
-  return 'social169';
+  return defaultPresetFor(spec);
 }
 
 type Row = { sequenceId: string; presetId: ExportPresetId };
@@ -51,7 +49,7 @@ function ExportRow({ d, row, onChange, progress, busy }: { d: Deliverable; row: 
           </select>
         </div>
         <div className="field">
-          <label htmlFor={`${idBase}-preset`}>Preset</label>
+          <label htmlFor={`${idBase}-preset`}>Vorlage (Preset)</label>
           <select id={`${idBase}-preset`} value={row.presetId} onChange={(e) => onChange({ ...row, presetId: e.target.value as ExportPresetId })}>
             {EXPORT_PRESETS.map((p) => (
               <option key={p.id} value={p.id}>
@@ -85,6 +83,7 @@ function ExportRow({ d, row, onChange, progress, busy }: { d: Deliverable; row: 
 export function ExportSheet({ assignment, onClose, onSubmit }: { assignment: Assignment; onClose(): void; onSubmit(): void }) {
   const project = useProject((s) => s.project);
   const dir = useProject((s) => s.dir);
+  const limiter = useProject((s) => projectSetting(s.project, 'safetyLimiter'));
   const evaluations = useApp((s) => s.state?.evaluations);
   const now = useNow();
   const deliverables = useMemo(() => assignment.deliverables.filter((d) => d.kind === 'video' && d.videoSpec), [assignment]);
@@ -156,11 +155,20 @@ export function ExportSheet({ assignment, onClose, onSubmit }: { assignment: Ass
       {deliverables.length === 0 ? (
         <p className="muted">Dieser Auftrag hat keine Video-Abgabe.</p>
       ) : (
-        <p className="exp-lead muted">Wähle für jede Abgabe die Sequenz und das Preset. Die Datei landet im Ordner „Export“ des Projekts.</p>
+        <p className="exp-lead muted">Wähle für jede Abgabe die Sequenz und die Vorlage. Die Datei landet im Ordner „Export“ des Projekts.</p>
       )}
       {deliverables.map((d) => (
         <ExportRow key={d.id} d={d} row={rows[d.id]} busy={busy} progress={progress[d.id]} onChange={(r) => setRows((cur) => ({ ...cur, [d.id]: r }))} />
       ))}
+      {deliverables.length > 0 && (
+        <div className="exp-limiter">
+          <label className="check">
+            <input type="checkbox" checked={limiter} disabled={busy} onChange={(e) => useProject.getState().setProjectSetting('safetyLimiter', e.target.checked)} />
+            <span>{LIMITER_LABEL}</span>
+          </label>
+          <p className="exp-hint muted">Fängt kurze Spitzen ab, damit der Ton nicht übersteuert. Die Lautheit (LUFS) stellst du weiter selbst mit dem Pegel ein.</p>
+        </div>
+      )}
       <div className="exp-status" role="status">
         {busy && running && <span>Exportiere … {percent} %</span>}
         {busy && !running && <span>Schreibe Datei …</span>}

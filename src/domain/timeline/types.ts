@@ -89,7 +89,7 @@ export type Sequence = {
   outPoint: Frames | null;
 };
 
-export type ExportPresetId = 'social169' | 'social916' | 'rundfunk' | 'prores';
+export type ExportPresetId = 'social169' | 'social916' | 'social11' | 'uhd' | 'rundfunk' | 'prores';
 
 export type ExportRecord = {
   deliverableId: string;
@@ -108,6 +108,12 @@ export type ExportRecord = {
   sequenceHash?: string;
 };
 
+/** Einstellungen je Projekt (fehlende Felder = Standard, siehe `projectSetting`). */
+export type ProjectSettings = {
+  /** Sicherheits-Limiter (−2 dBFS) im Export; Standard an. */
+  safetyLimiter?: boolean;
+};
+
 export type Project = {
   version: 1;
   assignmentId: string;
@@ -115,4 +121,5 @@ export type Project = {
   sequences: Sequence[];
   activeSequenceId: string;
   exports: ExportRecord[];
+  settings?: ProjectSettings;
 };
