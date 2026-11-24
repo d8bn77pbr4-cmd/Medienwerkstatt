@@ -8,6 +8,11 @@ import type { AppState, Assignment, LoadResult, Measurements, MediaItem, Project
  */
 const KEY = 'mw-state';
 const BAK1 = 'mw-state.bak1';
+const PROJECT_KEY = (dir: string) => `mw-project:${dir}`;
+/** Testmedien des Vite-Dev-Servers (`tests/fixtures/media/` unter `/fixtures/`). */
+const FIXTURES = ['/fixtures/e2e-clip.webm', '/fixtures/e2e-clip2.webm'];
+const PROXY_STEPS = [0.25, 0.5, 0.75, 1];
+const PROXY_STEP_MS = 40;
 
 function readItem(key: string): string | null {
   try {
@@ -61,19 +66,49 @@ export class MockBackend implements Backend {
     return `/mock/Medienwerkstatt/${a.id}`;
   }
   async loadProject(dir: string): Promise<LoadResult<Project>> {
+    const raw = readItem(PROJECT_KEY(dir));
+    if (raw !== null) {
+      try {
+        return { value: JSON.parse(raw) as Project, restoredFromBackup: false };
+      } catch {
+        /* defekt: wie ohne Projekt */
+      }
+    }
     return { value: this.projects.get(dir) ?? null, restoredFromBackup: false };
   }
   async saveProject(dir: string, p: Project): Promise<void> {
+    // Synchron vor dem ersten await: Sichern beim Verlassen der Seite (pagehide) greift sofort.
     this.projects.set(dir, p);
+    writeItem(PROJECT_KEY(dir), JSON.stringify(p));
   }
   async pickMediaFiles(): Promise<string[]> {
-    return [];
+    return [...FIXTURES];
   }
-  async importMedia(): Promise<MediaItem[]> {
-    return [];
+  async importMedia(_dir: string, paths: string[]): Promise<MediaItem[]> {
+    // Pfade bleiben unverändert (der Dev-Server liefert sie aus); Probe-Daten wie die WebM-Fixtures.
+    return paths.map((path) => ({
+      kind: 'video',
+      durationSec: 5,
+      width: 1280,
+      height: 720,
+      fps: 25,
+      hasAudio: true,
+      hdr: false,
+      videoCodec: 'vp9',
+      audioCodec: 'opus',
+      rotation: 0,
+      id: crypto.randomUUID(),
+      name: path.split('/').pop() || path,
+      path,
+      proxyPath: null,
+      shotSize: null,
+    }));
   }
   async createProxy(_dir: string, m: MediaItem, onProgress: (p: number) => void): Promise<string> {
-    onProgress(1);
+    for (const p of PROXY_STEPS) {
+      await new Promise((r) => setTimeout(r, PROXY_STEP_MS));
+      onProgress(p);
+    }
     return m.path;
   }
   mediaUrl(path: string): string {
@@ -105,4 +140,7 @@ export class MockBackend implements Backend {
     generate: async (): Promise<string> => '{}',
   };
   async revealInFinder(): Promise<void> {}
+  onFileDrop(): () => void {
+    return () => {};
+  }
 }

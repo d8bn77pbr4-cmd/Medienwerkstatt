@@ -331,6 +331,15 @@ describe('History', () => {
     expect(h.undo()).toBe(0);
     expect(h.redo()).toBe(1);
   });
+  it('replace ersetzt den aktuellen Stand ohne neuen Schritt und verwirft Wiederholen', () => {
+    const h = new History(0);
+    h.push(1);
+    h.push(2);
+    h.undo();
+    h.replace(5);
+    expect([h.present, h.canRedo]).toEqual([5, false]);
+    expect(h.undo()).toBe(0);
+  });
   it('100 Schritte rückgängig, der 101. fällt raus', () => {
     const h = new History(0);
     for (let i = 1; i <= 101; i++) h.push(i);

@@ -21,4 +21,6 @@ export interface Backend {
     generate(model: string, prompt: string, imagePaths: string[], schema: object): Promise<string>;
   };
   revealInFinder(path: string): Promise<void>;
+  /** Dateien per Drag & Drop aufs Fenster (nur im Tauri-Fenster; im Browser nie). Gibt den Abmelder zurück. */
+  onFileDrop(h: { over(on: boolean): void; drop(paths: string[]): void }): () => void;
 }

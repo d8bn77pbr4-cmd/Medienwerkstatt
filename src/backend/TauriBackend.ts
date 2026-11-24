@@ -104,4 +104,29 @@ export class TauriBackend implements Backend {
   revealInFinder(path: string): Promise<void> {
     return call('reveal_in_finder', { path });
   }
+  onFileDrop(h: { over(on: boolean): void; drop(paths: string[]): void }): () => void {
+    let off: (() => void) | null = null;
+    let closed = false;
+    void import('@tauri-apps/api/webview')
+      .then(({ getCurrentWebview }) =>
+        getCurrentWebview().onDragDropEvent((e) => {
+          const p = e.payload;
+          if (p.type === 'enter' || p.type === 'over') h.over(true);
+          else if (p.type === 'leave') h.over(false);
+          else {
+            h.over(false);
+            if (p.paths.length) h.drop(p.paths);
+          }
+        }),
+      )
+      .then((unlisten) => {
+        if (closed) unlisten();
+        else off = unlisten;
+      })
+      .catch(() => undefined);
+    return () => {
+      closed = true;
+      off?.();
+    };
+  }
 }

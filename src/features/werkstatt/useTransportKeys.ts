@@ -1,39 +1,23 @@
-import { useEffect } from 'react';
+import { useMemo } from 'react';
+import { COMMANDS, type CommandCtx } from './commands';
+import type { CommandId } from './keymap';
 import type { PlaybackEngine } from './playback';
+import { useKeymap, type KeyHandlers } from './useKeymap';
+
+const TRANSPORT: CommandId[] = [
+  'transport.reverse', 'transport.stop', 'transport.forward', 'transport.toggle',
+  'transport.stepBack', 'transport.stepForward', 'transport.stepBack5', 'transport.stepForward5',
+];
 
 /**
- * Transport-Tastenkürzel (nie animiert): J/K/L, ←/→ (1 Bild), ⇧←/⇧→ (5 Bilder), Leertaste.
- * Task 12 hängt dasselbe an die Werkstatt.
+ * Nur Transport (J/K/L, ←/→, ⇧←/⇧→, Leertaste) für einen einzelnen Monitor, z. B. die
+ * Entwicklungsseite. Die Werkstatt hängt die ganze `KEYMAP` über `useKeymap` an (keine Doppelbelegung).
  */
 export function useTransportKeys(engine: PlaybackEngine | null): void {
-  useEffect(() => {
-    if (!engine) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      const t = e.target as HTMLElement | null;
-      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
-      const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-      // Taste gehalten: J/K/L/Leertaste nur einmal auswerten (sonst eskaliert L auf 8×); Pfeile wiederholen weiter.
-      if (e.repeat && (key === 'l' || key === 'j' || key === 'k' || key === ' ')) {
-        e.preventDefault();
-        return;
-      }
-      switch (key) {
-        case 'l': engine.play(1); break;
-        case 'j': engine.play(-1); break;
-        case 'k': engine.pause(); break;
-        case ' ':
-          if (t?.tagName === 'BUTTON') return; // Leertaste löst dort den Knopf aus
-          if (engine.isPlaying) engine.pause();
-          else engine.play(1);
-          break;
-        case 'ArrowRight': engine.step(e.shiftKey ? 5 : 1); break;
-        case 'ArrowLeft': engine.step(e.shiftKey ? -5 : -1); break;
-        default: return;
-      }
-      e.preventDefault();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+  const handlers = useMemo<KeyHandlers>(() => {
+    if (!engine) return {};
+    const ctx: CommandCtx = { program: engine, source: null, active: () => 'program' };
+    return Object.fromEntries(TRANSPORT.map((id) => [id, () => COMMANDS[id](ctx)]));
   }, [engine]);
+  useKeymap(handlers, engine !== null);
 }

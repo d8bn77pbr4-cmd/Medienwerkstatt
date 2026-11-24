@@ -30,6 +30,11 @@ export class History<T> {
     this.current = next;
     this.future = [];
   }
+  /** Ersetzt den aktuellen Stand ohne neuen Schritt (z. B. fortlaufendes Ziehen eines Reglers). */
+  replace(next: T): void {
+    this.current = next;
+    this.future = [];
+  }
   undo(): T {
     const prev = this.past.pop();
     if (prev !== undefined) {
