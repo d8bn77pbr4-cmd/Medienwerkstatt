@@ -24,6 +24,11 @@ const settled = async (page: Page): Promise<number> => {
     .toBe(true);
   return last;
 };
+/** Zurück auf Bild 0 (⇧← springt je 5 Bilder), damit die 6-s-Fixture nie vor dem Ende der Messung ausläuft. */
+const rewind = async (page: Page): Promise<void> => {
+  for (let i = Math.ceil((await frames(page)) / 5) + 1; i > 0; i--) await page.keyboard.press('Shift+ArrowLeft');
+  await expect(timecode(page)).toHaveText('00:00:00:00');
+};
 /** Zeitstempel der Tasten im Browser: Wartezeit und Tastenlatenz des Testläufers fallen so aus der Rechnung. */
 const stamp = (page: Page) =>
   page.evaluate(() => {
@@ -45,6 +50,8 @@ const lastRun = (page: Page) =>
 /** Bilder pro Sekunde Wanduhrzeit zwischen erstem `l` und `k` (Verhältnisse sind rechnerunabhängig, absolute Bildzahlen nicht). */
 const fps = async (page: Page, run: () => Promise<void>): Promise<number> => {
   await stamp(page);
+  await settled(page);
+  await rewind(page);
   const from = await settled(page);
   await run();
   const frames_ = (await settled(page)) - from;

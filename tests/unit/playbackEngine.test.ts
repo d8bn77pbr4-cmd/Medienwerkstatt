@@ -68,3 +68,36 @@ describe('PlaybackEngine Zeitgeber', () => {
     expect(e.frame).toBe(50);
   });
 });
+
+describe('seek und step während der Wiedergabe', () => {
+  it('seek setzt die Uhr zurück: K nach dem Sprung landet auf dem Ziel, nicht dahinter', () => {
+    const e = makeEngine();
+    e.play(1);
+    frameAt(100);
+    now = 700; // 600 ms seit dem letzten Takt ohne neuen Takt
+    e.seek(50);
+    now = 700;
+    e.pause();
+    expect(e.frame).toBe(50);
+  });
+
+  it('seek: danach läuft die Zeit erst ab dem Sprung weiter', () => {
+    const e = makeEngine();
+    e.play(1);
+    now = 500;
+    e.seek(50);
+    now = 600; // 100 ms = 2,5 Bilder ab Ziel
+    e.pause();
+    expect(e.frame).toBe(52);
+  });
+
+  it('step während der Wiedergabe geht vom aktuellen Bild aus, nicht vom veralteten', () => {
+    const e = makeEngine();
+    e.play(1);
+    frameAt(40); // 1 Bild
+    now = 1040; // 25 Bilder ohne Takt
+    e.step(1);
+    expect(e.frame).toBe(27); // 1 + 25 Bilder bis jetzt, dann ein Bild vor
+    expect(e.rate).toBe(0);
+  });
+});

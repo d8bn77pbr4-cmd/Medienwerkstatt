@@ -195,10 +195,12 @@ export class PlaybackEngine {
   seek(frame: number): void {
     const end = sequenceEnd(this.getSeq());
     this.pos = Math.max(0, Math.min(end, Math.round(frame)));
+    this.lastT = Math.max(this.lastT, performance.now()); // Zeit läuft erst ab dem Sprung weiter
     this.invalidate();
   }
 
   step(n: number): void {
+    this.settle(performance.now());
     const f = this.frame;
     this._rate = 0;
     this.seek(f + n);
