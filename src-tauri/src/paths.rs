@@ -80,14 +80,6 @@ fn is_network_arg(arg: &str) -> bool {
     })
 }
 
-const FORBIDDEN_OPTIONS: [&str; 6] = [
-    "-progress",
-    "-report",
-    "-passlogfile",
-    "-vstats_file",
-    "-sdp_file",
-    "-dump_attachment",
-];
 const FORBIDDEN_FORMATS: [&str; 7] = [
     "tee",
     "segment",
@@ -97,7 +89,9 @@ const FORBIDDEN_FORMATS: [&str; 7] = [
     "dash",
     "image2",
 ];
-const NO_VALUE_FLAGS: [&str; 10] = [
+/// Erlaubte ffmpeg-Optionen ohne Wert. Alles, was nicht hier oder in `FFMPEG_VALUE_OPTIONS`
+/// steht, lehnt `validate_ffmpeg_args` ab (Task 10: der Export-Aufbau muss hierin bleiben).
+pub const FFMPEG_FLAGS: &[&str] = &[
     "-y",
     "-n",
     "-hide_banner",
@@ -108,6 +102,60 @@ const NO_VALUE_FLAGS: [&str; 10] = [
     "-vn",
     "-sn",
     "-dn",
+];
+
+/// Erlaubte ffmpeg-Optionen mit Wert (Grundname ohne `-`; ein Stromwähler wie `:v`, `:a:1`,
+/// `:s:v:0` hinter dem Namen ist erlaubt).
+pub const FFMPEG_VALUE_OPTIONS: &[&str] = &[
+    "i",
+    "f",
+    "ss",
+    "t",
+    "to",
+    "loop",
+    "r",
+    "s",
+    "c",
+    "codec",
+    "b",
+    "pix_fmt",
+    "ar",
+    "ac",
+    "map",
+    "filter_complex",
+    "vf",
+    "af",
+    "filter",
+    "movflags",
+    "preset",
+    "crf",
+    "g",
+    "profile",
+    "level",
+    "tag",
+    "metadata",
+    "frames",
+    "q",
+    "qscale",
+    "threads",
+    "framerate",
+    "color_primaries",
+    "color_trc",
+    "colorspace",
+    "color_range",
+    "x264-params",
+    "x265-params",
+    "aspect",
+    "maxrate",
+    "bufsize",
+    "sample_fmt",
+    "channel_layout",
+    "disposition",
+    "itsoffset",
+    "fps_mode",
+    "vsync",
+    "max_muxing_queue_size",
+    "allow_sw",
 ];
 
 fn args_error(msg: String) -> CmdError {
@@ -127,14 +175,18 @@ pub fn validate_ffmpeg_args(roots: &[PathBuf], args: &[String]) -> CmdResult<()>
         let a = &args[i];
         if a.len() > 1 && a.starts_with('-') {
             let name = a.to_ascii_lowercase();
-            if FORBIDDEN_OPTIONS.contains(&name.as_str()) {
-                return Err(args_error(format!("Option nicht erlaubt: {a}")));
-            }
-            if NO_VALUE_FLAGS.contains(&name.as_str()) {
+            if FFMPEG_FLAGS.contains(&name.as_str()) {
                 i += 1;
                 continue;
             }
-            if name == "-f" {
+            let base = name
+                .strip_prefix('-')
+                .and_then(|n| n.split(':').next())
+                .unwrap_or_default();
+            if name.starts_with("--") || !FFMPEG_VALUE_OPTIONS.contains(&base) {
+                return Err(args_error(format!("Option nicht erlaubt: {a}")));
+            }
+            if base == "f" {
                 if let Some(v) = args.get(i + 1) {
                     if FORBIDDEN_FORMATS.contains(&v.to_ascii_lowercase().as_str()) {
                         return Err(args_error(format!("Format nicht erlaubt: {v}")));
@@ -341,6 +393,61 @@ mod tests {
             assert_eq!(code(&["-i", "a", "-f", f, OUT]), "invalid_args", "{f}");
         }
         assert!(validate_ffmpeg_args(&roots(), &args(&["-i", "a", "-f", "mp4", OUT])).is_ok());
+    }
+
+    #[test]
+    fn ffmpeg_args_use_an_option_allowlist() {
+        let o = "/Users/x/Movies/Medienwerkstatt/A01_X/Export/out.mp4";
+        assert_eq!(
+            code(&["-i", "a", "-re", "/tmp/evil.mp4", o]),
+            "invalid_args"
+        );
+        for bad in [
+            "-stats",
+            "-vstats",
+            "--progress",
+            "-protocol_whitelist",
+            "-foo",
+            "-re",
+        ] {
+            let a: &[&str] = &["-i", "a", bad, "x", o];
+            assert_eq!(code(a), "invalid_args", "{bad}");
+        }
+        assert_eq!(code(&["--progress", "x", o]), "invalid_args");
+        assert_eq!(
+            code(&["-protocol_whitelist", "http", "-i", "a", o]),
+            "invalid_args"
+        );
+        let ok = args(&[
+            "-i",
+            "a",
+            "-c:v",
+            "h264_videotoolbox",
+            "-allow_sw",
+            "1",
+            "-b:v",
+            "10M",
+            "-tag:v",
+            "hvc1",
+            "-metadata:s:v:0",
+            "rotate=0",
+            "-disposition:a:0",
+            "default",
+            "-frames:v",
+            "1",
+            "-q:v",
+            "3",
+            "-an",
+            "-vn",
+            "-sn",
+            "-dn",
+            "-n",
+            "-hide_banner",
+            "-nostdin",
+            "-nostats",
+            o,
+        ]);
+        assert!(validate_ffmpeg_args(&roots(), &ok).is_ok());
     }
 
     #[test]
