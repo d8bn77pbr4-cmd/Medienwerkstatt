@@ -209,7 +209,6 @@ export const COMMANDS: Record<CommandId, (ctx: CommandCtx) => void> = {
   },
   'history.undo': () => project().undo(),
   'history.redo': () => project().redo(),
-  // Task 13 öffnet hier das Export-Blatt; bis dahin der Sequenz-Bereich (Auflösung/Bildrate).
-  'export.open': () => ui().focusPanel('export'),
+  'export.open': () => ui().setExportOpen(true),
   'help.shortcuts': () => ui().setShortcutsOpen(!ui().shortcutsOpen),
 };

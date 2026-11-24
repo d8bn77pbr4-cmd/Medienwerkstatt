@@ -3,8 +3,8 @@ import { getBackend } from '../backend';
 import type { Backend } from '../backend/Backend';
 import type { Assignment, ShotSize } from '../domain/assignments/types';
 import { History } from '../domain/timeline/history';
-import { newSequence } from '../domain/timeline/sequence';
-import type { MediaItem, Project, Sequence } from '../domain/timeline/types';
+import { newSequence, withFormat } from '../domain/timeline/sequence';
+import type { ExportRecord, MediaItem, Project, Sequence } from '../domain/timeline/types';
 
 export const PROJECT_SAVE_DEBOUNCE_MS = 2000;
 export const SWITCH_ERROR = 'Wechsel nicht möglich – Projekt konnte nicht gespeichert werden';
@@ -38,6 +38,10 @@ export interface ProjectStore {
   open(a: Assignment, backend?: Backend): Promise<boolean>;
   import(paths: string[]): Promise<MediaItem[]>;
   setShotSize(mediaId: string, s: ShotSize | null): void;
+  /** Export-Eintrag anhängen und das Projekt sofort sichern. */
+  recordExport(rec: ExportRecord): Promise<void>;
+  /** Kopie der aktiven Sequenz mit Format und Namen einer Abgabe (z. B. zweites Format); gibt deren ID zurück. */
+  addSequenceFor(name: string, format: { width: number; height: number; fps: number }): string | null;
   /** Bearbeitung der aktiven Sequenz als Verlaufsschritt; `coalesce` fasst eine Geste (Regler) zu einem Schritt zusammen. */
   apply(op: SeqOp, opts?: { coalesce?: string }): boolean;
   /** Beendet eine zusammengefasste Geste. */
@@ -228,6 +232,19 @@ export const useProject = create<ProjectStore>()((set, get) => {
       commitProject((p) => ({ ...p, media: [...p.media, ...items] }));
       for (const m of items.filter((x) => x.kind === 'video' && !x.proxyPath)) void makeProxy(b, dir, m);
       return items;
+    },
+
+    async recordExport(rec) {
+      commitProject((p) => ({ ...p, exports: [...p.exports, rec] }));
+      await flush();
+    },
+
+    addSequenceFor(name, format) {
+      const { project, seq } = get();
+      if (!project || !seq) return null;
+      const copy: Sequence = { ...withFormat(seq, format), id: crypto.randomUUID(), name };
+      commitProject((p) => ({ ...p, sequences: [...p.sequences, copy] }));
+      return copy.id;
     },
 
     setShotSize(mediaId, s) {

@@ -53,3 +53,19 @@ input[aria-invalid='true'] { border-color: var(--sig-warn); }
 .werkstatt input[type='color'] { width: 44px; height: 28px; padding: 2px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--surface-2); }
 .werkstatt input[type='range'] { accent-color: var(--accent); width: 100%; margin: 0; }
 .werkstatt .banner { padding: 6px 16px; font-size: 13px; }
+
+/* Blatt (Export, Abgabe, Tastenkürzel): Federn/200–350 ms, nur transform/opacity; Bewegung reduzieren = 150-ms-Überblendung */
+.sheet-backdrop { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: rgba(0, 0, 0, 0.5); }
+.sheet {
+  display: flex; flex-direction: column; width: min(760px, 92vw); max-height: 82vh; padding: 16px 18px;
+  background: var(--surface); border: 1px solid var(--line-strong); border-radius: 12px; color: var(--ink);
+  animation: mw-sheet-in var(--dur-2) var(--ease-out-smooth);
+}
+.sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.sheet-head h2 { font-size: 17px; font-weight: 650; }
+.sheet-body { overflow: auto; min-height: 0; }
+.sheet-foot { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+@keyframes mw-sheet-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .sheet { animation: mw-fade 150ms linear; }
+}

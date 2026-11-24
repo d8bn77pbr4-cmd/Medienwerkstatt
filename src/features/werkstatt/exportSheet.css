@@ -1,0 +1,14 @@
+/* Export-Blatt (Werkstatt, dunkel): Dichte nach macOS-HIG, nie unter 12 px */
+.exp-lead { font-size: 13px; margin-bottom: 10px; }
+.exp-row { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px 10px; margin: 0 0 10px; min-width: 0; }
+.exp-row legend { font-size: 13px; font-weight: 650; padding: 0 6px; }
+.exp-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+.exp-add { margin-bottom: 6px; }
+.exp-last { font-size: 12px; font-variant-numeric: tabular-nums; }
+.exp-progress { height: 6px; margin-top: 8px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.exp-progress span { display: block; height: 100%; background: var(--accent); transform-origin: left; transition: transform var(--dur-2) var(--ease-out-fast); }
+.exp-status { min-height: 20px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.exp-done { color: var(--good); font-weight: 600; }
+.exp-done::before { content: '✓ '; }
+@media (prefers-reduced-motion: reduce) { .exp-progress span { transition: none; } }
+@media (max-width: 640px) { .exp-fields { grid-template-columns: 1fr; } }

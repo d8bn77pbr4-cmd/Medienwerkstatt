@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { ChefbueroView } from './features/chefbuero/ChefbueroView';
 import { AuftraegeView } from './features/auftraege/AuftraegeView';
 import { AuftragDetail } from './features/auftraege/AuftragDetail';
 import { ResearchForm } from './features/auftraege/ResearchForm';
@@ -20,6 +21,7 @@ const DevWiedergabe = import.meta.env.DEV ? lazy(() => import('./features/werkst
 function AreaPage({ area }: { area: AreaInfo }) {
   if (area.id === 'werkstatt') return <Werkstatt />;
   if (area.id === 'auftraege') return <AuftraegeView lead={area.lead} />;
+  if (area.id === 'chefbuero') return <ChefbueroView lead={area.lead} />;
   if (area.id === 'einstellungen') return <Einstellungen label={area.label} lead={area.lead} />;
   return (
     <main className="main">
@@ -49,6 +51,7 @@ function Shell() {
         <Routes>
           <Route path="/auftraege/:id" element={<AuftragDetail />} />
           <Route path="/auftraege/:id/recherche/:deliverableId" element={<ResearchForm />} />
+          <Route path="/chefbuero/:evaluationId" element={<ChefbueroView lead={AREAS[2].lead} />} />
           {DevWiedergabe && (
             <Route
               path="/_dev/wiedergabe"

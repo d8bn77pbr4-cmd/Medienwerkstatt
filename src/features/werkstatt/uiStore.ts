@@ -29,6 +29,10 @@ export interface WerkstattUi {
   /** Vorher/Nachher: Farbkorrektur des gewählten Clips in der Vorschau aus. */
   colorBypass: boolean;
   shortcutsOpen: boolean;
+  /** Export-Blatt (⌘M) offen. */
+  exportOpen: boolean;
+  /** Abgabe-Blatt offen. */
+  submitOpen: boolean;
   /** Sprungziel (z. B. „So behebst du es“ aus dem Protokoll); `n` zählt hoch, damit gleiche Ziele erneut wirken. */
   focusRequest: { panel: Panel; n: number } | null;
   notice: string | null;
@@ -47,6 +51,8 @@ export interface WerkstattUi {
   setInspectorTab(t: InspectorTab): void;
   setColorBypass(on: boolean): void;
   setShortcutsOpen(open: boolean): void;
+  setExportOpen(open: boolean): void;
+  setSubmitOpen(open: boolean): void;
   /** Springt zum Bereich `panel` ('audio' | 'farbe' | 'export' | 'timeline' | 'medien'). */
   focusPanel(panel: Panel): void;
   showNotice(text: string | null): void;
@@ -71,6 +77,8 @@ const initial = () => ({
   inspectorTab: 'clip' as InspectorTab,
   colorBypass: false,
   shortcutsOpen: false,
+  exportOpen: false,
+  submitOpen: false,
   focusRequest: null,
   notice: null,
 });
@@ -99,6 +107,8 @@ export const useWerkstatt = create<WerkstattUi>()((set, get) => ({
   setInspectorTab: (inspectorTab) => set({ inspectorTab, colorBypass: inspectorTab === 'farbe' ? get().colorBypass : false }),
   setColorBypass: (colorBypass) => set({ colorBypass }),
   setShortcutsOpen: (shortcutsOpen) => set({ shortcutsOpen }),
+  setExportOpen: (exportOpen) => set({ exportOpen }),
+  setSubmitOpen: (submitOpen) => set({ submitOpen }),
   focusPanel: (panel) => {
     const tab = TAB_FOR_PANEL[panel];
     set({ focusRequest: { panel, n: (get().focusRequest?.n ?? 0) + 1 }, ...(tab ? { inspectorTab: tab } : {}) });

@@ -173,12 +173,12 @@ describe('COMMANDS ohne Projekt, Auswahl oder Monitor', () => {
     expect(calls).toEqual(['p.play(1)', 'p.step(-5)', 'p.play(1)', 'p.play(-1)']);
   });
 
-  it('⌘/ schaltet die Übersicht, ⌘M springt zum Export-Bereich', () => {
+  it('⌘/ schaltet die Übersicht, ⌘M öffnet das Export-Blatt', () => {
     COMMANDS['help.shortcuts'](emptyCtx);
     expect(useWerkstatt.getState().shortcutsOpen).toBe(true);
     COMMANDS['help.shortcuts'](emptyCtx);
     expect(useWerkstatt.getState().shortcutsOpen).toBe(false);
     COMMANDS['export.open'](emptyCtx);
-    expect(useWerkstatt.getState().focusRequest?.panel).toBe('export');
+    expect(useWerkstatt.getState().exportOpen).toBe(true);
   });
 });

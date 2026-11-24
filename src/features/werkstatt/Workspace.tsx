@@ -1,11 +1,14 @@
 import { ChevronsLeftRight, Hand, Keyboard, Magnet, MousePointer2, Scissors, UnfoldHorizontal, X, type LucideIcon } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getBackend } from '../../backend';
 import type { Assignment } from '../../domain/assignments/types';
 import { newSequence } from '../../domain/timeline/sequence';
 import type { MediaItem, Sequence } from '../../domain/timeline/types';
 import { useProject } from '../../state/projectStore';
 import { COMMANDS, type CommandCtx } from './commands';
+import { SubmitSheet } from '../chefbuero/SubmitSheet';
+import { ExportSheet } from './ExportSheet';
 import { Inspector } from './Inspector';
 import { onKind, primaryClip } from './inspectorParts';
 import { COMMAND_IDS, bindingFor, tooltipFor, type CommandId } from './keymap';
@@ -55,6 +58,9 @@ export function Workspace({ assignment, heading }: { assignment: Assignment; hea
   const marks = useWerkstatt((s) => s.sourceMarks);
   const shortcutsOpen = useWerkstatt((s) => s.shortcutsOpen);
   const focusRequest = useWerkstatt((s) => s.focusRequest);
+  const exportOpen = useWerkstatt((s) => s.exportOpen);
+  const submitOpen = useWerkstatt((s) => s.submitOpen);
+  const navigate = useNavigate();
   const [engines, setEngines] = useState<{ program: PlaybackEngine; source: SourceEngine } | null>(null);
   const [loaded, setLoaded] = useState<MediaItem | null>(null);
   const [scopes, setScopes] = useState(false);
@@ -210,6 +216,26 @@ export function Workspace({ assignment, heading }: { assignment: Assignment; hea
         </div>
       </div>
       {shortcutsOpen && <ShortcutOverlay onClose={() => useWerkstatt.getState().setShortcutsOpen(false)} />}
+      {exportOpen && (
+        <ExportSheet
+          assignment={assignment}
+          onClose={() => useWerkstatt.getState().setExportOpen(false)}
+          onSubmit={() => {
+            useWerkstatt.getState().setExportOpen(false);
+            useWerkstatt.getState().setSubmitOpen(true);
+          }}
+        />
+      )}
+      {submitOpen && (
+        <SubmitSheet
+          assignment={assignment}
+          onClose={() => useWerkstatt.getState().setSubmitOpen(false)}
+          onDone={(e) => {
+            useWerkstatt.getState().setSubmitOpen(false);
+            navigate(`/chefbuero/${encodeURIComponent(e.id)}`, { state: { fresh: true } });
+          }}
+        />
+      )}
     </main>
   );
 }

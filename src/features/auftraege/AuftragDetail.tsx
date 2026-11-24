@@ -1,6 +1,9 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { getBackend } from '../../backend';
 import { researchKey, useApp } from '../../state/appStore';
+import { loadProjectFor } from '../../state/projectAccess';
+import { SubmitSheet } from '../chefbuero/SubmitSheet';
 import { RESEARCH_TEMPLATES, validSources } from '../../domain/chef/research';
 import { formatDeadline } from './format';
 import { StatusBadge } from './StatusBadge';
@@ -17,7 +20,22 @@ export function AuftragDetail() {
   const research = useApp((s) => s.state?.research);
   const toggle = useApp((s) => s.toggleChecklist);
   const statusOf = useStatusOf();
+  const evaluations = useApp((s) => s.state?.evaluations);
+  const [submitOpen, setSubmitOpen] = useState(false);
+  const [exportCount, setExportCount] = useState(0);
   const groups = useMemo(() => (assignment ? vorgabenFor(assignment) : []), [assignment]);
+
+  // Gibt es schon einen Export? Erst dann ist „Abgeben“ sinnvoll (Recherche-Aufträge brauchen keinen).
+  useEffect(() => {
+    if (!assignment) return;
+    let alive = true;
+    loadProjectFor(assignment, getBackend())
+      .then((r) => alive && setExportCount(r.project?.exports.length ?? 0))
+      .catch(() => alive && setExportCount(0));
+    return () => {
+      alive = false;
+    };
+  }, [assignment]);
 
   if (!assignment) {
     return (
@@ -40,6 +58,8 @@ export function AuftragDetail() {
   const hasVideo = assignment.deliverables.some((d) => d.kind === 'video');
   const firstResearch = assignment.deliverables.find((d) => d.kind === 'research');
   const researchPath = firstResearch ? `/auftraege/${assignment.id}/recherche/${firstResearch.id}` : null;
+  const canSubmit = assignment.status === 'open' && (!hasVideo || exportCount > 0);
+  const lastEvaluation = [...(evaluations ?? [])].filter((e) => e.assignmentId === assignment.id).sort((a, b) => b.at - a.at)[0];
   const ticked = new Set(checked ?? []);
   const total = groups.reduce((n, g) => n + g.items.length, 0);
 
@@ -132,22 +152,37 @@ export function AuftragDetail() {
         </section>
 
         <div className="actions">
+          {canSubmit && (
+            <button type="button" className="btn btn-primary pressable" onClick={() => setSubmitOpen(true)}>
+              Abgeben
+            </button>
+          )}
+          {lastEvaluation && (
+            <button
+              type="button"
+              className={`btn pressable${canSubmit ? '' : ' btn-primary'}`}
+              onClick={() => navigate(`/chefbuero/${encodeURIComponent(lastEvaluation.id)}`)}
+            >
+              Zum Abnahmeprotokoll
+            </button>
+          )}
           {hasVideo ? (
             <button
               type="button"
-              className="btn btn-primary pressable"
+              className={`btn pressable${canSubmit || lastEvaluation ? '' : ' btn-primary'}`}
               onClick={() => navigate('/', { state: { assignmentId: assignment.id } })}
             >
               In der Werkstatt öffnen
             </button>
           ) : (
             researchPath && (
-              <button type="button" className="btn btn-primary pressable" onClick={() => navigate(researchPath)}>
+              <button type="button" className={`btn pressable${canSubmit || lastEvaluation ? '' : ' btn-primary'}`} onClick={() => navigate(researchPath)}>
                 Recherche bearbeiten
               </button>
             )
           )}
         </div>
+        {submitOpen && <SubmitSheet assignment={assignment} onClose={() => setSubmitOpen(false)} />}
       </div>
     </main>
   );
