@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getBackend } from '../../backend';
 import type { GeminiFrame } from '../../domain/gemini/frames';
 import { GEMINI_PRIVACY } from './privacy';
@@ -15,6 +15,11 @@ type Props = { frames: GeminiFrame[]; onSend(): void; onDecline(): void };
 export function GeminiConsent({ frames, onSend, onDecline }: Props) {
   const [people, setPeople] = useState(false);
   const backend = getBackend();
+  // Das Blatt bleibt offen, nur sein Inhalt wechselt: Fokus auf das Pflicht-Häkchen (der Knopf „Senden“ ist noch gesperrt).
+  const check = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    check.current?.focus();
+  }, []);
   return (
     <div className="consent">
       <p>
@@ -37,7 +42,7 @@ export function GeminiConsent({ frames, onSend, onDecline }: Props) {
         <p className="submit-note">Es gehen keine Bilder an Google, nur dein Text.</p>
       )}
       <label className="submit-check">
-        <input type="checkbox" checked={people} onChange={(e) => setPeople(e.target.checked)} />
+        <input ref={check} type="checkbox" checked={people} onChange={(e) => setPeople(e.target.checked)} />
         <span>Alle erkennbaren Personen haben zugestimmt</span>
       </label>
       <p className="muted consent-hint">{GEMINI_PRIVACY.people}</p>
@@ -45,7 +50,7 @@ export function GeminiConsent({ frames, onSend, onDecline }: Props) {
         <button type="button" className="btn pressable" onClick={onDecline}>
           Ohne Gemini abgeben
         </button>
-        <button type="button" className="btn btn-primary pressable" data-autofocus disabled={!people} onClick={onSend}>
+        <button type="button" className="btn btn-primary pressable" disabled={!people} onClick={onSend}>
           Senden
         </button>
       </div>

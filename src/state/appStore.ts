@@ -315,7 +315,12 @@ export const useApp = create<AppStore>()((set, get) => {
       const clock = get().clock;
       const s = get().state;
       if (!clock || !s) return { ok: false, reason: 'invalid' };
-      const check = canAddVacation(s.schedule.vacations, v, clock.now());
+      // „Ab heute“ gilt: Beginn am heutigen Datum (Mitternacht, wie das Formular ihn sendet) startet jetzt; frühere Tage bleiben „past“.
+      const now = clock.now();
+      const d = new Date(now);
+      const today = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+      if (v.start === today && today < now) v = { ...v, start: now };
+      const check = canAddVacation(s.schedule.vacations, v, now);
       if (!check.ok) return check;
       commit((cur) => ({ ...cur, schedule: { ...cur.schedule, vacations: [...cur.schedule.vacations, v] } as ScheduleState }));
       return check;

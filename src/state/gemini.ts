@@ -53,3 +53,8 @@ export async function geminiReview(r: ReviewRequest): Promise<Evaluation> {
     return { ...e, geminiNote: noteForError(err) };
   }
 }
+
+/** Gemini ist eingeschaltet, aber Schlüssel oder Modell fehlen (`hasKey` `null` = noch unbekannt). */
+export function geminiNotReady(g: { enabled: boolean; model: string | null }, hasKey: boolean | null): boolean {
+  return g.enabled && (!g.model || hasKey === false);
+}

@@ -24,12 +24,13 @@ const axe = async (page: Page) => {
 const gemini = (page: Page) => page.getByRole('region', { name: 'Gemini' });
 
 /** Schalter an, Datenschutz-Hinweis bestätigen, Schlüssel speichern. */
-async function enableGemini(page: Page) {
+async function enableGemini(page: Page, withKey = true) {
   const g = gemini(page);
   await g.getByRole('switch', { name: 'Gestaltung von Gemini begutachten lassen' }).click();
   const notice = page.getByRole('dialog', { name: 'Datenschutz-Hinweis' });
   await expect(notice).toBeVisible();
   await notice.getByRole('button', { name: 'Verstanden, einschalten' }).click();
+  if (!withKey) return;
   await g.getByLabel('Gemini-Schlüssel').fill(KEY);
   await g.getByRole('button', { name: 'Speichern' }).click();
   await expect(g.getByText('Schlüssel gespeichert')).toBeVisible();
@@ -114,6 +115,36 @@ test('Urlaub: hinzufügen, Meldungen zu jedem Ablehnungsgrund, Entfernen', async
   await expect(u.getByRole('list', { name: 'Eingetragener Urlaub' })).toHaveCount(0);
 });
 
+test('Urlaub ab heute wird angenommen', async ({ page }) => {
+  await page.goto('/einstellungen');
+  const u = page.getByRole('region', { name: 'Urlaub' });
+  await u.getByLabel('Von').fill('2026-11-23');
+  await u.getByLabel('Bis (einschließlich)').fill('2026-11-24');
+  await u.getByRole('button', { name: 'Urlaub eintragen' }).click();
+  await expect(u.getByRole('alert')).toHaveCount(0);
+  await expect(u.getByRole('list', { name: 'Eingetragener Urlaub' }).getByRole('listitem')).toHaveCount(1);
+});
+
+test('Gemini an mit Schlüssel: Standardmodell gewählt, kein „Kein Modell“-Hinweis', async ({ page }) => {
+  await page.goto('/einstellungen');
+  await enableGemini(page);
+  await expect(gemini(page).getByRole('combobox', { name: 'Modell' })).toHaveValue('gemini-2.5-flash');
+  await expect(page.getByText('Kein Modell gewählt')).toHaveCount(0);
+});
+
+test('Gemini an ohne Schlüssel: Abgabe-Blatt nennt „nicht bereit“, es gibt keine Einwilligungsfrage', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const submit = await openSubmitSheet(page, false);
+  await expect(submit.getByText('Gemini ist eingeschaltet, aber nicht bereit (Schlüssel oder Modell fehlt) – nur Regeln')).toBeVisible();
+  expect(await axe(page), 'Abgabe-Blatt mit Hinweis').toEqual([]);
+  const hook = submit.getByRole('checkbox');
+  if (await hook.count()) await hook.check();
+  await submit.getByRole('button', { name: 'Abgeben', exact: true }).click();
+  await expect(page.getByRole('heading', { level: 2, name: 'Kurz gesagt' })).toBeVisible();
+  await page.getByText('Für Profis', { exact: true }).click();
+  await expect(page.getByText('Gestaltung (Gemini)')).toHaveCount(0);
+});
+
 test('Entwickler-Abschnitt nur mit ?dev=1', async ({ page }) => {
   await page.goto('/einstellungen');
   await expect(page.getByRole('heading', { name: 'Entwickler' })).toHaveCount(0);
@@ -155,7 +186,7 @@ async function cut(page: Page) {
 }
 
 /** Schneiden, exportieren, Gemini einschalten (alles ohne Neuladen: Der Mock-Schlüssel lebt im Arbeitsspeicher) und das Abgabe-Blatt öffnen. */
-async function readyToSubmit(page: Page, query = '') {
+async function readyToSubmit(page: Page, query = '', withKey = true) {
   await page.goto(`/auftraege/A01?seed=e2e-laut&messung=perfekt${query}`);
   await page.getByRole('button', { name: 'In der Werkstatt öffnen' }).click();
   await cut(page);
@@ -166,7 +197,7 @@ async function readyToSubmit(page: Page, query = '') {
   await page.keyboard.press('Escape');
   await expect(sheet).toHaveCount(0);
   await page.getByRole('link', { name: 'Einstellungen' }).click();
-  await enableGemini(page);
+  await enableGemini(page, withKey);
   await page.getByRole('link', { name: 'Aufträge' }).click();
   await page.locator('a.auftrag-card').click();
   await page.getByRole('button', { name: 'Abgeben', exact: true }).click();
@@ -177,10 +208,31 @@ async function readyToSubmit(page: Page, query = '') {
   return page.getByRole('dialog', { name: 'Gemini-Begutachtung' });
 }
 
+/** Wie `readyToSubmit`, hält aber vor dem Klick auf „Abgeben“ im Blatt an. */
+async function openSubmitSheet(page: Page, withKey: boolean) {
+  await page.goto('/auftraege/A01?seed=e2e-laut&messung=perfekt');
+  await page.getByRole('button', { name: 'In der Werkstatt öffnen' }).click();
+  await cut(page);
+  await page.keyboard.press('Meta+m');
+  const sheet = page.getByRole('dialog', { name: 'Exportieren' });
+  await sheet.getByRole('button', { name: 'Exportieren', exact: true }).click();
+  await expect(sheet.getByText('Export fertig.')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page.getByRole('link', { name: 'Einstellungen' }).click();
+  await enableGemini(page, withKey);
+  await page.getByRole('link', { name: 'Aufträge' }).click();
+  await page.locator('a.auftrag-card').click();
+  await page.getByRole('button', { name: 'Abgeben', exact: true }).click();
+  return page.getByRole('dialog', { name: 'Abgeben' });
+}
+
 test('Abgabe ohne Personen-Häkchen: „Senden“ gesperrt, „Ohne Gemini abgeben“ → Protokoll ohne Gemini-Teil', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   const consent = await readyToSubmit(page);
   await expect(consent).toBeVisible();
+  // Fokus bleibt im Blatt: Pflicht-Häkchen (Senden ist noch gesperrt)
+  await expect(consent.getByRole('checkbox', { name: 'Alle erkennbaren Personen haben zugestimmt' })).toBeFocused();
+  expect(await page.evaluate(() => !!document.activeElement?.closest('[role="dialog"]'))).toBe(true);
   await expect(consent).toContainText('Im Gratis-Tarif nutzt Google');
   await expect(consent.getByRole('img')).toHaveCount(8);
   await expect(consent.getByRole('button', { name: 'Senden' })).toBeDisabled();

@@ -47,6 +47,14 @@ describe('Einstellungen im App-Zustand', () => {
     app().setTheme('dark');
     expect(app().state!.settings.theme).toBe('dark');
   });
+  it('Urlaub ab heute (Mitternacht) wird angenommen, gestern bleibt „past“', () => {
+    const day = 24 * 3_600_000;
+    const d = new Date(t0);
+    const today = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    expect(app().addVacation({ start: today - day, end: today + day })).toEqual({ ok: false, reason: 'past' });
+    expect(app().addVacation({ start: today, end: today + 2 * day }).ok).toBe(true);
+    expect(app().state!.schedule.vacations[0].start).toBe(t0);
+  });
   it('Urlaub: nur künftige Einträge lassen sich entfernen', () => {
     const day = 24 * 3_600_000;
     expect(app().addVacation({ start: t0 + 5 * day, end: t0 + 7 * day }).ok).toBe(true);

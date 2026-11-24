@@ -6,7 +6,7 @@ type Refusal = Extract<ReturnType<typeof canAddVacation>, { ok: false }>['reason
 export function vacationRefusalText(reason: Refusal): string {
   switch (reason) {
     case 'past':
-      return 'Der Urlaub darf nicht in der Vergangenheit beginnen. Wähle einen Beginn ab heute.';
+      return 'Der Beginn liegt in der Vergangenheit. Der Urlaub kann frühestens heute beginnen.';
     case 'over14days':
       return 'Mehr als 14 Urlaubstage im Jahr gibt es nicht. Verkürze den Urlaub oder entferne einen anderen.';
     case 'overlap':

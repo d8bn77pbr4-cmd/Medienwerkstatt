@@ -1,4 +1,4 @@
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, TriangleAlert } from 'lucide-react';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { getBackend } from '../../backend';
 import { defaultModel } from '../../domain/gemini/models';
@@ -31,7 +31,9 @@ export function GeminiSection() {
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState(false);
 
+  // Der Schlüsselstatus (Schlüsselbund) wird erst gelesen, wenn Gemini eingeschaltet ist: aus = kein Gemini-Aufruf.
   useEffect(() => {
+    if (!enabled) return;
     let alive = true;
     getBackend()
       .gemini.hasKey()
@@ -40,7 +42,7 @@ export function GeminiSection() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [enabled]);
 
   // Modelle nur holen, wenn Gemini an ist und ein Schlüssel vorliegt (das ist eine Anfrage an Google).
   const loadModels = useCallback(async () => {
@@ -117,7 +119,7 @@ export function GeminiSection() {
           </button>
         </form>
       )}
-      {hasKey === true && (
+      {enabled && hasKey === true && (
         <div className="set-row">
           <span className="key-ok">Schlüssel gespeichert</span>
           <button type="button" className="btn pressable" onClick={() => void removeKey()}>
@@ -147,6 +149,18 @@ export function GeminiSection() {
           </div>
           <button type="button" className="icon-btn pressable" aria-label="Modelle aktualisieren" disabled={loading} onClick={() => void loadModels()}>
             <RefreshCw aria-hidden="true" />
+          </button>
+        </div>
+      )}
+      {enabled && hasKey === true && !model && !loading && (
+        <div className="set-warn" role="status">
+          <TriangleAlert aria-hidden="true" />
+          <span>
+            Kein Modell gewählt – Gemini bleibt aus.{' '}
+            {models && models.length > 0 ? 'Wähle ein Modell aus der Liste.' : 'Die Modellliste ist leer oder konnte nicht geladen werden.'}
+          </span>
+          <button type="button" className="btn pressable" onClick={() => void loadModels()}>
+            Erneut laden
           </button>
         </div>
       )}

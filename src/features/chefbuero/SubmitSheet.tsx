@@ -10,7 +10,7 @@ import type { Evaluation } from '../../domain/chef/types';
 import type { Project } from '../../domain/timeline/types';
 import { Sheet } from '../../shell/Sheet';
 import { GeminiConsent } from '../einstellungen/GeminiConsent';
-import type { GeminiChoice } from '../../state/gemini';
+import { geminiNotReady, type GeminiChoice } from '../../state/gemini';
 import type { GeminiPreparation } from '../../state/geminiFrames';
 import { researchKey, useApp } from '../../state/appStore';
 import { loadProjectFor } from '../../state/projectAccess';
@@ -34,6 +34,19 @@ export function SubmitSheet({ assignment, onClose, onDone }: { assignment: Assig
   const [error, setError] = useState<string | null>(null);
   /** Gemini ist aktiv: vor dem Senden die Standbilder zeigen und um Einwilligung bitten. */
   const [consent, setConsent] = useState<GeminiPreparation | null>(null);
+  const geminiSettings = useApp((s) => s.state?.settings.gemini);
+  const geminiOn = geminiSettings?.enabled ?? false;
+  const [hasKey, setHasKey] = useState<boolean | null>(null);
+  // Schlüsselstatus nur lesen, wenn Gemini eingeschaltet ist (aus = kein Gemini-Aufruf).
+  useEffect(() => {
+    if (!geminiOn) return;
+    let alive = true;
+    getBackend().gemini.hasKey().then((k) => alive && setHasKey(k), () => alive && setHasKey(false));
+    return () => {
+      alive = false;
+    };
+  }, [geminiOn]);
+  const geminiNotice = geminiSettings && geminiNotReady(geminiSettings, hasKey);
 
   useEffect(() => {
     let alive = true;
@@ -178,6 +191,11 @@ export function SubmitSheet({ assignment, onClose, onDone }: { assignment: Assig
           {missing > 0 && check.ok && (
             <p className="submit-note" role="status">
               Du kannst trotzdem abgeben. Jede fehlende Abgabe kostet {Math.abs(missingPoints)} Punkte.
+            </p>
+          )}
+          {geminiNotice && (
+            <p className="submit-note" role="status">
+              <TriangleAlert aria-hidden="true" className="note-icon" /> Gemini ist eingeschaltet, aber nicht bereit (Schlüssel oder Modell fehlt) – nur Regeln.
             </p>
           )}
           <h3>Haken</h3>
