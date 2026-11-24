@@ -77,6 +77,7 @@ export class MockBackend implements Backend {
     return m.path;
   }
   mediaUrl(path: string): string {
+    // Pfade unter /fixtures/ (Testmedien des Vite-Dev-Servers) und alle anderen bleiben unverändert.
     return path;
   }
   async writeFile(dir: string, rel: string): Promise<string> {

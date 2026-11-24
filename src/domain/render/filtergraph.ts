@@ -1,4 +1,5 @@
 import type { Clip, MediaItem, Sequence } from '../timeline/types';
+import { NO_OVERHANG as NO_EXT, transitionOverhangs } from '../timeline/transitions';
 import type { ExportPreset } from './presets';
 
 export type ExportAssets = {
@@ -31,42 +32,6 @@ export function escapeFilterPath(p: string): string {
 /** Ausgabegröße: Größe des Presets, sonst die der Sequenz. */
 export function exportSize(seq: Sequence, preset: ExportPreset): { width: number; height: number } {
   return preset.size ?? { width: seq.width, height: seq.height };
-}
-
-/**
- * Wie weit Clips über ihren Schnitt hinausragen: Überblendungen liegen mittig auf dem Schnitt.
- * `head`/`tail` sind auf die vorhandene Quelle begrenzt (vor `sourceIn`, nach dem Clip-Ende);
- * `fadeIn`/`fadeOut` sind die tatsächlichen Überblendungslängen (Überstand rechts + links).
- */
-type Extension = { head: number; tail: number; fadeIn: number; fadeOut: number };
-const NO_EXT: Extension = { head: 0, tail: 0, fadeIn: 0, fadeOut: 0 };
-
-function extensions(seq: Sequence, kind: 'dissolve' | 'audioFade', media: Map<string, MediaItem>): Map<string, Extension> {
-  const ext = new Map<string, Extension>();
-  const get = (id: string): Extension => {
-    let e = ext.get(id);
-    if (!e) ext.set(id, (e = { ...NO_EXT }));
-    return e;
-  };
-  const clip = (id: string) => seq.clips.find((c) => c.id === id);
-  const room = (c: Clip | undefined): { head: number; tail: number } => {
-    const m = c?.mediaId ? media.get(c.mediaId) : undefined;
-    if (!c || !m || m.kind === 'image') return { head: Infinity, tail: Infinity };
-    return { head: Math.max(0, c.sourceIn), tail: Math.max(0, m.durationSec - c.sourceIn - c.duration / seq.fps) };
-  };
-  for (const t of seq.transitions) {
-    if (t.kind !== kind) continue;
-    const [l, r] = [clip(t.leftClipId), clip(t.rightClipId)];
-    if (!l || !r) continue;
-    const half = t.duration / seq.fps / 2;
-    const tail = Math.min(half, room(l).tail);
-    const head = Math.min(half, room(r).head);
-    get(l.id).tail = tail;
-    get(r.id).head = head;
-    get(l.id).fadeOut = head + tail;
-    get(r.id).fadeIn = head + tail;
-  }
-  return ext;
 }
 
 type Graph = { inputs: string[][]; chains: string[] };
@@ -142,7 +107,7 @@ export function buildExport(
     g.chains.push(`${cur}[p${n}]overlay=eof_action=pass${next}`);
     cur = next;
   };
-  const vext = extensions(seq, 'dissolve', byId);
+  const vext = transitionOverhangs(seq, 'dissolve', byId);
   const fit = `scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2,setsar=1`;
   for (const { clip: c, media: m } of videoClips(seq, byId)) {
     const e = vext.get(c.id) ?? NO_EXT;
@@ -178,7 +143,7 @@ export function buildExport(
   g.chains.push(ranged ? `${cur}trim=start=${num(inSec)}:end=${num(outSec)},setpts=PTS-STARTPTS[vout]` : `${cur}null[vout]`);
 
   // ---- Ton ----
-  const aext = extensions(seq, 'audioFade', byId);
+  const aext = transitionOverhangs(seq, 'audioFade', byId);
   const mixed: string[] = [];
   for (const t of seq.tracks.filter((x) => x.kind === 'audio' && !x.muted)) {
     for (const c of seq.clips.filter((x) => x.trackId === t.id && x.kind === 'media').sort((a, b) => a.start - b.start)) {

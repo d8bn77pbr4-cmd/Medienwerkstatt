@@ -18,3 +18,25 @@ export function buildCubeLut(p: ColorParams, size = 33): string {
   }
   return `${lines.join('\n')}\n`;
 }
+
+/**
+ * Dieselbe 3D-LUT als RGBA8 (R läuft am schnellsten, Alpha 255) für die Vorschau (WebGL-3D-Textur).
+ * Rechnet mit `applyColor`, genau wie `buildCubeLut` für den Export.
+ */
+export function lutData(p: ColorParams, size = 33): Uint8Array {
+  const out = new Uint8Array(size * size * size * 4);
+  const step = size - 1;
+  let i = 0;
+  for (let b = 0; b < size; b++) {
+    for (let g = 0; g < size; g++) {
+      for (let r = 0; r < size; r++) {
+        const [x, y, z] = applyColor(p, [r / step, g / step, b / step]);
+        out[i++] = Math.round(x * 255);
+        out[i++] = Math.round(y * 255);
+        out[i++] = Math.round(z * 255);
+        out[i++] = 255;
+      }
+    }
+  }
+  return out;
+}

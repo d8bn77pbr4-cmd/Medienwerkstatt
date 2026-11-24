@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { AuftraegeView } from './features/auftraege/AuftraegeView';
 import { AuftragDetail } from './features/auftraege/AuftragDetail';
@@ -13,6 +13,9 @@ import { AREAS, areaForPath } from './shell/areas';
 import type { AreaInfo } from './shell/areas';
 import { useAreaShortcuts } from './shell/useAreaShortcuts';
 import { useApp } from './state/appStore';
+
+/** Nur im Entwicklungsserver: Testseite für Wiedergabe, Monitor und Scopes. */
+const DevWiedergabe = import.meta.env.DEV ? lazy(() => import('./features/werkstatt/DevWiedergabe')) : null;
 
 function WerkstattPlatzhalter({ area }: { area: AreaInfo }) {
   const assignmentId = (useLocation().state as { assignmentId?: string } | null)?.assignmentId;
@@ -63,6 +66,16 @@ function Shell() {
         <Routes>
           <Route path="/auftraege/:id" element={<AuftragDetail />} />
           <Route path="/auftraege/:id/recherche/:deliverableId" element={<ResearchForm />} />
+          {DevWiedergabe && (
+            <Route
+              path="/_dev/wiedergabe"
+              element={
+                <Suspense fallback={null}>
+                  <DevWiedergabe />
+                </Suspense>
+              }
+            />
+          )}
           {AREAS.map((a) => (
             <Route key={a.id} path={a.path} element={<AreaPage area={a} />} />
           ))}

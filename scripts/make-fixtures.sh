@@ -41,4 +41,8 @@ make hdr-hlg.mov "${V30[@]}" "${A20[@]}" -af volume=-2dB \
 # Zu laut: Sinus 0 dBFS, geclippt.
 make zu-laut.wav -f lavfi -i "sine=frequency=440:sample_rate=48000:duration=5" \
   -af "volume=24dB,alimiter=limit=1:level=disabled:attack=0.1:release=1" -c:a pcm_s16le
+# E2E (Playwright-Chromium kann kein H.264/AAC): VP9 + Opus, 5 s, 1280x720, 25 fps, 440-Hz-Sinus.
+VP9=(-c:v libvpx-vp9 -deadline realtime -cpu-used 8 -crf 38 -b:v 0 -pix_fmt yuv420p -g 12 -c:a libopus -b:a 64k -shortest)
+make e2e-clip.webm -f lavfi -i "testsrc2=size=1280x720:rate=25:duration=5" "${A20[@]}" "${VP9[@]}"
+make e2e-clip2.webm -f lavfi -i "smptebars=size=1280x720:rate=25:duration=5" "${A20[@]}" "${VP9[@]}"
 echo "Fixtures bereit in $OUT"
