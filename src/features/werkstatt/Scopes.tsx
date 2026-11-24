@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { PlaybackEngine } from './playback';
 import { lumaScopes, type LumaScopes } from './scopesMath';
 import './monitor.css';
@@ -59,24 +59,40 @@ function drawHistogram(c: HTMLCanvasElement, s: LumaScopes | null): void {
 export function Scopes({ engine }: { engine: PlaybackEngine }) {
   const wave = useRef<HTMLCanvasElement>(null);
   const hist = useRef<HTMLCanvasElement>(null);
+  const [blocked, setBlocked] = useState(false);
 
   useEffect(() => {
+    setBlocked(false);
+    let stopped = false;
     const small = document.createElement('canvas');
     const sctx = small.getContext('2d', { willReadFrequently: true });
+    let id = 0;
     const tick = () => {
       const src = engine.canvas;
       let s: LumaScopes | null = null;
       if (sctx && src.width > 0 && src.height > 0) {
-        small.width = SRC_W;
-        small.height = Math.max(1, Math.round((SRC_W * src.height) / src.width));
-        sctx.drawImage(src, 0, 0, small.width, small.height);
-        s = lumaScopes(sctx.getImageData(0, 0, small.width, small.height).data, small.width, small.height);
+        try {
+          small.width = SRC_W;
+          small.height = Math.max(1, Math.round((SRC_W * src.height) / src.width));
+          sctx.drawImage(src, 0, 0, small.width, small.height);
+          s = lumaScopes(sctx.getImageData(0, 0, small.width, small.height).data, small.width, small.height);
+        } catch (e) {
+          // Cross-Origin-Quelle ohne Freigabe: Canvas ist „tainted“. Nicht alle 100 ms erneut werfen.
+          if (e instanceof DOMException && e.name === 'SecurityError') {
+            stopped = true;
+            window.clearInterval(id);
+            engine.markBlocked();
+            setBlocked(true);
+            return;
+          }
+          throw e;
+        }
       }
       if (wave.current) drawWaveform(wave.current, s);
       if (hist.current) drawHistogram(hist.current, s);
     };
     tick();
-    const id = window.setInterval(tick, INTERVAL_MS);
+    if (!stopped) id = window.setInterval(tick, INTERVAL_MS);
     return () => window.clearInterval(id);
   }, [engine]);
 
@@ -90,6 +106,11 @@ export function Scopes({ engine }: { engine: PlaybackEngine }) {
         <figcaption>Histogramm</figcaption>
         <canvas ref={hist} width={HIST.w} height={HIST.h} role="img" aria-label="Histogramm" data-testid="scope-histogram" />
       </figure>
+      {blocked && (
+        <p className="scopes-hint" role="status">
+          Vorschau blockiert: Medienquelle nicht freigegeben
+        </p>
+      )}
     </section>
   );
 }

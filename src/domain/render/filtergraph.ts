@@ -41,7 +41,7 @@ const addInput = (g: Graph, args: string[]): number => g.inputs.push(args) - 1;
 
 function videoClips(seq: Sequence, media: Map<string, MediaItem>): { clip: Clip; media: MediaItem }[] {
   const out: { clip: Clip; media: MediaItem }[] = [];
-  for (const t of seq.tracks.filter((x) => x.kind === 'video')) {
+  for (const t of seq.tracks.filter((x) => x.kind === 'video' && !x.muted)) {
     for (const c of seq.clips.filter((x) => x.trackId === t.id && x.kind === 'media').sort((a, b) => a.start - b.start)) {
       const m = c.mediaId ? media.get(c.mediaId) : undefined;
       if (m && m.kind !== 'audio') out.push({ clip: c, media: m });
@@ -126,7 +126,7 @@ export function buildExport(
     if (e.fadeIn > 0) parts.push('format=yuva420p', `fade=t=in:st=0:d=${num(e.fadeIn)}:alpha=1`);
     overlay(`[${k}:v]`, start, parts.join(','));
   }
-  for (const t of seq.tracks.filter((x) => x.kind === 'video')) {
+  for (const t of seq.tracks.filter((x) => x.kind === 'video' && !x.muted)) {
     for (const c of seq.clips.filter((x) => x.trackId === t.id && x.kind === 'title').sort((a, b) => a.start - b.start)) {
       const png = assets.titlePngByClipId[c.id];
       if (!png || !c.title) continue;

@@ -21,7 +21,7 @@ export function lutKeyOf(c: ColorParams | null): string {
  * (`transitionOverhangs`): Der rechte Clip beginnt `head` früher und blendet linear über
  * `fadeIn` ein, der linke läuft `tail` über seinen Schnitt hinaus.
  * Bildebenen von unten (V1) nach oben (V2); Titel liegen über allen Bildebenen.
- * Stumme Tonspuren liefern nichts (wie im Export; Videospuren kennen kein Stummschalten).
+ * Stumme Spuren (Bild wie Ton) liefern nichts, genau wie im Export.
  */
 export function resolveFrame(seq: Sequence, media: Map<string, MediaItem> | MediaItem[], frame: number): ResolvedFrame {
   const byId = Array.isArray(media) ? new Map(media.map((m) => [m.id, m])) : media;
@@ -33,14 +33,14 @@ export function resolveFrame(seq: Sequence, media: Map<string, MediaItem> | Medi
   const clipsOn = (trackId: string): Clip[] => seq.clips.filter((c) => c.trackId === trackId).sort((a, b) => a.start - b.start);
   const sourceTime = (c: Clip): number => Math.max(0, c.sourceIn + (frame - c.start) / fps);
 
-  for (const t of seq.tracks.filter((x) => x.kind === 'video')) {
+  for (const t of seq.tracks.filter((x) => x.kind === 'video' && !x.muted)) {
     for (const c of clipsOn(t.id)) {
       if (c.kind === 'title') {
         if (!c.title || frame < c.start || frame >= c.start + c.duration) continue;
         const local = frame - c.start;
         const fin = c.title.fadeIn > 0 ? local / c.title.fadeIn : 1;
         const fout = c.title.fadeOut > 0 ? (c.duration - local) / c.title.fadeOut : 1;
-        out.titles.push({ clipId: c.id, alpha: clamp01(Math.min(fin, fout)) });
+        out.titles.push({ clipId: c.id, alpha: clamp01(fin) * clamp01(fout) });
         continue;
       }
       const m = c.mediaId ? byId.get(c.mediaId) : undefined;
@@ -61,12 +61,13 @@ export function resolveFrame(seq: Sequence, media: Map<string, MediaItem> | Medi
       const end = c.start + c.duration;
       const from = c.start - e.head * fps;
       if (frame < from - EPS || frame >= end + e.tail * fps - EPS) continue;
+      // ffmpeg verkettet die afade-Filter: die Hüllkurven multiplizieren sich.
       let env = 1;
-      if (c.fadeIn > 0) env = Math.min(env, (frame - c.start) / c.fadeIn);
-      if (c.fadeOut > 0) env = Math.min(env, (end - frame) / c.fadeOut);
-      if (e.fadeIn > 0) env = Math.min(env, (frame - from) / (e.fadeIn * fps));
-      if (e.fadeOut > 0) env = Math.min(env, (end + e.tail * fps - frame) / (e.fadeOut * fps));
-      out.audio.push({ clipId: c.id, mediaId: m.id, sourceTime: sourceTime(c), gain: 10 ** (c.gainDb / 20) * clamp01(env) });
+      if (c.fadeIn > 0) env *= clamp01((frame - c.start) / c.fadeIn);
+      if (c.fadeOut > 0) env *= clamp01((end - frame) / c.fadeOut);
+      if (e.fadeIn > 0) env *= clamp01((frame - from) / (e.fadeIn * fps));
+      if (e.fadeOut > 0) env *= clamp01((end + e.tail * fps - frame) / (e.fadeOut * fps));
+      out.audio.push({ clipId: c.id, mediaId: m.id, sourceTime: sourceTime(c), gain: 10 ** (c.gainDb / 20) * env });
     }
   }
   return out;

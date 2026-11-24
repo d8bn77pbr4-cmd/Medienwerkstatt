@@ -10,9 +10,22 @@ export type DrawList = { layers: DrawLayer[]; titles: DrawTitle[] };
 export interface Preview {
   /** `true`, wenn die Farbkorrektur sichtbar ist (WebGL2). */
   readonly colorSupported: boolean;
+  /** `true`, wenn eine Medienquelle nicht ins Bild übernommen werden darf (SecurityError, fehlendes CORS). */
+  readonly blocked: boolean;
+  /** Wird aufgerufen, wenn der WebGL-Kontext verloren ging und nicht zurückkam. */
+  onUnrecoverable: (() => void) | null;
+  /** Wird aufgerufen, wenn der WebGL-Kontext wiederhergestellt wurde (neu zeichnen!). */
+  onRestored: (() => void) | null;
   draw(list: DrawList): void;
+  /** Gibt Titel-Zwischenspeicher frei, die nicht mehr `live` sind oder länger als 30 s ungenutzt blieben. */
+  prune(live: Set<string>, now: number): void;
   dispose(): void;
 }
+
+/** So lange ungenutzte Titel-Texturen bleiben (ms). */
+export const IDLE_MS = 30_000;
+/** So lange wartet die Vorschau auf `webglcontextrestored`, bevor sie auf Canvas 2D zurückfällt (ms). */
+const RESTORE_WAIT_MS = 2000;
 
 const LUT_SIZE = 33;
 const LUT_CACHE_MAX = 16;
@@ -68,18 +81,35 @@ export function fitRect(srcW: number, srcH: number, dstW: number, dstH: number):
 }
 
 class TitleCache {
-  private items = new Map<string, { json: string; w: number; h: number; surface: HTMLCanvasElement | OffscreenCanvas }>();
-  /** Zeichnet den Titel neu, wenn sich Parameter oder Größe geändert haben; liefert `true`, wenn neu gezeichnet. */
-  get(key: string, params: TitleParams, w: number, h: number): { surface: HTMLCanvasElement | OffscreenCanvas; fresh: boolean } {
+  private items = new Map<string, { json: string; w: number; h: number; surface: HTMLCanvasElement | OffscreenCanvas; lastUsed: number }>();
+  /** Zeichnet den Titel neu, wenn sich Parameter oder Größe geändert haben; liefert `fresh`, wenn neu gezeichnet. */
+  get(key: string, params: TitleParams, w: number, h: number, now: number): { surface: HTMLCanvasElement | OffscreenCanvas; fresh: boolean } {
     const json = JSON.stringify(params);
     let it = this.items.get(key);
-    if (it && it.json === json && it.w === w && it.h === h) return { surface: it.surface, fresh: false };
-    if (!it || it.w !== w || it.h !== h) it = { json, w, h, surface: makeSurface(w, h) };
+    if (it && it.json === json && it.w === w && it.h === h) {
+      it.lastUsed = now;
+      return { surface: it.surface, fresh: false };
+    }
+    if (!it || it.w !== w || it.h !== h) it = { json, w, h, surface: makeSurface(w, h), lastUsed: now };
     it.json = json;
+    it.lastUsed = now;
     const ctx = it.surface.getContext('2d') as unknown as TitleCtx | null;
     if (ctx) renderTitle(params, w, h, ctx);
     this.items.set(key, it);
     return { surface: it.surface, fresh: true };
+  }
+  prune(live: Set<string>, now: number): string[] {
+    const gone: string[] = [];
+    for (const [k, it] of this.items) {
+      if (!live.has(k) || now - it.lastUsed > IDLE_MS) {
+        this.items.delete(k);
+        gone.push(k);
+      }
+    }
+    return gone;
+  }
+  has(key: string): boolean {
+    return this.items.has(key);
   }
   clear(): void {
     this.items.clear();
@@ -88,19 +118,31 @@ class TitleCache {
 
 export class GlPreview implements Preview {
   readonly colorSupported = true;
-  private gl: WebGL2RenderingContext;
-  private prog: WebGLProgram;
-  private u: Record<'rect' | 'tex' | 'lut' | 'useLut' | 'premult' | 'alpha', WebGLUniformLocation | null>;
-  private vao: WebGLVertexArrayObject | null;
-  private buf: WebGLBuffer | null;
-  private srcTex: WebGLTexture | null;
+  blocked = false;
+  onUnrecoverable: (() => void) | null = null;
+  onRestored: (() => void) | null = null;
+  private lost = false;
+  private restoreTimer = 0;
+  private prog!: WebGLProgram;
+  private u!: Record<'rect' | 'tex' | 'lut' | 'useLut' | 'premult' | 'alpha', WebGLUniformLocation | null>;
+  private vao: WebGLVertexArrayObject | null = null;
+  private buf: WebGLBuffer | null = null;
+  private srcTex: WebGLTexture | null = null;
   private titleTex = new Map<string, WebGLTexture>();
   private lutTex = new Map<string, WebGLTexture>();
-  private identityLut: WebGLTexture | null;
+  private identityLut: WebGLTexture | null = null;
   private titles = new TitleCache();
+  private uploaded = new WeakSet<WebGLTexture>();
 
-  private constructor(private canvas: HTMLCanvasElement, gl: WebGL2RenderingContext) {
-    this.gl = gl;
+  private constructor(private canvas: HTMLCanvasElement, private gl: WebGL2RenderingContext) {
+    this.init();
+    canvas.addEventListener('webglcontextlost', this.handleLost);
+    canvas.addEventListener('webglcontextrestored', this.handleRestored);
+  }
+
+  /** Programm, Puffer und Standard-Texturen anlegen (auch nach Kontextwiederherstellung). */
+  private init(): void {
+    const gl = this.gl;
     const compile = (type: number, src: string): WebGLShader => {
       const s = gl.createShader(type)!;
       gl.shaderSource(s, src);
@@ -127,6 +169,30 @@ export class GlPreview implements Preview {
     this.srcTex = this.makeTex2D();
     this.identityLut = this.makeLut(lutData({ exposure: 0, contrast: 0, highlights: 0, shadows: 0, temperature: 0, tint: 0, saturation: 0 }, 2), 2);
   }
+
+  private handleLost = (e: Event): void => {
+    e.preventDefault(); // sonst kommt der Kontext nie zurück
+    this.lost = true;
+    window.clearTimeout(this.restoreTimer);
+    this.restoreTimer = window.setTimeout(() => {
+      if (this.lost) this.onUnrecoverable?.();
+    }, RESTORE_WAIT_MS);
+  };
+
+  private handleRestored = (): void => {
+    window.clearTimeout(this.restoreTimer);
+    // Alle GL-Objekte sind weg: Zwischenspeicher verwerfen, LUT- und Titel-Texturen entstehen beim nächsten Zeichnen neu.
+    this.titleTex.clear();
+    this.lutTex.clear();
+    this.uploaded = new WeakSet();
+    try {
+      this.init();
+      this.lost = false;
+      this.onRestored?.();
+    } catch {
+      this.onUnrecoverable?.();
+    }
+  };
 
   /** `null`, wenn WebGL2 fehlt. */
   static create(canvas: HTMLCanvasElement): GlPreview | null {
@@ -182,7 +248,9 @@ export class GlPreview implements Preview {
   }
 
   draw(list: DrawList): void {
+    if (this.lost || this.gl.isContextLost()) return;
     const { gl, canvas } = this;
+    const now = performance.now();
     const [W, H] = [canvas.width, canvas.height];
     gl.viewport(0, 0, W, H);
     gl.disable(gl.DEPTH_TEST);
@@ -203,8 +271,9 @@ export class GlPreview implements Preview {
       gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
       try {
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, l.source);
-      } catch {
-        continue; // Bild noch nicht dekodiert
+      } catch (e) {
+        if (e instanceof DOMException && e.name === 'SecurityError') this.blocked = true;
+        continue; // Bild noch nicht dekodiert oder Quelle nicht freigegeben
       }
       gl.activeTexture(gl.TEXTURE1);
       const lut = l.color ? this.lutFor(l.lutKey, l.color) : null;
@@ -216,7 +285,7 @@ export class GlPreview implements Preview {
     }
 
     for (const t of list.titles) {
-      const { surface, fresh } = this.titles.get(t.key, t.params, W, H);
+      const { surface, fresh } = this.titles.get(t.key, t.params, W, H, now);
       let tex = this.titleTex.get(t.key);
       gl.activeTexture(gl.TEXTURE0);
       if (!tex) {
@@ -236,23 +305,41 @@ export class GlPreview implements Preview {
     }
     gl.disable(gl.BLEND);
   }
-  private uploaded = new WeakSet<WebGLTexture>();
+
+  prune(live: Set<string>, now: number): void {
+    this.titles.prune(live, now);
+    // Texturen ohne Zeichenfläche (veraltet oder entfernt) freigeben; sie entstehen bei Bedarf neu.
+    for (const key of [...this.titleTex.keys()]) {
+      if (!live.has(key) || !this.titles.has(key)) {
+        if (!this.lost) this.gl.deleteTexture(this.titleTex.get(key) ?? null);
+        this.titleTex.delete(key);
+      }
+    }
+  }
 
   dispose(): void {
+    window.clearTimeout(this.restoreTimer);
+    this.canvas.removeEventListener('webglcontextlost', this.handleLost);
+    this.canvas.removeEventListener('webglcontextrestored', this.handleRestored);
     const gl = this.gl;
-    for (const t of [...this.titleTex.values(), ...this.lutTex.values(), this.srcTex, this.identityLut]) gl.deleteTexture(t);
+    if (!this.lost) {
+      for (const t of [...this.titleTex.values(), ...this.lutTex.values(), this.srcTex, this.identityLut]) gl.deleteTexture(t);
+      gl.deleteProgram(this.prog);
+      gl.deleteBuffer(this.buf);
+      gl.deleteVertexArray(this.vao);
+    }
     this.titleTex.clear();
     this.lutTex.clear();
     this.titles.clear();
-    gl.deleteProgram(this.prog);
-    gl.deleteBuffer(this.buf);
-    gl.deleteVertexArray(this.vao);
   }
 }
 
 /** Rückfall ohne WebGL2: Canvas 2D, ohne Farbkorrektur. */
 export class CanvasPreview implements Preview {
   readonly colorSupported = false;
+  blocked = false;
+  onUnrecoverable: (() => void) | null = null;
+  onRestored: (() => void) | null = null;
   private ctx: CanvasRenderingContext2D;
   private titles = new TitleCache();
 
@@ -274,16 +361,20 @@ export class CanvasPreview implements Preview {
       ctx.globalAlpha = l.alpha;
       try {
         ctx.drawImage(l.source, r.x, r.y, r.w, r.h);
-      } catch {
-        /* noch nicht dekodiert */
+      } catch (e) {
+        if (e instanceof DOMException && e.name === 'SecurityError') this.blocked = true;
       }
     }
     for (const t of list.titles) {
-      const { surface } = this.titles.get(t.key, t.params, W, H);
+      const { surface } = this.titles.get(t.key, t.params, W, H, performance.now());
       ctx.globalAlpha = t.alpha;
       ctx.drawImage(surface as CanvasImageSource, 0, 0);
     }
     ctx.globalAlpha = 1;
+  }
+
+  prune(live: Set<string>, now: number): void {
+    this.titles.prune(live, now);
   }
 
   dispose(): void {

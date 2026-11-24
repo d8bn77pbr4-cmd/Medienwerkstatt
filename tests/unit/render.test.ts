@@ -324,6 +324,14 @@ describe('buildExport', () => {
     expect(graphOf(v.args)).not.toContain('amix');
     expect(inputsOf(v.args)).toContain('anullsrc=r=48000:cl=stereo');
   });
+  it('stumme Videospur: Clips und Titel fehlen im Export', () => {
+    const s = seqOf([mkClip('a', 'V1', 0, 50), mkClip('b', 'V2', 0, 50), mkClip('t', 'V2', 0, 50, { kind: 'title', mediaId: undefined, title: TITLE })]);
+    s.tracks = s.tracks.map((t) => (t.id === 'V2' ? { ...t, muted: true } : t));
+    const r = build(s);
+    expect(inputsOf(r.args).filter((i) => i.includes('m.mov'))).toHaveLength(1);
+    expect(inputsOf(r.args).some((i) => i.includes('Titel'))).toBe(false);
+    expect(graphOf(r.args).match(/overlay/g)).toHaveLength(1);
+  });
   it('stumme Ton-Spur (muted) → stille Spur', () => {
     const s = seqOf([mkClip('a', 'V1', 0, 50), mkClip('x', 'A1', 0, 50)]);
     s.tracks = s.tracks.map((t) => (t.id === 'A1' ? { ...t, muted: true } : t));

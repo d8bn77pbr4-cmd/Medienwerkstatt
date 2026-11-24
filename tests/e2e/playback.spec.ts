@@ -138,3 +138,73 @@ test('Barrierefreiheit (axe)', async ({ page }) => {
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations).toEqual([]);
 });
+
+test('gehaltenes L (Tastenwiederholung) eskaliert nicht auf 8×', async ({ page }) => {
+  await page.keyboard.press('l');
+  await page.evaluate(() => {
+    for (let i = 0; i < 6; i++) window.dispatchEvent(new KeyboardEvent('keydown', { key: 'l', repeat: true, bubbles: true }));
+  });
+  await page.waitForTimeout(500);
+  await page.keyboard.press('k');
+  // 1× in ~0,5 s ≈ 12 Bilder; bei Eskalation auf 8× wären es > 60
+  expect(await frames(page)).toBeLessThan(20);
+});
+
+const brightPixels = (page: Page) =>
+  page.evaluate(() => {
+    const src = document.querySelector<HTMLCanvasElement>('canvas.monitor-canvas')!;
+    const c = document.createElement('canvas');
+    c.width = 64;
+    c.height = 36;
+    const ctx = c.getContext('2d')!;
+    ctx.drawImage(src, 0, 0, 64, 36);
+    const d = ctx.getImageData(0, 0, 64, 36).data;
+    let n = 0;
+    for (let i = 0; i < d.length; i += 4) if (d[i] + d[i + 1] + d[i + 2] > 120) n++;
+    return n;
+  });
+
+test('WebGL-Kontextverlust mit Wiederherstellung: Bild kommt zurück', async ({ page }) => {
+  await page.keyboard.press('Shift+ArrowRight');
+  await expect.poll(() => brightPixels(page)).toBeGreaterThan(100);
+  await page.evaluate(() => {
+    const gl = document.querySelector<HTMLCanvasElement>('canvas.monitor-canvas')!.getContext('webgl2')!;
+    const ext = gl.getExtension('WEBGL_lose_context')!;
+    ext.loseContext();
+    setTimeout(() => ext.restoreContext(), 300);
+  });
+  await page.keyboard.press('Shift+ArrowRight');
+  await expect.poll(() => brightPixels(page), { timeout: 5000 }).toBeGreaterThan(100);
+  await expect(page.getByText('Farbkorrektur in der Vorschau nicht verfügbar')).toHaveCount(0);
+});
+
+test('WebGL-Kontextverlust ohne Wiederherstellung: Rückfall auf Canvas 2D mit Hinweis', async ({ page }) => {
+  await page.keyboard.press('Shift+ArrowRight');
+  await expect.poll(() => brightPixels(page)).toBeGreaterThan(100);
+  await page.evaluate(() => {
+    const gl = document.querySelector<HTMLCanvasElement>('canvas.monitor-canvas')!.getContext('webgl2')!;
+    gl.getExtension('WEBGL_lose_context')!.loseContext();
+  });
+  await expect(page.getByText('Farbkorrektur in der Vorschau nicht verfügbar')).toBeVisible({ timeout: 6000 });
+  await page.keyboard.press('Shift+ArrowRight');
+  await expect.poll(() => brightPixels(page), { timeout: 5000 }).toBeGreaterThan(100);
+  await expect(page.locator('canvas.monitor-canvas')).toHaveCount(1);
+});
+
+test('Scopes: SecurityError beim Lesen zeigt Hinweis und stoppt die Schleife', async ({ page }) => {
+  await page.keyboard.press('Shift+ArrowRight');
+  await expect.poll(() => brightPixels(page)).toBeGreaterThan(100);
+  await page.evaluate(() => {
+    const w = window as unknown as { __reads: number };
+    w.__reads = 0;
+    CanvasRenderingContext2D.prototype.getImageData = function () {
+      w.__reads++;
+      throw new DOMException('tainted', 'SecurityError');
+    };
+  });
+  await expect(page.getByText('Vorschau blockiert: Medienquelle nicht freigegeben').first()).toBeVisible();
+  const reads = await page.evaluate(() => (window as unknown as { __reads: number }).__reads);
+  await page.waitForTimeout(500);
+  expect(await page.evaluate(() => (window as unknown as { __reads: number }).__reads)).toBe(reads);
+  expect(reads).toBe(1);
+});

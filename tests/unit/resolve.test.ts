@@ -3,6 +3,7 @@ import { newSequence } from '../../src/domain/timeline/sequence';
 import type { Clip, ColorParams, MediaItem, Sequence, TitleParams } from '../../src/domain/timeline/types';
 import { resolveFrame } from '../../src/domain/timeline/resolve';
 import { transitionOverhangs } from '../../src/domain/timeline/transitions';
+import { assignSlots } from '../../src/features/werkstatt/pool';
 import { lutData } from '../../src/domain/render/lut';
 import { applyColor } from '../../src/domain/render/color';
 
@@ -154,6 +155,61 @@ describe('resolveFrame – Ton', () => {
   });
   it('Videoclips auf V1 liefern keinen Ton', () => {
     expect(resolveFrame(seqOf([mkClip('a', 'V1', 0, 50)]), MEDIA, 10).audio).toEqual([]);
+  });
+});
+
+describe('resolveFrame – Überblendungen wirken als Produkt (ffmpeg verkettet fade/afade)', () => {
+  it('Titel: sich überlappende Ein-/Ausblendung multipliziert', () => {
+    const s = seqOf([mkClip('t', 'V2', 0, 10, { kind: 'title', mediaId: undefined, title: { ...TITLE, fadeIn: 10, fadeOut: 10 } })]);
+    expect(resolveFrame(s, MEDIA, 5).titles[0].alpha).toBeCloseTo(0.25);
+    expect(resolveFrame(s, MEDIA, 2).titles[0].alpha).toBeCloseTo(0.2 * 0.8);
+  });
+  it('Ton: kurzer Clip mit fadeIn + fadeOut über die ganze Länge', () => {
+    const s = seqOf([mkClip('a', 'A1', 0, 10, { fadeIn: 10, fadeOut: 10 })]);
+    expect(resolveFrame(s, MEDIA, 5).audio[0].gain).toBeCloseTo(0.25);
+  });
+  it('Ton: Clip-Einblendung innerhalb einer Tonblende (Kreuzblende) multipliziert', () => {
+    const s = seqOf([mkClip('a', 'A1', 0, 50), mkClip('b', 'A1', 50, 50, { fadeIn: 10 })], {
+      transitions: [{ id: 'y', trackId: 'A1', leftClipId: 'a', rightClipId: 'b', duration: 10, kind: 'audioFade' }],
+    });
+    const b = resolveFrame(s, MEDIA, 52).audio.find((x) => x.clipId === 'b')!;
+    expect(b.gain).toBeCloseTo(0.2 * 0.7);
+  });
+});
+
+describe('resolveFrame – stumme Videospuren', () => {
+  it('Clips und Titel auf stummer Videospur sind unsichtbar', () => {
+    const s = seqOf([
+      mkClip('lo', 'V1', 0, 50),
+      mkClip('hi', 'V2', 0, 50),
+      mkClip('t', 'V2', 0, 50, { kind: 'title', mediaId: undefined, title: TITLE }),
+    ]);
+    s.tracks.find((t) => t.id === 'V2')!.muted = true;
+    const r = resolveFrame(s, MEDIA, 20);
+    expect(r.layers.map((l) => l.clipId)).toEqual(['lo']);
+    expect(r.titles).toEqual([]);
+  });
+});
+
+describe('assignSlots (gleiches Medium gleichzeitig sichtbar)', () => {
+  const L = (clipId: string, mediaId = 'm') => ({ clipId, mediaId });
+  it('zwei Clips desselben Mediums bekommen verschiedene Plätze', () => {
+    const s = seqOf([mkClip('a', 'V1', 0, 50), mkClip('b', 'V1', 50, 50)], { transitions: [dissolve] });
+    const layers = resolveFrame(s, MEDIA, 50).layers;
+    expect(layers.map((l) => l.mediaId)).toEqual(['m', 'm']);
+    const slots = assignSlots(layers, new Map());
+    expect(slots.get('a')).not.toBe(slots.get('b'));
+  });
+  it('bleibt danach stabil und vergibt Plätze neu, wenn frei', () => {
+    const first = assignSlots([L('a'), L('b')], new Map());
+    const prev = new Map([...first].map(([id, slot]) => [id, { mediaId: 'm', slot }]));
+    const after = assignSlots([L('b')], prev);
+    expect(after.get('b')).toBe(first.get('b'));
+    expect(assignSlots([L('x', 'n'), L('y', 'm')], new Map()).get('y')).toBe(0);
+  });
+  it('mehr als zwei gleichzeitig: teilt sich den letzten Platz', () => {
+    const slots = assignSlots([L('a'), L('b'), L('c')], new Map());
+    expect([...slots.values()].every((v) => v === 0 || v === 1)).toBe(true);
   });
 });
 

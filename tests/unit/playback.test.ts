@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { formatTimecode } from '../../src/features/werkstatt/timecode';
 import { nextRate } from '../../src/features/werkstatt/playback';
+import { Pool } from '../../src/features/werkstatt/pool';
 import { lumaScopes } from '../../src/features/werkstatt/scopesMath';
 
 describe('formatTimecode', () => {
@@ -51,5 +52,44 @@ describe('MockBackend.mediaUrl', () => {
   it('lässt /fixtures/-Pfade unverändert', async () => {
     const { MockBackend } = await import('../../src/backend/MockBackend');
     expect(new MockBackend().mediaUrl('/fixtures/e2e-clip.webm')).toBe('/fixtures/e2e-clip.webm');
+  });
+});
+
+describe('Pool (Elemente freigeben und aufräumen)', () => {
+  type Fake = { id: number; released: boolean };
+  const make = () => {
+    let n = 0;
+    return new Pool<Fake>(() => ({ id: ++n, released: false }), (f) => { f.released = true; });
+  };
+  it('liefert denselben Eintrag solange die URL gleich bleibt', () => {
+    const p = make();
+    expect(p.get('k', 'u1', 0)).toBe(p.get('k', 'u1', 1));
+  });
+  it('gibt den alten Eintrag frei, wenn sich die URL ändert (Proxy wird verfügbar)', () => {
+    const p = make();
+    const old = p.get('k', 'orig', 0);
+    const neu = p.get('k', 'proxy', 1);
+    expect(neu).not.toBe(old);
+    expect(old.released).toBe(true);
+    expect(neu.released).toBe(false);
+  });
+  it('prune: entfernt nicht mehr lebende und länger als 30 s ungenutzte Einträge, gibt sie frei', () => {
+    const p = make();
+    const a = p.get('a', 'u', 0);
+    const b = p.get('b', 'u', 0);
+    const c = p.get('c', 'u', 0);
+    p.get('c', 'u', 40_000); // c zuletzt benutzt
+    const removed = p.prune((k) => k !== 'a', 41_000, 30_000);
+    expect(removed.sort()).toEqual(['a', 'b']);
+    expect(a.released && b.released).toBe(true);
+    expect(c.released).toBe(false);
+    expect([...p.keys()]).toEqual(['c']);
+  });
+  it('clear gibt alles frei', () => {
+    const p = make();
+    const a = p.get('a', 'u', 0);
+    p.clear();
+    expect(a.released).toBe(true);
+    expect(p.size).toBe(0);
   });
 });

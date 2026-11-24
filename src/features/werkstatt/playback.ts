@@ -2,7 +2,8 @@ import type { Backend } from '../../backend/Backend';
 import { resolveFrame, type ResolvedAudio } from '../../domain/timeline/resolve';
 import { DEFAULT_TRACKS, newSequence } from '../../domain/timeline/sequence';
 import type { Clip, MediaItem, Sequence } from '../../domain/timeline/types';
-import { createPreview, type DrawList, type Preview, type TexSource } from './glPreview';
+import { CanvasPreview, createPreview, IDLE_MS, type DrawList, type Preview, type TexSource } from './glPreview';
+import { assignSlots, Pool } from './pool';
 
 /** Höchstes Abspieltempo (J/K/L: 1, 2, 4, 8). */
 export const MAX_RATE = 8;
@@ -19,7 +20,28 @@ export function nextRate(current: number, dir: 1 | -1): number {
 
 export const sequenceEnd = (seq: Sequence): number => Math.max(0, ...seq.clips.map((c) => c.start + c.duration));
 
-type AudioNode_ = { el: HTMLAudioElement; gain: GainNode | null; url: string };
+type AudioNode_ = { el: HTMLAudioElement; gain: GainNode | null; source: MediaElementAudioSourceNode | null };
+
+/** Prüfintervall für Aufräumen der Zwischenspeicher während der Wiedergabe (ms). */
+const PRUNE_EVERY_MS = 5000;
+
+function releaseVideo(el: TexSource): void {
+  if (el instanceof HTMLVideoElement) {
+    el.pause();
+    el.removeAttribute('src');
+    el.load();
+  } else {
+    el.removeAttribute('src');
+  }
+}
+
+function releaseAudio(a: AudioNode_): void {
+  a.el.pause();
+  a.el.removeAttribute('src');
+  a.el.load();
+  a.source?.disconnect();
+  a.gain?.disconnect();
+}
 export type FrameListener = (frame: number) => void;
 
 /**
@@ -35,8 +57,15 @@ export class PlaybackEngine {
   private lastT = 0;
   private stopAt = 0;
   private raf = 0;
-  private videos = new Map<string, { el: TexSource; url: string }>();
-  private audios = new Map<string, AudioNode_>();
+  private videos = new Pool<TexSource>((url) => this.createVideoOrImage(url), releaseVideo);
+  private audios = new Pool<AudioNode_>((url) => this.createAudio(url), releaseAudio);
+  private slotOf = new Map<string, { mediaId: string; slot: number }>();
+  private pendingKind: 'video' | 'image' = 'video';
+  private lastClips: unknown = null;
+  private lastPrune = 0;
+  private _canvas: HTMLCanvasElement;
+  private canvasListeners = new Set<() => void>();
+  private _blocked = false;
   private audioCtx: AudioContext | null = null;
   private disposed = false;
 
@@ -44,10 +73,48 @@ export class PlaybackEngine {
     private backend: Backend,
     private getSeq: () => Sequence,
     private getMedia: () => MediaItem[],
-    readonly canvas: HTMLCanvasElement,
+    canvas: HTMLCanvasElement,
   ) {
+    this._canvas = canvas;
     this.syncSize(getSeq());
     this.preview = createPreview(canvas);
+    this.preview.onUnrecoverable = () => this.fallbackToCanvas2d();
+    this.preview.onRestored = () => this.invalidate();
+  }
+
+  /** Aktuelle Zeichenfläche (wechselt nur, wenn WebGL endgültig ausfällt: dann `onCanvasChange`). */
+  get canvas(): HTMLCanvasElement {
+    return this._canvas;
+  }
+  onCanvasChange(cb: () => void): () => void {
+    this.canvasListeners.add(cb);
+    return () => this.canvasListeners.delete(cb);
+  }
+  /** WebGL-Kontext verloren und nicht zurückgekehrt: neue Zeichenfläche mit Canvas 2D (ohne Farbkorrektur). */
+  private fallbackToCanvas2d(): void {
+    if (this.disposed) return;
+    const old = this._canvas;
+    const fresh = document.createElement('canvas');
+    fresh.width = old.width;
+    fresh.height = old.height;
+    fresh.className = old.className;
+    for (const a of ['role', 'aria-label']) {
+      const v = old.getAttribute(a);
+      if (v !== null) fresh.setAttribute(a, v);
+    }
+    this.preview.dispose();
+    this._canvas = fresh;
+    this.preview = new CanvasPreview(fresh);
+    for (const cb of this.canvasListeners) cb();
+    this.invalidate();
+  }
+  /** Eine Medienquelle darf nicht gezeichnet/gelesen werden (CORS); die Oberfläche zeigt einen Hinweis. */
+  get blocked(): boolean {
+    return this._blocked || this.preview.blocked;
+  }
+  markBlocked(): void {
+    this._blocked = true;
+    this.invalidate();
   }
 
   // ---- Zustand ----
@@ -121,14 +188,13 @@ export class PlaybackEngine {
     this._rate = 0;
     if (this.raf) cancelAnimationFrame(this.raf);
     this.raf = 0;
-    for (const { el } of this.videos.values()) if (el instanceof HTMLVideoElement) { el.pause(); el.removeAttribute('src'); el.load(); }
-    for (const a of this.audios.values()) { a.el.pause(); a.el.removeAttribute('src'); a.gain?.disconnect(); }
     this.videos.clear();
     this.audios.clear();
     void this.audioCtx?.close();
     this.audioCtx = null;
     this.preview.dispose();
     this.listeners.clear();
+    this.canvasListeners.clear();
   }
 
   // ---- Takt ----
@@ -166,30 +232,30 @@ export class PlaybackEngine {
     if (this.canvas.height !== h) this.canvas.height = h;
   }
 
-  private sourceFor(m: MediaItem): TexSource | null {
-    if (m.kind === 'audio') return null;
-    const url = this.backend.mediaUrl(m.proxyPath ?? m.path);
-    const have = this.videos.get(m.id);
-    if (have && have.url === url) return have.el;
+  private createVideoOrImage(url: string): TexSource {
     const wake = () => this.invalidate();
-    let el: TexSource;
-    if (m.kind === 'image') {
+    if (this.pendingKind === 'image') {
       const img = new Image();
+      img.crossOrigin = 'anonymous';
       img.addEventListener('load', wake);
       img.src = url;
-      el = img;
-    } else {
-      const v = document.createElement('video');
-      v.muted = true;
-      v.defaultMuted = true;
-      v.playsInline = true;
-      v.preload = 'auto';
-      for (const ev of ['seeked', 'loadeddata', 'canplay']) v.addEventListener(ev, wake);
-      v.src = url;
-      el = v;
+      return img;
     }
-    this.videos.set(m.id, { el, url });
-    return el;
+    const v = document.createElement('video');
+    v.crossOrigin = 'anonymous';
+    v.muted = true;
+    v.defaultMuted = true;
+    v.playsInline = true;
+    v.preload = 'auto';
+    for (const ev of ['seeked', 'loadeddata', 'canplay']) v.addEventListener(ev, wake);
+    v.src = url;
+    return v;
+  }
+
+  private sourceFor(m: MediaItem, slot: number, now: number): TexSource | null {
+    if (m.kind === 'audio') return null;
+    this.pendingKind = m.kind === 'image' ? 'image' : 'video';
+    return this.videos.get(`${m.id}#${slot}`, this.backend.mediaUrl(m.proxyPath ?? m.path), now);
   }
 
   private syncVideo(el: HTMLVideoElement, sourceTime: number, fps: number): void {
@@ -210,24 +276,41 @@ export class PlaybackEngine {
     this.syncSize(seq);
     const media = new Map(this.getMedia().map((m) => [m.id, m]));
     const r = resolveFrame(seq, media, this.frame);
+    const now = performance.now();
     const list: DrawList = { layers: [], titles: [] };
     const used = new Set<string>();
+    const slots = assignSlots(r.layers, this.slotOf);
+    this.slotOf = new Map(r.layers.map((l) => [l.clipId, { mediaId: l.mediaId, slot: slots.get(l.clipId) ?? 0 }]));
     for (const l of r.layers) {
       const m = media.get(l.mediaId);
-      const el = m ? this.sourceFor(m) : null;
+      const slot = slots.get(l.clipId) ?? 0;
+      const el = m ? this.sourceFor(m, slot, now) : null;
       if (!el) continue;
       if (el instanceof HTMLVideoElement) this.syncVideo(el, l.sourceTime, seq.fps);
-      used.add(l.mediaId);
+      used.add(`${l.mediaId}#${slot}`);
       const clip = seq.clips.find((c) => c.id === l.clipId);
       list.layers.push({ source: el, alpha: l.alpha, lutKey: l.lutKey, color: clip?.color ?? null });
     }
-    for (const [id, v] of this.videos) if (!used.has(id) && v.el instanceof HTMLVideoElement && !v.el.paused) v.el.pause();
+    for (const [key, v] of this.videos.entries()) if (!used.has(key) && v.el instanceof HTMLVideoElement && !v.el.paused) v.el.pause();
     for (const t of r.titles) {
       const params = seq.clips.find((c: Clip) => c.id === t.clipId)?.title;
       if (params) list.titles.push({ key: t.clipId, params, alpha: t.alpha });
     }
-    this.syncAudio(r.audio, media, seq.fps);
+    this.syncAudio(r.audio, media, seq.fps, now);
     this.preview.draw(list);
+    this.maybePrune(seq, media, now);
+  }
+
+  /** Zwischenspeicher aufräumen: bei geänderter Zeitleiste und alle paar Sekunden. */
+  private maybePrune(seq: Sequence, media: Map<string, MediaItem>, now: number): void {
+    if (seq.clips === this.lastClips && now - this.lastPrune < PRUNE_EVERY_MS) return;
+    this.lastClips = seq.clips;
+    this.lastPrune = now;
+    const mediaIds = new Set(seq.clips.flatMap((c) => (c.mediaId && media.has(c.mediaId) ? [c.mediaId] : [])));
+    const clipIds = new Set(seq.clips.map((c) => c.id));
+    this.videos.prune((key) => mediaIds.has(key.slice(0, key.lastIndexOf('#'))), now, IDLE_MS);
+    this.audios.prune((clipId) => clipIds.has(clipId), now, IDLE_MS);
+    this.preview.prune(new Set(seq.clips.filter((c) => c.kind === 'title').map((c) => c.id)), now);
   }
 
   // ---- Ton ----
@@ -243,31 +326,33 @@ export class PlaybackEngine {
     if (this.audioCtx && this.audioCtx.state === 'suspended') void this.audioCtx.resume().catch(() => undefined);
   }
 
-  private audioFor(clipId: string, m: MediaItem): AudioNode_ | null {
-    const url = this.backend.mediaUrl(m.proxyPath ?? m.path);
-    const have = this.audios.get(clipId);
-    if (have && have.url === url) return have;
+  private createAudio(url: string): AudioNode_ {
     const el = new Audio();
+    el.crossOrigin = 'anonymous';
     el.preload = 'auto';
     el.src = url;
     let gain: GainNode | null = null;
+    let source: MediaElementAudioSourceNode | null = null;
     if (this.audioCtx) {
       gain = this.audioCtx.createGain();
       gain.gain.value = 0;
-      this.audioCtx.createMediaElementSource(el).connect(gain).connect(this.audioCtx.destination);
+      source = this.audioCtx.createMediaElementSource(el);
+      source.connect(gain).connect(this.audioCtx.destination);
     }
-    const node = { el, gain, url };
-    this.audios.set(clipId, node);
-    return node;
+    return { el, gain, source };
   }
 
-  private syncAudio(entries: ResolvedAudio[], media: Map<string, MediaItem>, fps: number): void {
+  private audioFor(clipId: string, m: MediaItem, now: number): AudioNode_ {
+    return this.audios.get(clipId, this.backend.mediaUrl(m.proxyPath ?? m.path), now);
+  }
+
+  private syncAudio(entries: ResolvedAudio[], media: Map<string, MediaItem>, fps: number, now: number): void {
     const audible = this._rate > 0 && this._rate <= MAX_AUDIO_RATE;
     const active = new Set<string>();
     if (audible) {
       for (const a of entries) {
         const m = media.get(a.mediaId);
-        const node = m ? this.audioFor(a.clipId, m) : null;
+        const node = m ? this.audioFor(a.clipId, m, now) : null;
         if (!node) continue;
         active.add(a.clipId);
         const { el, gain } = node;
@@ -278,7 +363,7 @@ export class PlaybackEngine {
         else el.volume = Math.min(1, a.gain);
       }
     }
-    for (const [id, n] of this.audios) {
+    for (const [id, { el: n }] of this.audios.entries()) {
       if (active.has(id)) continue;
       if (!n.el.paused) n.el.pause();
       if (n.gain && this.audioCtx) n.gain.gain.value = 0;

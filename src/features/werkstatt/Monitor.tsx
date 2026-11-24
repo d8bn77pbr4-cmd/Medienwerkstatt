@@ -21,21 +21,33 @@ export function Monitor({ engine, label, fps, inPoint, outPoint, aspect = 16 / 9
   const [frame, setFrame] = useState(engine.frame);
   const [safe, setSafe] = useState(false);
   const [color, setColor] = useState(engine.colorSupported);
+  const [blocked, setBlocked] = useState(engine.blocked);
 
   useEffect(() => {
     const el = host.current;
     if (!el) return;
-    engine.canvas.classList.add('monitor-canvas');
-    engine.canvas.setAttribute('role', 'img');
-    engine.canvas.setAttribute('aria-label', `${label}-Monitor`);
-    el.prepend(engine.canvas);
+    let shown: HTMLCanvasElement | null = null;
+    const mount = () => {
+      if (shown && shown.parentNode === el) el.removeChild(shown);
+      shown = engine.canvas;
+      shown.classList.add('monitor-canvas');
+      shown.setAttribute('role', 'img');
+      shown.setAttribute('aria-label', `${label}-Monitor`);
+      el.prepend(shown);
+      setColor(engine.colorSupported);
+    };
+    mount();
     setFrame(engine.frame);
-    setColor(engine.colorSupported);
-    const off = engine.onFrame(setFrame);
+    const offFrame = engine.onFrame((f) => {
+      setFrame(f);
+      setBlocked(engine.blocked);
+    });
+    const offCanvas = engine.onCanvasChange(mount);
     engine.invalidate();
     return () => {
-      off();
-      if (engine.canvas.parentNode === el) el.removeChild(engine.canvas);
+      offFrame();
+      offCanvas();
+      if (shown && shown.parentNode === el) el.removeChild(shown);
     };
   }, [engine, label]);
 
@@ -65,6 +77,11 @@ export function Monitor({ engine, label, fps, inPoint, outPoint, aspect = 16 / 9
         </button>
       </div>
       {!color && <p className="monitor-hint">Farbkorrektur in der Vorschau nicht verfügbar</p>}
+      {blocked && (
+        <p className="monitor-hint" role="status">
+          Vorschau blockiert: Medienquelle nicht freigegeben
+        </p>
+      )}
     </section>
   );
 }

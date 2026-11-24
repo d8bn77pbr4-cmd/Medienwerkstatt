@@ -13,6 +13,11 @@ export function useTransportKeys(engine: PlaybackEngine | null): void {
       const t = e.target as HTMLElement | null;
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
       const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+      // Taste gehalten: J/K/L/Leertaste nur einmal auswerten (sonst eskaliert L auf 8×); Pfeile wiederholen weiter.
+      if (e.repeat && (key === 'l' || key === 'j' || key === 'k' || key === ' ')) {
+        e.preventDefault();
+        return;
+      }
       switch (key) {
         case 'l': engine.play(1); break;
         case 'j': engine.play(-1); break;
