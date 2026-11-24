@@ -1,0 +1,59 @@
+name: build-mac
+
+on:
+  push:
+    branches: [main, 'claude/**']
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin
+      - uses: Swatinem/rust-cache@v2
+      - run: npm ci
+      - name: ffmpeg und ffprobe laden (Intel-Mac)
+        run: bash scripts/fetch-ffmpeg-mac.sh
+      - name: App bauen (.dmg)
+        env:
+          CI: 'true'
+        run: npx tauri build --target x86_64-apple-darwin --bundles dmg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Medienwerkstatt-${{ github.sha }}
+          path: src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
+          if-no-files-found: error
+      - name: Release anlegen (nur bei Tag)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
+
+  e2e-webkit:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: ffmpeg für Testmedien
+        run: brew install ffmpeg
+      - run: npx playwright install --with-deps webkit
+      - run: npx playwright test --project=webkit --trace off
+        env:
+          CI_WEBKIT: '1'

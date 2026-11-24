@@ -11,6 +11,16 @@ const BAK1 = 'mw-state.bak1';
 const PROJECT_KEY = (dir: string) => `mw-project:${dir}`;
 /** Testmedien des Vite-Dev-Servers (`tests/fixtures/media/` unter `/fixtures/`). */
 const FIXTURES = ['/fixtures/e2e-clip.webm', '/fixtures/e2e-clip2.webm'];
+/** WebKit spielt kein VP9/Opus-WebM: dort liefert `mediaUrl` die gleichnamigen H.264/AAC-MP4-Testmedien. */
+function webmPlayable(): boolean {
+  try {
+    const v = document.createElement('video');
+    // jsdom (Unit-Tests) kann nichts abspielen: dort bleibt es bei den Pfaden wie übergeben.
+    return v.canPlayType('video/webm; codecs="vp9, opus"') !== '' || v.canPlayType('video/mp4; codecs="avc1.42E01E, mp4a.40.2"') === '';
+  } catch {
+    return true;
+  }
+}
 const FRAME_FIXTURE = '/fixtures/frame.png';
 /** Modellliste und Antwort im Mock-Modus (kein Netzwerk, kein echter Schlüssel). */
 const MOCK_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.5-pro'];
@@ -151,7 +161,9 @@ export class MockBackend implements Backend {
     return m.path;
   }
   mediaUrl(path: string): string {
-    // Pfade unter /fixtures/ (Testmedien des Vite-Dev-Servers) und alle anderen bleiben unverändert.
+    // Pfade unter /fixtures/ (Testmedien des Vite-Dev-Servers) bleiben unverändert, außer die
+    // E2E-WebM-Clips in Browsern ohne VP9/Opus (WebKit): dort ihre MP4-Zwillinge.
+    if (/^\/fixtures\/e2e-clip2?\.webm$/.test(path) && !webmPlayable()) return path.replace(/\.webm$/, '.mp4');
     return path;
   }
   async writeFile(dir: string, rel: string): Promise<string> {

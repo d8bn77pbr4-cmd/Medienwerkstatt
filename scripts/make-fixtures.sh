@@ -45,4 +45,8 @@ make zu-laut.wav -f lavfi -i "sine=frequency=440:sample_rate=48000:duration=5" \
 VP9=(-c:v libvpx-vp9 -deadline realtime -cpu-used 8 -crf 38 -b:v 0 -pix_fmt yuv420p -g 12 -c:a libopus -b:a 64k -shortest)
 make e2e-clip.webm -f lavfi -i "testsrc2=size=1280x720:rate=25:duration=5" "${A20[@]}" "${VP9[@]}"
 make e2e-clip2.webm -f lavfi -i "smptebars=size=1280x720:rate=25:duration=5" "${A20[@]}" "${VP9[@]}"
+# Dasselbe als H.264 + AAC (WebKit spielt kein VP9/Opus-WebM; Bilder/Ton wie die WebM-Clips).
+MP4E=(-c:v libx264 -preset ultrafast -crf 30 -pix_fmt yuv420p -g 12 -c:a aac -b:a 64k -movflags +faststart -shortest)
+make e2e-clip.mp4 -f lavfi -i "testsrc2=size=1280x720:rate=25:duration=5" "${A20[@]}" "${MP4E[@]}"
+make e2e-clip2.mp4 -f lavfi -i "smptebars=size=1280x720:rate=25:duration=5" "${A20[@]}" "${MP4E[@]}"
 echo "Fixtures bereit in $OUT"

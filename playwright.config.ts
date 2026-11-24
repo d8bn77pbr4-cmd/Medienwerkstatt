@@ -10,7 +10,7 @@ export default defineConfig({
     url: 'http://127.0.0.1:1420',
     reuseExistingServer: !process.env.CI,
   },
-  // Task 15 ergänzt das Projekt „webkit“ (CI-macOS).
+  // Das Projekt „webkit“ (Safari-Engine) gibt es nur mit CI_WEBKIT=1 (macOS-CI); lokal fehlt WebKit.
   projects: [
     {
       name: 'chromium',
@@ -21,5 +21,13 @@ export default defineConfig({
         launchOptions: { args: ['--autoplay-policy=no-user-gesture-required', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] },
       },
     },
+    ...(process.env.CI_WEBKIT
+      ? [
+          {
+            name: 'webkit',
+            use: { ...devices['Desktop Safari'], viewport: { width: 1440, height: 900 } },
+          },
+        ]
+      : []),
   ],
 });
