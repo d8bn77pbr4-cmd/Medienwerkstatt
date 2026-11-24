@@ -171,7 +171,10 @@ export const useApp = create<AppStore>()((set, get) => {
     // Gemini läuft nur, wenn es in den Einstellungen eingeschaltet ist; ohne Entscheidung gibt es keine Anfrage.
     const g = s.settings.gemini;
     const gemini = g.enabled && choice && (g.model || !choice.consent) ? { model: g.model ?? '', choice } : undefined;
-    const evaluation = await runSubmission({ backend, rules: loadRules(), assignment: a, project, research, selfChecks, isCorrection, submittedAt, gemini, onProgress });
+    // Korrektur: Verspätung/Frühbonus ab der ersten (nicht korrigierenden) Abgabe.
+    const firstAt = a.submissions.filter((x) => !x.isCorrection).reduce<number | undefined>((m, x) => (m === undefined || x.at < m ? x.at : m), undefined);
+    const lateBasisAt = isCorrection ? firstAt : undefined;
+    const evaluation = await runSubmission({ backend, rules: loadRules(), assignment: a, project, research, selfChecks, isCorrection, submittedAt, lateBasisAt, gemini, onProgress });
     commit((cur) => ({
       ...cur,
       evaluations: [...cur.evaluations, evaluation],

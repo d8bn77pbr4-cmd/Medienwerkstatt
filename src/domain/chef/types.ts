@@ -15,6 +15,11 @@ export type ProjectFacts = {
   audioCutsWithoutFade: number;
   fpsMismatch: boolean;
   longestShotSec: number;
+  /**
+   * Gewollt schwarze oder stehende Stellen (Sekunden wie `shots`): Titel über leerer Videospur und Bild-Clips.
+   * Schwarz-/Standbild-Funde, die zu ≥ 50 % darin liegen, zählen nicht. Ältere Momentaufnahmen: fehlt.
+   */
+  exemptIntervals?: { start: number; end: number }[];
 };
 
 export type Deduction = {
@@ -37,6 +42,11 @@ export type EvaluationInput = {
   research: Record<string, ResearchDoc | null>;
   selfChecks: { hookDone: boolean };
   isCorrection: boolean;
+  /**
+   * Korrektur: Zeitpunkt der ersten Abgabe. Verspätung und Frühbonus zählen ab dort (Nachbessern ist kein
+   * neues Zuspätkommen). Fehlt er, gilt `submittedAt`.
+   */
+  lateBasisAt?: number;
 };
 
 export type CategoryResult = { max: number; points: number; deductions: Deduction[] };

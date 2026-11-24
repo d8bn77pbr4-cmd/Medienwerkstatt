@@ -86,6 +86,16 @@ describe('Technik', () => {
     expect(all(e).filter(d => d.ruleId === 'blackOrFreeze').map(d => d.points)).toEqual([-3, -3]);
     expect(evaluate(input(black), rules).categories.technik.points).toBe(37);
   });
+  it('Schwarz/Standbild in Ausnahmen (Titel über leerer Spur, Standbild-Clip) zählt nicht, ab 50 % Überlappung', () => {
+    const m = M(perfectM);
+    m.video.black = [{ start: 0.2, end: 1.8 }, { start: 30, end: 31 }];
+    m.video.freeze = [{ start: 40, end: 44 }, { start: 50, end: 54 }];
+    const facts = { ...goodFacts(), exemptIntervals: [{ start: 0, end: 2 }, { start: 41, end: 44 }, { start: 50, end: 51 }] };
+    const e = evaluate(input(m, {}, facts), rules);
+    const found = all(e).filter(d => d.ruleId === 'blackOrFreeze').map(d => d.ist);
+    // 0,2–1,8 ganz in der Ausnahme, 40–44 zu 75 % → frei; 30–31 keine, 50–54 nur 25 % → Abzug
+    expect(found).toEqual(['30,0–31,0 s', '50,0–54,0 s']);
+  });
   it('Auflösung und Bildrate falsch', () => {
     const m = M(perfectM); m.format.width = 1280; m.format.height = 720; m.format.fps = 30;
     const e = evaluate(input(m), rules);
@@ -269,6 +279,22 @@ describe('Gesamt', () => {
     expect(applyLate(assignment(), DEADLINE + 1, rules)?.points).toBe(-10);
     const harsh = { ...rules, frist: { ...rules.frist, perDay: -100 } };
     expect(evaluate(input(perfectM, { submittedAt: DEADLINE + 5 * 24 * H }), harsh).total).toBe(0);
+  });
+  it('Korrektur: Verspätung und Frühbonus zählen ab der ersten Abgabe, nicht ab der Korrektur', () => {
+    // erste Abgabe 4 h vor der Frist, Korrektur 20 h später (16 h nach der Frist)
+    const first = DEADLINE - 4 * H;
+    const e = evaluate(input(perfectM, { isCorrection: true, submittedAt: first + 20 * H, lateBasisAt: first }), rules);
+    expect(e.late).toBeNull();
+    expect(e.total).toBe(90);
+    expect(e.at).toBe(first + 20 * H);
+    // erste Abgabe früh (30 h vor der Frist): Frühbonus bleibt bei der Korrektur
+    const early = DEADLINE - 30 * H;
+    const m = M(perfectM); m.audio.clippedSamples = 1;
+    const c = evaluate(input(m, { isCorrection: true, submittedAt: early + 10 * H, lateBasisAt: early }), rules);
+    expect(c.bonus.map((b) => b.ruleId)).toContain('early24h');
+    // erste Abgabe war schon zu spät: das bleibt so
+    const late = DEADLINE + 2 * H;
+    expect(evaluate(input(perfectM, { isCorrection: true, submittedAt: late + 20 * H, lateBasisAt: late }), rules).late?.points).toBe(-10);
   });
   it('Korrektur höchstens 90', () => {
     expect(evaluate(input(perfectM, { isCorrection: true }), rules).total).toBe(90);

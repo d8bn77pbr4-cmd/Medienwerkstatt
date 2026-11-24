@@ -66,8 +66,15 @@ export function technikRules(spec: VideoSpec, v: VideoInput, rules: Rules, prefi
     add('clipping', 'Ton übersteuert (Clipping)', 'keine übersteuerten Samples', `${audio.clippedSamples} Samples`, r.clipping,
       `Senke den ${GAIN} der lauten Clips, bis nichts mehr übersteuert, oder schalte im Export den „${LIMITER_LABEL}“ ein.`, 'audio');
   }
+  // Gewolltes Schwarz/Standbild (Titel über leerer Spur, Bild-Clips): Funde, die zu ≥ 50 % darin liegen, zählen nicht.
+  const exempt = facts.exemptIntervals ?? [];
+  const intended = (i: { start: number; end: number }) => {
+    const len = i.end - i.start;
+    const covered = exempt.reduce((s, x) => s + Math.max(0, Math.min(i.end, x.end) - Math.max(i.start, x.start)), 0);
+    return len <= EPS ? exempt.some((x) => i.start >= x.start && i.start <= x.end) : covered >= 0.5 * len - EPS;
+  };
   for (const [kind, list] of [['Schwarzbild', video.black], ['Standbild', video.freeze]] as const) {
-    for (const i of list) {
+    for (const i of list.filter((x) => !intended(x))) {
       add('blackOrFreeze', `Unbeabsichtigtes ${kind}`, `kein ${kind}`, iv(i), r.blackOrFreeze,
         `Schneide das ${kind} bei ${iv(i)} in der Timeline heraus oder fülle die Lücke mit Material.`, 'timeline');
     }

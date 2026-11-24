@@ -12,7 +12,7 @@ import { exportDeliverable } from '../../src/state/exporter';
 import { exportRows } from '../../src/state/exportRun';
 import { sequenceHash } from '../../src/state/hash';
 import { resetProjectForTests, useProject } from '../../src/state/projectStore';
-import { exportStale, factsForExport } from '../../src/state/submission';
+import { exportSnapshot, exportStale, factsForExport } from '../../src/state/submission';
 
 const rules = loadRules();
 const HOUR = 3_600_000;
@@ -96,6 +96,21 @@ describe('Abgabe: Messung, Fehler, Schutz vor Doppelaufruf', () => {
     expect(backend.calls).toEqual([snap]);
   });
 
+  it('Einstellungsgröße, die nach dem Export beschriftet wird, zählt (kein missingShotSize-Abzug)', async () => {
+    const seq = seqOf('s1', [clip('c1', 0, 125), clip('c2', 125, 125, { sourceIn: 50 })]);
+    const unlabeled = { ...media, shotSize: null };
+    const facts = factsForExport(seq, [unlabeled]);
+    expect(facts.shots.every((x) => x.shotSize === null)).toBe(true);
+    const required = a().deliverables[0].videoSpec!.requiredShotSizes[0];
+    const labeled = { ...media, shotSize: required };
+    const p = { ...proj([rec(a(), { sequenceId: 's1', facts, segments: facts.shots.map((x) => ({ start: x.start, end: x.end })), sequenceHash: sequenceHash(seq) })], [seq]), media: [labeled] };
+    expect(exportSnapshot(p, p.exports[0]).facts.shots.map((x) => x.shotSize)).toEqual([required, required]);
+    await save(a(), p);
+    clock.set(a().deadline - 48 * HOUR);
+    const e = await app().submit(a().id, { hookDone: true });
+    expect(e.categories.gestaltung.deductions.map((d) => d.ruleId)).not.toContain('missingShotSize');
+  });
+
   it('(d) alter Eintrag ohne sequenceId: aktive Sequenz', async () => {
     const other = seqOf('s1', [clip('c1', 0, 50)]);
     const active = seqOf('s2', [clip('c1', 0, 100), clip('c2', 100, 100, { sourceIn: 50 })]);
@@ -126,6 +141,17 @@ describe('Abgabe: Messung, Fehler, Schutz vor Doppelaufruf', () => {
     expect(app().state!.evaluations).toHaveLength(1);
     expect(a().submissions).toHaveLength(1);
     expect(backend.calls).toHaveLength(1);
+  });
+
+  it('Korrektur nach der Frist: keine Verspätung, wenn die erste Abgabe pünktlich war', async () => {
+    await save(a(), proj([rec(a())], [seqOf('s1', [clip('c1', 0, 125)])]));
+    clock.set(a().deadline - 4 * HOUR);
+    const first = await app().submit(a().id, { hookDone: true });
+    expect(first.late).toBeNull();
+    clock.set(a().deadline + 16 * HOUR);
+    const r = await app().correction(a().id, { hookDone: true });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.evaluation.late).toBeNull();
   });
 
   it('zwei gleichzeitige correction-Aufrufe: genau eine zusätzliche Bewertung', async () => {
@@ -164,6 +190,15 @@ describe('Export: Momentaufnahme, veraltet, Fehler', () => {
     await exportDeliverable({ ...project, settings: { safetyLimiter: false } }, seq, seedA.deliverables[0], 'social169', deps);
     await exportDeliverable({ ...project, settings: { safetyLimiter: true } }, seq, seedA.deliverables[0], 'social169', deps);
     expect(graphs.map((g) => g.includes('alimiter=limit=0.79:level=false'))).toEqual([true, false, true]);
+  });
+
+  it('Ausnahmen (Bild-Clip) landen exportbezogen verschoben und beschnitten in der Momentaufnahme', async () => {
+    const img: MediaItem = { ...media, id: 'img', kind: 'image', fps: null, hasAudio: false };
+    const seq = seqOf('s1', [clip('c1', 0, 100), clip('i1', 100, 100, { mediaId: 'img' })], { inPoint: 50, outPoint: 150 });
+    const backend = { writeFile: async (d: string, r: string) => `${d}/${r}`, runFfmpeg: async () => {} } as unknown as MockBackend;
+    const project: Project = { version: 1, assignmentId: seedA.id, media: [media, img], sequences: [seq], activeSequenceId: 's1', exports: [] };
+    const r = await exportDeliverable(project, seq, seedA.deliverables[0], 'social169', { backend, dir: '/p', assignment: seedA, now: () => 1, h264Encoder: 'libx264' });
+    expect(r.facts?.exemptIntervals).toEqual([{ start: 2, end: 4 }]);
   });
 
   it('(e) exportStale: erst nach einer Änderung der Sequenz; alte Einträge nie', () => {

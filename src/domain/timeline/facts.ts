@@ -43,6 +43,33 @@ function shotsOf(seq: Sequence, media: MediaItem[]): ProjectFacts['shots'] {
   });
 }
 
+/**
+ * Stellen, an denen Schwarz oder Stillstand gewollt ist: nur Titel über leerer Videospur, oder das oberste
+ * sichtbare Medium ist ein Bild. Aneinanderstoßende Stellen werden zusammengefasst (Sekunden).
+ */
+function exemptIntervalsOf(seq: Sequence, media: MediaItem[]): { start: number; end: number }[] {
+  const videoTracks = seq.tracks.filter((t) => t.kind === 'video' && !t.muted).map((t) => t.id);
+  const clips = seq.clips.filter((c) => videoTracks.includes(c.trackId));
+  const points = [...new Set(clips.flatMap((c) => [c.start, end(c)]))].sort((a, b) => a - b);
+  const out: { start: number; end: number }[] = [];
+  for (let i = 0; i + 1 < points.length; i++) {
+    const [from, to] = [points[i], points[i + 1]];
+    const here = clips.filter((c) => c.start <= from && end(c) >= to);
+    let visible: Clip | null = null;
+    for (const id of videoTracks) {
+      const hit = here.find((c) => c.trackId === id && c.kind === 'media');
+      if (hit) visible = hit;
+    }
+    const titleOnly = !visible && here.some((c) => c.kind === 'title');
+    const still = !!visible && media.find((m) => m.id === visible.mediaId)?.kind === 'image';
+    if (!titleOnly && !still) continue;
+    const last = out[out.length - 1];
+    if (last && last.end === from / seq.fps) last.end = to / seq.fps;
+    else out.push({ start: from / seq.fps, end: to / seq.fps });
+  }
+  return out;
+}
+
 function audioCutsWithoutFade(seq: Sequence): number {
   let n = 0;
   for (const t of seq.tracks.filter((x) => x.kind === 'audio')) {
@@ -79,5 +106,6 @@ export function projectFacts(seq: Sequence, media: MediaItem[]): ProjectFacts {
     audioCutsWithoutFade: audioCutsWithoutFade(seq),
     fpsMismatch: used.some((m) => !!m && m.kind !== 'image' && m.fps !== null && Math.abs(m.fps - seq.fps) > 0.01),
     longestShotSec: shots.reduce((mx, s) => Math.max(mx, s.end - s.start), 0),
+    exemptIntervals: exemptIntervalsOf(seq, media),
   };
 }

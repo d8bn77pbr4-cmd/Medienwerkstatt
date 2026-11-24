@@ -71,7 +71,9 @@ export function evaluate(input: EvaluationInput, rules: Rules): Evaluation {
   const bonus: Deduction[] = [];
   // Ohne tatsächlich vorliegende Abgabe gibt es keinen Frühbonus (sonst lohnte sich die leere Abgabe).
   const researchPresent = a.deliverables.filter(x => x.kind === 'research' && input.research[x.id]).length;
-  if (videosPresent + researchPresent > 0 && input.submittedAt <= a.deadline - rules.bonus.earlyHours * HOUR_MS) {
+  // Korrektur: Frist und Frühbonus messen an der ersten Abgabe.
+  const basisAt = input.isCorrection && input.lateBasisAt !== undefined ? input.lateBasisAt : input.submittedAt;
+  if (videosPresent + researchPresent > 0 && basisAt <= a.deadline - rules.bonus.earlyHours * HOUR_MS) {
     bonus.push(makeDeduction('', 'early24h', 'bonus', 'Früh abgegeben', `≥ ${rules.bonus.earlyHours} h vor der Frist`, 'erfüllt', rules.bonus.early24h, ''));
   }
   if (videosPresent > 0 && videosPresent === videoDeliverables.length && technik.length === 0) {
@@ -81,7 +83,7 @@ export function evaluate(input: EvaluationInput, rules: Rules): Evaluation {
   const categories = researchOnly
     ? { technik: category(0, []), gestaltung: category(0, []), auftrag: category(ro.max, auftrag) }
     : { technik: category(d.technik.max, technik), gestaltung: category(d.gestaltung.max, gestaltung), auftrag: category(d.auftrag.max, auftrag) };
-  const late = applyLate(a, input.submittedAt, rules);
+  const late = applyLate(a, basisAt, rules);
   const total = totalOf(categories, bonus, late, rules, input.isCorrection);
 
   const e: Evaluation = { id: `${a.id}:${input.submittedAt}`, assignmentId: a.id, at: input.submittedAt, categories, bonus, late, total, phrase: '' };

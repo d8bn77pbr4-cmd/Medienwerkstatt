@@ -61,6 +61,17 @@ describe('applyGemini', () => {
     expect(r.categories.gestaltung.points - 20 + (r.categories.auftrag.points - 15)).toBe(10);
     expect(r.gemini?.summary).toBe('s');
   });
+  it('gemischte Vorzeichen: jede Kategorie für sich auf ±maxShift geklemmt (+30 Gestaltung, −20 Auftrag)', () => {
+    const e = base();
+    const r = applyGemini(e, result(crit('licht', 10), crit('farbe', 10), crit('bildaufbau', 10), crit('briefing', -10), crit('inhalt', -10)), rules);
+    expect(r.geminiShift).toEqual({ gestaltung: rules.gemini.maxShift, auftrag: -rules.gemini.maxShift });
+    expect(r.categories.gestaltung.points - e.categories.gestaltung.points).toBe(10);
+    expect(r.categories.auftrag.points - e.categories.auftrag.points).toBe(-10);
+    expect(Math.abs(r.total - e.total)).toBeLessThanOrEqual(rules.gemini.maxShift);
+    // eine Kategorie allein über dem Limit, die andere klein: Summe bleibt ±10
+    const r2 = applyGemini(e, result(crit('licht', 10), crit('farbe', 10), crit('briefing', -3)), rules);
+    expect(r2.geminiShift).toEqual({ gestaltung: 10, auftrag: -3 });
+  });
   it('Technik bleibt unverändert', () => {
     const e = base();
     const r = applyGemini(e, result(crit('licht', 8), crit('farbe', 8), crit('briefing', 8)), rules);

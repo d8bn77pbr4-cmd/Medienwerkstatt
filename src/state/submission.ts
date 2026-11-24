@@ -46,10 +46,12 @@ export function rangeOfSequence(seq: Sequence): TimeRange {
 export function factsForExport(seq: Sequence, media: MediaItem[], range?: TimeRange): ProjectFacts {
   const facts = projectFacts(seq, media);
   if (!range) return facts;
-  const shots = facts.shots
-    .map((s) => ({ ...s, start: Math.max(s.start, range.start) - range.start, end: Math.min(s.end, range.end) - range.start }))
-    .filter((s) => s.end - s.start > 1e-9);
-  return { ...facts, shots, longestShotSec: shots.reduce((mx, s) => Math.max(mx, s.end - s.start), 0) };
+  const clip = <T extends TimeRange>(list: T[]): T[] =>
+    list
+      .map((s) => ({ ...s, start: Math.max(s.start, range.start) - range.start, end: Math.min(s.end, range.end) - range.start }))
+      .filter((s) => s.end - s.start > 1e-9);
+  const shots = clip(facts.shots);
+  return { ...facts, shots, exemptIntervals: clip(facts.exemptIntervals ?? []), longestShotSec: shots.reduce((mx, s) => Math.max(mx, s.end - s.start), 0) };
 }
 
 /** Einstellungs-Segmente für `backend.analyze`. */
@@ -57,9 +59,21 @@ export function exportSegments(seq: Sequence, media: MediaItem[], range?: TimeRa
   return factsForExport(seq, media, range).shots.map((s) => ({ start: s.start, end: s.end }));
 }
 
-/** Momentaufnahme des Exports; ältere Einträge: aus dem Stand der Sequenz berechnet. */
+/**
+ * Einstellungsgrößen aus dem aktuellen Stand der Medien: Die Beschriftung ist eine Angabe über das Material,
+ * nicht über die Datei – wer nach dem Export beschriftet, soll nicht neu exportieren müssen.
+ */
+function withCurrentShotSizes(facts: ProjectFacts, media: MediaItem[]): ProjectFacts {
+  const byId = new Map(media.map((m) => [m.id, m.shotSize]));
+  return { ...facts, shots: facts.shots.map((s) => (byId.has(s.mediaId) ? { ...s, shotSize: byId.get(s.mediaId) ?? null } : s)) };
+}
+
+/**
+ * Momentaufnahme des Exports (Zeiten und Schnitte gelten der Datei); ältere Einträge: aus dem Stand der Sequenz
+ * berechnet. Die Einstellungsgrößen kommen immer aus den aktuellen Medien.
+ */
 export function exportSnapshot(project: Project, rec: ExportRecord): { facts: ProjectFacts; segments: Segment[] } {
-  if (rec.facts && rec.segments) return { facts: rec.facts, segments: rec.segments };
+  if (rec.facts && rec.segments) return { facts: withCurrentShotSizes(rec.facts, project.media), segments: rec.segments };
   const seq = sequenceOfExport(project, rec);
   const facts = factsForExport(seq, project.media, rec.rangeSec ?? rangeOfSequence(seq));
   return { facts, segments: facts.shots.map((s) => ({ start: s.start, end: s.end })) };
@@ -76,6 +90,8 @@ export type SubmissionRequest = {
   selfChecks: { hookDone: boolean };
   isCorrection: boolean;
   submittedAt: number;
+  /** Korrektur: Zeitpunkt der ersten Abgabe (Basis für Verspätung und Frühbonus). */
+  lateBasisAt?: number;
   /** Nur gesetzt, wenn Gemini eingeschaltet ist und der Nutzer sich entschieden hat. */
   gemini?: GeminiRun;
   onProgress?: (message: string) => void;
@@ -107,7 +123,7 @@ export async function runSubmission(r: SubmissionRequest): Promise<Evaluation> {
   }
   if (measured === 0) r.onProgress?.('Prüfe Abgaben …');
   r.onProgress?.('Bewerte …');
-  const input = { assignment: a, submittedAt: r.submittedAt, videos, research: r.research, selfChecks: r.selfChecks, isCorrection: r.isCorrection };
+  const input = { assignment: a, submittedAt: r.submittedAt, videos, research: r.research, selfChecks: r.selfChecks, isCorrection: r.isCorrection, lateBasisAt: r.lateBasisAt };
   let e = evaluate(input, r.rules);
   if (r.gemini) {
     r.onProgress?.(r.gemini.choice.consent ? 'Frage Gemini …' : 'Bewerte …');

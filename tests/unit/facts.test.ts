@@ -37,6 +37,24 @@ describe('projectFacts', () => {
     const open = projectFacts({ ...s, tracks: s.tracks.map((t) => ({ ...t, muted: false })) }, media);
     expect(open.shots.map((x) => x.mediaId)).toEqual(['m', 'n', 'm']);
   });
+  it('Ausnahmen für Schwarz/Standbild: Titel über leerer V1 und Bild-Clips, zusammengefasst', () => {
+    const tp = { style: 'titel' as const, line1: 'Hallo', line2: '', font: '', size: 1, color: '', x: 0, y: 0, fadeIn: 0, fadeOut: 0 };
+    const img = mkMedia('img', { kind: 'image', fps: null, hasAudio: false });
+    const f = projectFacts(
+      base([
+        mkClip('t', 'V2', 0, 50, { kind: 'title', mediaId: undefined, title: tp }),
+        mkClip('a', 'V1', 50, 50),
+        mkClip('i', 'V1', 100, 25, { mediaId: 'img' }),
+        mkClip('j', 'V1', 125, 25, { mediaId: 'img' }),
+        // Bauchbinde über Film: keine Ausnahme
+        mkClip('t2', 'V2', 60, 20, { kind: 'title', mediaId: undefined, title: tp }),
+      ]),
+      [...media, img],
+    );
+    expect(f.exemptIntervals).toEqual([{ start: 0, end: 2 }, { start: 4, end: 6 }]);
+    // Leere Lücke ohne Titel ist keine Ausnahme
+    expect(projectFacts(base([mkClip('a', 'V1', 50, 50)]), media).exemptIntervals).toEqual([]);
+  });
   it('leere Sequenz', () => {
     expect(projectFacts(base([]), media)).toMatchObject({ shots: [], longestShotSec: 0, fpsMismatch: false, hasJOrLCut: false, transitions: 0 });
   });
