@@ -148,6 +148,7 @@ export class PlaybackEngine {
   play(rate: number): void {
     if (rate === 0) return this.pause();
     this.ensureAudio();
+    this.settle(performance.now());
     const next = Math.abs(rate) === 1 ? nextRate(this._rate, rate > 0 ? 1 : -1) : Math.max(-MAX_RATE, Math.min(MAX_RATE, rate));
     const seq = this.getSeq();
     const end = sequenceEnd(seq);
@@ -158,14 +159,37 @@ export class PlaybackEngine {
       this.stopAt = out !== null && this.pos < out ? out : end;
     }
     this._rate = next;
-    this.lastT = performance.now();
+    this.lastT = Math.max(this.lastT, performance.now());
     this.schedule();
   }
 
   pause(): void {
     if (this._rate === 0) return;
+    this.settle(performance.now());
     this._rate = 0;
     this.invalidate();
+  }
+
+  /**
+   * Bis `now` mit dem bisherigen Tempo weiterrechnen. Ohne das gehen beim Anhalten/Tempowechsel
+   * die Millisekunden seit dem letzten Takt verloren (auf langsamen Rechnern bis zu einem Taktabstand).
+   */
+  private settle(now: number): void {
+    if (this._rate === 0) return;
+    this.advance(now, this.getSeq().fps);
+  }
+
+  private advance(t: number, fps: number): void {
+    const dt = Math.max(0, t - this.lastT) / 1000;
+    this.lastT = Math.max(this.lastT, t);
+    this.pos += dt * fps * this._rate;
+    if (this._rate > 0 && this.pos >= this.stopAt) {
+      this.pos = this.stopAt;
+      this._rate = 0;
+    } else if (this._rate < 0 && this.pos <= 0) {
+      this.pos = 0;
+      this._rate = 0;
+    }
   }
 
   seek(frame: number): void {
@@ -210,18 +234,7 @@ export class PlaybackEngine {
     this.raf = 0;
     if (this.disposed) return;
     const seq = this.getSeq();
-    if (this._rate !== 0) {
-      const dt = Math.max(0, t - this.lastT) / 1000;
-      this.lastT = t;
-      this.pos += dt * seq.fps * this._rate;
-      if (this._rate > 0 && this.pos >= this.stopAt) {
-        this.pos = this.stopAt;
-        this._rate = 0;
-      } else if (this._rate < 0 && this.pos <= 0) {
-        this.pos = 0;
-        this._rate = 0;
-      }
-    }
+    if (this._rate !== 0) this.advance(t, seq.fps);
     this.render(seq);
     for (const cb of this.listeners) cb(this.frame);
     if (this._rate !== 0) this.schedule();

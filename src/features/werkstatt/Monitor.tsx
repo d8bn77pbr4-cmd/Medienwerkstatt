@@ -15,6 +15,9 @@ export type MonitorProps = {
   caption?: string;
 };
 
+/** Sprechtext für das Tempo, z. B. „Wiedergabegeschwindigkeit 2-fach“ (rückwärts mit Zusatz). */
+const rateLabel = (r: number): string => `Wiedergabegeschwindigkeit ${Math.abs(r)}-fach${r < 0 ? ' rückwärts' : ''}`;
+
 const mark = (f: number | null, fps: number): string => (f === null ? '–' : formatTimecode(f, fps));
 
 /** Monitor mit Bild, Zeitcode (`HH:MM:SS:FF`, Tabellenziffern), Ein-/Aus-Anzeige und Sicherheitsrahmen. */
@@ -24,6 +27,7 @@ export function Monitor({ engine, label, fps, inPoint, outPoint, aspect = 16 / 9
   const [safe, setSafe] = useState(false);
   const [color, setColor] = useState(engine.colorSupported);
   const [blocked, setBlocked] = useState(engine.blocked);
+  const [rate, setRate] = useState(engine.rate);
 
   useEffect(() => {
     const el = host.current;
@@ -43,6 +47,7 @@ export function Monitor({ engine, label, fps, inPoint, outPoint, aspect = 16 / 9
     const offFrame = engine.onFrame((f) => {
       setFrame(f);
       setBlocked(engine.blocked);
+      setRate(engine.rate);
     });
     const offCanvas = engine.onCanvasChange(mount);
     engine.invalidate();
@@ -71,6 +76,12 @@ export function Monitor({ engine, label, fps, inPoint, outPoint, aspect = 16 / 9
         <span className="timecode" role="timer" aria-live="off" aria-label="Zeitcode">
           {formatTimecode(frame, fps)}
         </span>
+        {rate !== 0 && Math.abs(rate) !== 1 && (
+          <span className="monitor-rate" data-testid="rate" role="status" aria-label={rateLabel(rate)}>
+            {rate < 0 ? '−' : ''}
+            {Math.abs(rate)}×
+          </span>
+        )}
         <span className="monitor-io" data-testid="io-marks">
           <span>Ein <span className="timecode-small">{mark(inPoint, fps)}</span></span>
           <span>Aus <span className="timecode-small">{mark(outPoint, fps)}</span></span>

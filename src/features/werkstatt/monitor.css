@@ -18,6 +18,7 @@
 .monitor-caption { color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 16em; }
 .timecode { font-variant-numeric: tabular-nums; font-size: 20px; font-weight: 600; color: var(--ink); letter-spacing: 0.02em; }
 .timecode-small { font-variant-numeric: tabular-nums; color: var(--ink); }
+.monitor-rate { font-variant-numeric: tabular-nums; font-size: 13px; font-weight: 600; color: var(--ink-2); padding: 0 6px; border: 1px solid var(--line-strong); border-radius: 6px; }
 .monitor-io { display: flex; gap: 12px; margin-left: auto; font-size: 12px; color: var(--muted); }
 .mon-btn {
   min-height: 22px; padding: 2px 10px; font: inherit; font-size: 12px;
