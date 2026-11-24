@@ -1,5 +1,7 @@
 import type { Sequence, Track } from './types';
 
+export type SequenceFormat = { width: number; height: number; fps: number };
+
 export type IdGen = () => string;
 export const defaultIdGen: IdGen = () => crypto.randomUUID();
 
@@ -26,5 +28,38 @@ export function newSequence(o: { width: number; height: number; fps: number; nam
     markers: [],
     inPoint: null,
     outPoint: null,
+  };
+}
+
+/**
+ * Auflösung und Bildrate ändern. Bei neuer Bildrate werden alle Bild-Angaben umgerechnet, damit die
+ * Zeiten in Sekunden gleich bleiben (Anfang und Ende je Clip einzeln gerundet: Stöße bleiben Stöße).
+ */
+export function withFormat(seq: Sequence, f: SequenceFormat): Sequence {
+  if (seq.width === f.width && seq.height === f.height && seq.fps === f.fps) return seq;
+  if (seq.fps === f.fps) return { ...seq, width: f.width, height: f.height };
+  const k = f.fps / seq.fps;
+  const r = (x: number) => Math.round(x * k);
+  return {
+    ...seq,
+    width: f.width,
+    height: f.height,
+    fps: f.fps,
+    clips: seq.clips.map((c) => {
+      const start = r(c.start);
+      const duration = Math.max(1, r(c.start + c.duration) - start);
+      return {
+        ...c,
+        start,
+        duration,
+        fadeIn: Math.min(duration, r(c.fadeIn)),
+        fadeOut: Math.min(duration, r(c.fadeOut)),
+        title: c.title ? { ...c.title, fadeIn: r(c.title.fadeIn), fadeOut: r(c.title.fadeOut) } : null,
+      };
+    }),
+    transitions: seq.transitions.map((t) => ({ ...t, duration: Math.max(1, r(t.duration)) })),
+    markers: seq.markers.map((m) => ({ ...m, frame: r(m.frame) })),
+    inPoint: seq.inPoint === null ? null : r(seq.inPoint),
+    outPoint: seq.outPoint === null ? null : r(seq.outPoint),
   };
 }

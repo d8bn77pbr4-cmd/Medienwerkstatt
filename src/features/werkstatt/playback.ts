@@ -67,6 +67,8 @@ export class PlaybackEngine {
   private canvasListeners = new Set<() => void>();
   private _blocked = false;
   private audioCtx: AudioContext | null = null;
+  /** Ein gemeinsamer Summenknoten mit Analyser (Pegelanzeige); alle Clip-Gains laufen hier hinein. */
+  private master: { gain: GainNode; analyser: AnalyserNode } | null = null;
   private disposed = false;
 
   constructor(
@@ -192,6 +194,7 @@ export class PlaybackEngine {
     this.audios.clear();
     void this.audioCtx?.close();
     this.audioCtx = null;
+    this.master = null;
     this.preview.dispose();
     this.listeners.clear();
     this.canvasListeners.clear();
@@ -323,7 +326,19 @@ export class PlaybackEngine {
         this.audioCtx = null;
       }
     }
+    if (this.audioCtx && !this.master) {
+      const gain = this.audioCtx.createGain();
+      const analyser = this.audioCtx.createAnalyser();
+      analyser.fftSize = 2048;
+      gain.connect(analyser).connect(this.audioCtx.destination);
+      this.master = { gain, analyser };
+    }
     if (this.audioCtx && this.audioCtx.state === 'suspended') void this.audioCtx.resume().catch(() => undefined);
+  }
+
+  /** Analyser der Summe (nach allen Clip-Pegeln), sobald WebAudio läuft; sonst `null`. */
+  get analyser(): AnalyserNode | null {
+    return this.master?.analyser ?? null;
   }
 
   private createAudio(url: string): AudioNode_ {
@@ -337,7 +352,7 @@ export class PlaybackEngine {
       gain = this.audioCtx.createGain();
       gain.gain.value = 0;
       source = this.audioCtx.createMediaElementSource(el);
-      source.connect(gain).connect(this.audioCtx.destination);
+      source.connect(gain).connect(this.master?.gain ?? this.audioCtx.destination);
     }
     return { el, gain, source };
   }

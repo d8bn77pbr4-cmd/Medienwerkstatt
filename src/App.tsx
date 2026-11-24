@@ -4,6 +4,7 @@ import { AuftraegeView } from './features/auftraege/AuftraegeView';
 import { AuftragDetail } from './features/auftraege/AuftragDetail';
 import { ResearchForm } from './features/auftraege/ResearchForm';
 import { Einstellungen } from './features/einstellungen/Einstellungen';
+import { Werkstatt } from './features/werkstatt/Werkstatt';
 import { RestoreBanner } from './shell/RestoreBanner';
 import { attachLifecycle } from './state/lifecycle';
 import { startApp } from './state/bootstrap';
@@ -12,31 +13,12 @@ import { TopBar } from './shell/TopBar';
 import { AREAS, areaForPath } from './shell/areas';
 import type { AreaInfo } from './shell/areas';
 import { useAreaShortcuts } from './shell/useAreaShortcuts';
-import { useApp } from './state/appStore';
 
 /** Nur im Entwicklungsserver: Testseite für Wiedergabe, Monitor und Scopes. */
 const DevWiedergabe = import.meta.env.DEV ? lazy(() => import('./features/werkstatt/DevWiedergabe')) : null;
 
-function WerkstattPlatzhalter({ area }: { area: AreaInfo }) {
-  const assignmentId = (useLocation().state as { assignmentId?: string } | null)?.assignmentId;
-  const assignment = useApp((s) => s.state?.assignments.find((a) => a.id === assignmentId));
-  return (
-    <main className="main werkstatt">
-      <div className="werkstatt-page">
-        <h1>{area.label}</h1>
-        <p className="page-lead">{area.lead}</p>
-        {assignment && (
-          <p className="page-lead">
-            Auftrag #{assignment.number}: {assignment.title}
-          </p>
-        )}
-      </div>
-    </main>
-  );
-}
-
 function AreaPage({ area }: { area: AreaInfo }) {
-  if (area.id === 'werkstatt') return <WerkstattPlatzhalter area={area} />;
+  if (area.id === 'werkstatt') return <Werkstatt />;
   if (area.id === 'auftraege') return <AuftraegeView lead={area.lead} />;
   if (area.id === 'einstellungen') return <Einstellungen label={area.label} lead={area.lead} />;
   return (
@@ -56,9 +38,10 @@ function Shell() {
     void startApp();
     return attachLifecycle();
   }, []);
-  const collapsed = areaForPath(useLocation().pathname).id === 'werkstatt';
+  // In der Werkstatt klappt die Seitenleiste auf Symbole zusammen und die ganze Shell wird dunkel.
+  const werkstatt = areaForPath(useLocation().pathname).id === 'werkstatt';
   return (
-    <div className={`shell${collapsed ? ' is-collapsed' : ''}`}>
+    <div className={`shell${werkstatt ? ' is-collapsed is-werkstatt' : ''}`}>
       <Sidebar />
       <div className="content">
         <TopBar />

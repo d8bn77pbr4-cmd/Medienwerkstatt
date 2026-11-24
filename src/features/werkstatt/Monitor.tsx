@@ -11,12 +11,14 @@ export type MonitorProps = {
   outPoint: number | null;
   /** Seitenverhältnis des Bildes (Breite / Höhe), Vorgabe 16:9. */
   aspect?: number;
+  /** Zusatz neben der Bezeichnung, z. B. der Name des Mediums in der Quelle. */
+  caption?: string;
 };
 
 const mark = (f: number | null, fps: number): string => (f === null ? '–' : formatTimecode(f, fps));
 
 /** Monitor mit Bild, Zeitcode (`HH:MM:SS:FF`, Tabellenziffern), Ein-/Aus-Anzeige und Sicherheitsrahmen. */
-export function Monitor({ engine, label, fps, inPoint, outPoint, aspect = 16 / 9 }: MonitorProps) {
+export function Monitor({ engine, label, fps, inPoint, outPoint, aspect = 16 / 9, caption }: MonitorProps) {
   const host = useRef<HTMLDivElement>(null);
   const [frame, setFrame] = useState(engine.frame);
   const [safe, setSafe] = useState(false);
@@ -65,6 +67,7 @@ export function Monitor({ engine, label, fps, inPoint, outPoint, aspect = 16 / 9
       </div>
       <div className="monitor-bar">
         <span className="monitor-label">{label}</span>
+        {caption && <span className="monitor-caption">{caption}</span>}
         <span className="timecode" role="timer" aria-live="off" aria-label="Zeitcode">
           {formatTimecode(frame, fps)}
         </span>

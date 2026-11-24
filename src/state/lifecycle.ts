@@ -1,12 +1,16 @@
 import { useApp } from './appStore';
+import { useProject } from './projectStore';
 
 /**
  * Minütliches `tickNow`, Prüfung beim Fokussieren des Fensters und Sichern beim Verlassen
- * (beforeunload, pagehide, Tab im Hintergrund). Gibt den Aufräumer zurück.
+ * (beforeunload, pagehide, Tab im Hintergrund) – App-Zustand und offenes Projekt. Gibt den Aufräumer zurück.
  */
 export function attachLifecycle(): () => void {
   const tickNow = () => useApp.getState().tickNow();
-  const flush = () => void useApp.getState().flush();
+  const flush = () => {
+    void useApp.getState().flush();
+    void useProject.getState().flush();
+  };
   const onVisibility = () => {
     if (document.visibilityState === 'hidden') flush();
     else tickNow();

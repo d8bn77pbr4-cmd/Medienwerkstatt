@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { newSequence } from '../../src/domain/timeline/sequence';
+import { newSequence, withFormat } from '../../src/domain/timeline/sequence';
 import type { Clip, MediaItem, Sequence } from '../../src/domain/timeline/types';
 import {
   addEditAll, addTitle, addTransition, insertEdit, liftDelete, moveClips, razor, rippleDelete,
@@ -29,6 +29,17 @@ const M = [mkMedia('m')];
 describe('newSequence', () => {
   it('legt V1, V2, A1–A4 an', () => {
     expect(newSequence({ width: 1, height: 1, fps: 25, name: 'x' }).tracks.map((t) => t.id)).toEqual(['V1', 'V2', 'A1', 'A2', 'A3', 'A4']);
+  });
+  it('withFormat: Auflösung allein ändert keine Bilder, neue Bildrate rechnet um und behält Stöße', () => {
+    const s = { ...base([mkClip('a', 'V1', 0, 50), mkClip('b', 'V1', 50, 37)]), markers: [{ frame: 25, label: '' }], inPoint: 10, outPoint: null };
+    expect(withFormat(s, { width: 1920, height: 1080, fps: 25 })).toBe(s);
+    const r = withFormat(s, { width: 1080, height: 1920, fps: 25 });
+    expect([r.width, r.height, r.clips]).toEqual([1080, 1920, s.clips]);
+    const f = withFormat(s, { width: 1920, height: 1080, fps: 50 });
+    expect(on(f, 'V1').map(span)).toEqual([[0, 100], [100, 174]]);
+    expect([f.fps, f.markers[0].frame, f.inPoint, f.outPoint]).toEqual([50, 50, 20, null]);
+    const g = withFormat(s, { width: 1920, height: 1080, fps: 30 });
+    expect(on(g, 'V1')[0].start + on(g, 'V1')[0].duration).toBe(on(g, 'V1')[1].start);
   });
 });
 

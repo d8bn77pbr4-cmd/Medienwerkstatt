@@ -41,7 +41,7 @@ export const KEYMAP: readonly KeyBinding[] = [
   T('tool.razor', ['c'], 'C', 'Rasierklinge (Razor)', 'Rasierklinge (Razor Tool)'),
   T('tool.ripple', ['b'], 'B', 'Ripple-Trim (Ripple Edit)', 'Ripple-Bearbeitung (Ripple Edit Tool)'),
   T('tool.roll', ['n'], 'N', 'Rollen (Roll)', 'Rollen-Bearbeitung (Rolling Edit Tool)'),
-  T('tool.hand', ['h'], 'H', 'Hand (Hand)', 'Hand-Werkzeug (Hand Tool)'),
+  T('tool.hand', ['h'], 'H', 'Hand-Werkzeug (Hand)', 'Hand-Werkzeug (Hand Tool)'),
   T('mark.in', ['i'], 'I', 'Eingang setzen (Mark In)', 'Mark In'),
   T('mark.out', ['o'], 'O', 'Ausgang setzen (Mark Out)', 'Mark Out'),
   T('transport.reverse', ['j'], 'J', 'Rückwärts abspielen, mehrfach = schneller', 'Shuttle Left'),

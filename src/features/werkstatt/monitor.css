@@ -15,6 +15,7 @@
 .monitor-safe .safe-title { inset: 5%; border-style: dashed; }
 .monitor-bar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 13px; color: var(--ink-2); }
 .monitor-label { font-weight: 600; color: var(--ink); }
+.monitor-caption { color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 16em; }
 .timecode { font-variant-numeric: tabular-nums; font-size: 20px; font-weight: 600; color: var(--ink); letter-spacing: 0.02em; }
 .timecode-small { font-variant-numeric: tabular-nums; color: var(--ink); }
 .monitor-io { display: flex; gap: 12px; margin-left: auto; font-size: 12px; color: var(--muted); }

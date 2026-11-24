@@ -20,7 +20,8 @@ test('Einstellungen sind per Link erreichbar', async ({ page }) => {
 
 test('Werkstatt: Grundschrift 13 px', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('.werkstatt .page-lead')).toHaveCSS('font-size', '13px');
+  // Platzhalter-Text gibt es nicht mehr: Arbeitsfläche oder leerer Zustand, beide in .werkstatt.
+  await expect(page.locator('.werkstatt')).toHaveCSS('font-size', '13px');
 });
 
 test('Markierung folgt Layoutänderungen (Fensterhöhe)', async ({ page }) => {
