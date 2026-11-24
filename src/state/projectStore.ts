@@ -6,6 +6,7 @@ import { History } from '../domain/timeline/history';
 import { newSequence, withFormat } from '../domain/timeline/sequence';
 import { projectSetting } from '../domain/timeline/settings';
 import type { ExportRecord, MediaItem, Project, ProjectSettings, Sequence } from '../domain/timeline/types';
+import { uuid } from '../domain/uuid';
 
 export const PROJECT_SAVE_DEBOUNCE_MS = 2000;
 /** Höchstens so viele Proxies werden gleichzeitig erstellt (ffmpeg ist schwer; der Rest wartet). */
@@ -267,7 +268,7 @@ export const useProject = create<ProjectStore>()((set, get) => {
     addSequenceFor(name, format) {
       const { seq } = get();
       if (!history || !seq) return null;
-      const copy: Sequence = { ...withFormat(seq, format), id: crypto.randomUUID(), name };
+      const copy: Sequence = { ...withFormat(seq, format), id: uuid(), name };
       gesture = null;
       history.push([...history.present, copy]);
       syncFromHistory();

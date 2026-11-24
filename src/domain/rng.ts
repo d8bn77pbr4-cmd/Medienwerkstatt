@@ -34,5 +34,6 @@ export function weighted<T>(r: () => number, items: [T, number][]): T {
     if (x < w) return item;
     x -= w;
   }
-  return items.filter(([, w]) => w > 0).at(-1)![0];
+  const positive = items.filter(([, w]) => w > 0);
+  return positive[positive.length - 1][0];
 }

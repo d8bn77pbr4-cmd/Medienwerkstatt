@@ -1,6 +1,7 @@
 import type { Backend } from './Backend';
 import { isValidState } from './schema';
 import type { AppState, Assignment, LoadResult, Measurements, MediaItem, Project, Segment } from './types';
+import { uuid } from '../domain/uuid';
 
 /**
  * Browser-/Test-Backend. Spätere Tasks füllen die Methoden mit echtem
@@ -146,7 +147,7 @@ export class MockBackend implements Backend {
       videoCodec: 'vp9',
       audioCodec: 'opus',
       rotation: 0,
-      id: crypto.randomUUID(),
+      id: uuid(),
       name: path.split('/').pop() || path,
       path,
       proxyPath: null,

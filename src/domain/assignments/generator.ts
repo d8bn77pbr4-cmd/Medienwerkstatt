@@ -63,7 +63,7 @@ const UHD_SHARE = 0.3;
 /** „a“, „a und b“, „a, b und c“. */
 function joinGerman(items: string[]): string {
   if (items.length <= 1) return items.join('');
-  return `${items.slice(0, -1).join(', ')} und ${items.at(-1)}`;
+  return `${items.slice(0, -1).join(', ')} und ${items[items.length - 1]}`;
 }
 
 /** 45 → „45 Sekunden“, 90 → „1:30 Minuten“, 120 → „2 Minuten“. */

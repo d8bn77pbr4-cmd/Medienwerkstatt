@@ -1,9 +1,10 @@
 import type { Sequence, Track } from './types';
+import { uuid } from '../uuid';
 
 export type SequenceFormat = { width: number; height: number; fps: number };
 
 export type IdGen = () => string;
-export const defaultIdGen: IdGen = () => crypto.randomUUID();
+export const defaultIdGen: IdGen = () => uuid();
 
 export const DEFAULT_TRACKS: Track[] = [
   { id: 'V1', kind: 'video', name: 'V1', locked: false, muted: false },

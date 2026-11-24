@@ -4,6 +4,7 @@ import { projectFolderFor } from '../domain/assignments/naming';
 import type { Backend } from './Backend';
 import { isValidState } from './schema';
 import type { AppState, Assignment, LoadResult, Measurements, MediaItem, Project, Segment } from './types';
+import { uuid } from '../domain/uuid';
 
 /** Fehler eines Tauri-Befehls: `code` ist einer von tool_missing, tool_failed, io, parse, invalid_key, rate_limited, offline, invalid_path. */
 export class CommandError extends Error {
@@ -40,7 +41,7 @@ function toBase64(bytes: Uint8Array): string {
 
 /** Führt `run(jobId)` aus und meldet die Fortschrittsereignisse (`mw://progress`) dieses Auftrags. */
 async function withProgress<T>(onProgress: (p: number) => void, run: (jobId: string) => Promise<T>): Promise<T> {
-  const jobId = crypto.randomUUID();
+  const jobId = uuid();
   const unlisten = await listen<{ jobId: string; p: number }>('mw://progress', e => {
     if (e.payload.jobId === jobId) onProgress(e.payload.p);
   });

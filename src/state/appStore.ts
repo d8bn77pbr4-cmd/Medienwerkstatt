@@ -14,6 +14,7 @@ import { prepareFrames, type GeminiPreparation } from './geminiFrames';
 import type { GeminiChoice } from './gemini';
 import { loadProjectFor } from './projectAccess';
 import { runSubmission } from './submission';
+import { uuid } from '../domain/uuid';
 
 export const SAVE_DEBOUNCE_MS = 2000;
 
@@ -213,7 +214,7 @@ export const useApp = create<AppStore>()((set, get) => {
       base = normalize(loaded.value);
     } else {
       fresh = true;
-      base = freshState(opts.installId ?? crypto.randomUUID(), clock.now());
+      base = freshState(opts.installId ?? uuid(), clock.now());
     }
     let state: AppState;
     try {
@@ -365,7 +366,7 @@ export const useApp = create<AppStore>()((set, get) => {
     async restart() {
       const clock = get().clock;
       if (!clock || !backend) return;
-      const fresh = ticked(freshState(crypto.randomUUID(), clock.now()), clock.now());
+      const fresh = ticked(freshState(uuid(), clock.now()), clock.now());
       set({ state: fresh, ready: true, restoredFromBackup: false, initError: null });
       dirty = true;
       await flush();
