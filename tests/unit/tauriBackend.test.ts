@@ -31,7 +31,7 @@ function emit(payload: unknown) {
   for (const cb of listeners.get('mw://progress') ?? []) cb({ payload });
 }
 const state = { version: 1, installId: 'i', createdAt: 1, schedule: { nextIssueAt: 1, nextNumber: 1, vacations: [] }, assignments: [], evaluations: [], showreel: [], settings: {}, checklist: {}, research: {} } as unknown as AppState;
-const media: MediaItem = { id: 'm1', path: '/x/a.mov' };
+const media = { id: 'm1', path: '/x/a.mov' } as MediaItem;
 
 beforeEach(() => {
   calls.length = 0;

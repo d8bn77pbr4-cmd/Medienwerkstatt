@@ -2,8 +2,23 @@ import type { Assignment } from '../domain/assignments/types';
 import type { ScheduleState } from '../domain/assignments/schedule';
 import type { Evaluation } from '../domain/chef/types';
 import type { ResearchDoc } from '../domain/chef/research';
+import type { ExportPresetId, ExportRecord, MediaItem, Project } from '../domain/timeline/types';
 
-// Platzhalter-Typen (Project, MediaItem, Segment): spätere Tasks füllen sie mit den echten Feldern.
+export type { Project, MediaItem, ExportRecord, ExportPresetId };
+
+/** TS-Spiegel des Rust-`MediaInfo` (camelCase-JSON). */
+export type MediaInfo = {
+  kind: 'video' | 'audio' | 'image';
+  durationSec: number;
+  width: number;
+  height: number;
+  fps: number | null;
+  hasAudio: boolean;
+  hdr: boolean;
+  videoCodec: string | null;
+  audioCodec: string | null;
+  rotation: number;
+};
 
 export type LoadResult<T> = { value: T | null; restoredFromBackup: boolean };
 
@@ -29,8 +44,6 @@ export type AppState = {
   research: Record<string, ResearchDoc>;
 };
 export type { Assignment };
-export type Project = { version: 1 };
-export type MediaItem = { id: string; path: string };
 export type Segment = { start: number; end: number };
 export type Interval = { start: number; end: number };
 /** Luma 0–1, Prozentwerte 0–100, U/V −0,5…0,5. */
