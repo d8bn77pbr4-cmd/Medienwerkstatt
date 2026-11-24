@@ -3,10 +3,10 @@ import path from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 
-const FIXTURE_DIR = path.resolve(__dirname, 'tests/fixtures/media');
-const TYPES: Record<string, string> = { '.webm': 'video/webm', '.mp4': 'video/mp4', '.mov': 'video/quicktime', '.wav': 'audio/wav' };
+const FIXTURE_DIRS = [path.resolve(__dirname, 'tests/fixtures/media'), path.resolve(__dirname, 'tests/fixtures/images')];
+const TYPES: Record<string, string> = { '.png': 'image/png', '.webm': 'video/webm', '.mp4': 'video/mp4', '.mov': 'video/quicktime', '.wav': 'audio/wav' };
 
-/** Nur Entwicklungsserver: stellt `tests/fixtures/media/` unter `/fixtures/` bereit (mit Range-Anfragen für Videos). */
+/** Nur Entwicklungsserver: stellt `tests/fixtures/media/` und `tests/fixtures/images/` unter `/fixtures/` bereit (mit Range-Anfragen für Videos). */
 function fixtures(): Plugin {
   return {
     name: 'mw-fixtures',
@@ -14,15 +14,21 @@ function fixtures(): Plugin {
     configureServer(server) {
       server.middlewares.use('/fixtures', (req, res, next) => {
         const name = decodeURIComponent((req.url ?? '').split('?')[0]).replace(/^\/+/, '');
-        const file = path.resolve(FIXTURE_DIR, name);
-        const type = TYPES[path.extname(file).toLowerCase()];
-        let size = 0;
-        try {
-          if (!type || path.dirname(file) !== FIXTURE_DIR) return next();
-          size = statSync(file).size;
-        } catch {
-          return next();
+        let file = '';
+        let size = -1;
+        for (const dir of FIXTURE_DIRS) {
+          const f = path.resolve(dir, name);
+          try {
+            if (path.dirname(f) !== dir) continue;
+            size = statSync(f).size;
+            file = f;
+            break;
+          } catch {
+            /* nächster Ordner */
+          }
         }
+        const type = TYPES[path.extname(file).toLowerCase()];
+        if (size < 0 || !type) return next();
         const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range ?? '');
         let [start, end] = [0, size - 1];
         if (range) {

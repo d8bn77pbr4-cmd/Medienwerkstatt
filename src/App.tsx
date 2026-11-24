@@ -5,6 +5,8 @@ import { AuftraegeView } from './features/auftraege/AuftraegeView';
 import { AuftragDetail } from './features/auftraege/AuftragDetail';
 import { ResearchForm } from './features/auftraege/ResearchForm';
 import { Einstellungen } from './features/einstellungen/Einstellungen';
+import { applyTheme } from './features/einstellungen/theme';
+import { useApp } from './state/appStore';
 import { Werkstatt } from './features/werkstatt/Werkstatt';
 import { RestoreBanner } from './shell/RestoreBanner';
 import { attachLifecycle } from './state/lifecycle';
@@ -40,6 +42,11 @@ function Shell() {
     void startApp();
     return attachLifecycle();
   }, []);
+  // Darstellung aus den Einstellungen (automatisch = Systemeinstellung).
+  const theme = useApp((s) => s.state?.settings.theme);
+  useEffect(() => {
+    if (theme) applyTheme(theme);
+  }, [theme]);
   // In der Werkstatt klappt die Seitenleiste auf Symbole zusammen und die ganze Shell wird dunkel.
   const werkstatt = areaForPath(useLocation().pathname).id === 'werkstatt';
   return (

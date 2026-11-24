@@ -91,6 +91,11 @@ export function Protokoll({ evaluation: e, assignment, fresh }: ProtokollProps) 
           <span className="kurz-of"> von {loadRules().maxScore} Punkten</span>
         </p>
         <p className="kurz-phrase">{e.phrase}</p>
+        {e.geminiNote && (
+          <p className="kurz-note" role="note">
+            {e.geminiNote}
+          </p>
+        )}
       </section>
 
       <Stage id="protokoll-verstehen" title="Verstehen" defaultOpen>
@@ -115,6 +120,11 @@ export function Protokoll({ evaluation: e, assignment, fresh }: ProtokollProps) 
         {e.late && (
           <p className="bar-extra is-bad">
             <CircleMinus aria-hidden="true" /> Verspätung: {signed(e.late.points)} Punkte ({e.late.ist})
+          </p>
+        )}
+        {e.gemini && (
+          <p className="bar-extra">
+            Gemini hat die Bewertung um {signed((e.geminiShift?.gestaltung ?? 0) + (e.geminiShift?.auftrag ?? 0))} Punkte angepasst: {e.gemini.summary}
           </p>
         )}
         {e.bonus.length > 0 && (
@@ -163,6 +173,11 @@ export function Protokoll({ evaluation: e, assignment, fresh }: ProtokollProps) 
           <div className="profis-group">
             <h3>Gestaltung (Gemini)</h3>
             <p>{e.gemini.summary}</p>
+            {e.geminiShift && (
+              <p className="muted">
+                Angewendet: Gestaltung {signed(e.geminiShift.gestaltung)}, Auftrag {signed(e.geminiShift.auftrag)} (insgesamt höchstens ±{loadRules().gemini.maxShift}).
+              </p>
+            )}
             <ul className="deds">
               {e.gemini.criteria.map((c) => (
                 <li key={c.key} className="ded">

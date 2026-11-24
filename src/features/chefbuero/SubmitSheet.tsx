@@ -9,6 +9,9 @@ import { loadRules } from '../../domain/chef/rules';
 import type { Evaluation } from '../../domain/chef/types';
 import type { Project } from '../../domain/timeline/types';
 import { Sheet } from '../../shell/Sheet';
+import { GeminiConsent } from '../einstellungen/GeminiConsent';
+import type { GeminiChoice } from '../../state/gemini';
+import type { GeminiPreparation } from '../../state/geminiFrames';
 import { researchKey, useApp } from '../../state/appStore';
 import { loadProjectFor } from '../../state/projectAccess';
 import { exportStale, latestExport } from '../../state/submission';
@@ -29,6 +32,8 @@ export function SubmitSheet({ assignment, onClose, onDone }: { assignment: Assig
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
+  /** Gemini ist aktiv: vor dem Senden die Standbilder zeigen und um Einwilligung bitten. */
+  const [consent, setConsent] = useState<GeminiPreparation | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -71,16 +76,36 @@ export function SubmitSheet({ assignment, onClose, onDone }: { assignment: Assig
   const selfHook = assignment.hook.verify === 'self';
   const missingPoints = assignment.deliverables.some((d) => d.kind === 'video') ? rules.deductions.auftrag.missingDeliverable : rules.deductions.researchOnly.missingDeliverable;
 
-  const submit = async () => {
+  /** Erst Gemini vorbereiten (nur wenn eingeschaltet); die Abgabe selbst folgt nach der Einwilligung. */
+  const start = async () => {
     setBusy(true);
     setError(null);
+    setMessage('Bereite Standbilder vor …');
+    try {
+      const prep = await useApp.getState().prepareGemini(assignment.id);
+      if (prep && !prep.error) {
+        setConsent(prep);
+        setBusy(false);
+        return;
+      }
+      await submit(prep?.error ? { consent: false, note: prep.error } : undefined);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setBusy(false);
+    }
+  };
+
+  const submit = async (choice?: GeminiChoice) => {
+    setBusy(true);
+    setError(null);
+    setConsent(null);
     setMessage('Prüfe Abgaben …');
     try {
       const app = useApp.getState();
       const checks = { hookDone };
       let evaluation: Evaluation;
       if (correction) {
-        const r = await app.correction(assignment.id, checks, setMessage);
+        const r = await app.correction(assignment.id, checks, setMessage, choice);
         if (!r.ok) {
           setError(r.reason === 'busy' ? 'Die Abgabe läuft schon.' : correctionBlockedText(r.reason, rules));
           setBusy(false);
@@ -88,7 +113,7 @@ export function SubmitSheet({ assignment, onClose, onDone }: { assignment: Assig
         }
         evaluation = r.evaluation;
       } else {
-        evaluation = await app.submit(assignment.id, checks, setMessage);
+        evaluation = await app.submit(assignment.id, checks, setMessage, choice);
       }
       setBusy(false);
       if (onDone) onDone(evaluation);
@@ -102,74 +127,78 @@ export function SubmitSheet({ assignment, onClose, onDone }: { assignment: Assig
   return (
     <Sheet
       id="submit-h"
-      title={correction ? 'Nachbessern abgeben' : 'Abgeben'}
+      title={consent ? 'Gemini-Begutachtung' : correction ? 'Nachbessern abgeben' : 'Abgeben'}
       busy={busy}
       onClose={onClose}
       footer={
-        check.ok ? (
-          <button type="button" className="btn btn-primary pressable" data-autofocus disabled={busy} onClick={() => void submit()}>
+        check.ok && !consent ? (
+          <button type="button" className="btn btn-primary pressable" data-autofocus disabled={busy} onClick={() => void start()}>
             {busy ? 'Wird bewertet …' : correction ? 'Korrektur abgeben' : 'Abgeben'}
           </button>
         ) : null
       }
     >
-      <div className="submit-body">
-        <p className="muted">
-          Auftrag #{assignment.number}: {assignment.title}
-        </p>
-        {correction && check.ok && (
-          <p className="submit-note">Das Ergebnis ist bei einer Korrektur auf höchstens {rules.correction.maxScore} Punkte gedeckelt; die bessere Bewertung zählt.</p>
-        )}
-        {!check.ok && (
-          <p className="submit-note" role="alert">
-            {correctionBlockedText(check.reason, rules)}
+      {consent ? (
+        <GeminiConsent frames={consent.frames} onSend={() => void submit({ consent: true, frames: consent.frames })} onDecline={() => void submit({ consent: false })} />
+      ) : (
+        <div className="submit-body">
+          <p className="muted">
+            Auftrag #{assignment.number}: {assignment.title}
           </p>
-        )}
-        <h3>Abgaben</h3>
-        <ul className="submit-list">
-          {lines.map((l) => (
-            <li key={l.id} className={l.ok ? 'is-ok' : 'is-missing'}>
-              {l.ok ? <CircleCheck aria-hidden="true" /> : <CircleAlert aria-hidden="true" />}
-              <span>
-                <strong>{l.label}</strong> · <span className="submit-state">{l.ok ? 'bereit' : 'fehlt'}</span>
-                <span className="submit-detail">{l.text}</span>
-                {l.stale && (
-                  <span className="submit-stale" role="status">
-                    <TriangleAlert aria-hidden="true" /> Seit dem Export geändert – bitte neu exportieren
-                  </span>
-                )}
-                {!l.ok && l.action && (
-                  <button type="button" className="inline-link" onClick={() => navigate(l.action!.to)}>
-                    {l.action.label}
-                  </button>
-                )}
-              </span>
-            </li>
-          ))}
-        </ul>
-        {missing > 0 && check.ok && (
-          <p className="submit-note" role="status">
-            Du kannst trotzdem abgeben. Jede fehlende Abgabe kostet {Math.abs(missingPoints)} Punkte.
+          {correction && check.ok && (
+            <p className="submit-note">Das Ergebnis ist bei einer Korrektur auf höchstens {rules.correction.maxScore} Punkte gedeckelt; die bessere Bewertung zählt.</p>
+          )}
+          {!check.ok && (
+            <p className="submit-note" role="alert">
+              {correctionBlockedText(check.reason, rules)}
+            </p>
+          )}
+          <h3>Abgaben</h3>
+          <ul className="submit-list">
+            {lines.map((l) => (
+              <li key={l.id} className={l.ok ? 'is-ok' : 'is-missing'}>
+                {l.ok ? <CircleCheck aria-hidden="true" /> : <CircleAlert aria-hidden="true" />}
+                <span>
+                  <strong>{l.label}</strong> · <span className="submit-state">{l.ok ? 'bereit' : 'fehlt'}</span>
+                  <span className="submit-detail">{l.text}</span>
+                  {l.stale && (
+                    <span className="submit-stale" role="status">
+                      <TriangleAlert aria-hidden="true" /> Seit dem Export geändert – bitte neu exportieren
+                    </span>
+                  )}
+                  {!l.ok && l.action && (
+                    <button type="button" className="inline-link" onClick={() => navigate(l.action!.to)}>
+                      {l.action.label}
+                    </button>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {missing > 0 && check.ok && (
+            <p className="submit-note" role="status">
+              Du kannst trotzdem abgeben. Jede fehlende Abgabe kostet {Math.abs(missingPoints)} Punkte.
+            </p>
+          )}
+          <h3>Haken</h3>
+          {selfHook ? (
+            <label className="submit-check">
+              <input type="checkbox" checked={hookDone} onChange={(e) => setHookDone(e.target.checked)} />
+              <span>Haken umgesetzt: {assignment.hook.text}</span>
+            </label>
+          ) : (
+            <p className="muted">{assignment.hook.text} – das prüft der Chef selbst.</p>
+          )}
+          <p className="submit-progress" role="status" aria-live="polite">
+            {busy ? message : ''}
           </p>
-        )}
-        <h3>Haken</h3>
-        {selfHook ? (
-          <label className="submit-check">
-            <input type="checkbox" checked={hookDone} onChange={(e) => setHookDone(e.target.checked)} />
-            <span>Haken umgesetzt: {assignment.hook.text}</span>
-          </label>
-        ) : (
-          <p className="muted">{assignment.hook.text} – das prüft der Chef selbst.</p>
-        )}
-        <p className="submit-progress" role="status" aria-live="polite">
-          {busy ? message : ''}
-        </p>
-        {error && (
-          <p className="submit-error" role="alert">
-            {error}
-          </p>
-        )}
-      </div>
+          {error && (
+            <p className="submit-error" role="alert">
+              {error}
+            </p>
+          )}
+        </div>
+      )}
     </Sheet>
   );
 }

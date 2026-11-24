@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../../state/appStore';
+import { SettingsView } from './SettingsView';
 
 const H = 3_600_000;
 
@@ -31,7 +32,7 @@ function DevTime() {
   );
 }
 
-/** Platzhalter; Task 14 baut die volle Ansicht und behält den Entwickler-Abschnitt. */
+/** Einstellungen: Darstellung, Urlaub, Gemini; Entwickler-Zeitsimulation nur mit `?dev=1`. */
 export function Einstellungen({ label, lead }: { label: string; lead: string }) {
   const dev = new URLSearchParams(window.location.search).get('dev') === '1';
   return (
@@ -40,6 +41,7 @@ export function Einstellungen({ label, lead }: { label: string; lead: string }) 
         <p className="page-kicker">{label}</p>
         <h1>{label}</h1>
         <p className="page-lead">{lead}</p>
+        <SettingsView />
         {dev && <DevTime />}
       </div>
     </main>
