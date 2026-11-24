@@ -223,6 +223,8 @@ fn measure_loudness(t: &Tools, file: &Path) -> Result<(Option<f64>, Option<f64>)
     args.extend(
         [
             "-vn",
+            "-map",
+            "0:a:0",
             "-af",
             "ebur128=peak=true:framelog=verbose",
             "-f",
@@ -296,6 +298,12 @@ fn audio_channels(t: &Tools, file: &Path) -> Result<usize> {
         .stdin(Stdio::null())
         .output()
         .map_err(|e| spawn_error(&t.ffprobe, e))?;
+    if !out.status.success() {
+        return Err(Error::ToolFailed {
+            code: out.status.code(),
+            stderr_tail: String::from_utf8_lossy(&out.stderr).trim().to_string(),
+        });
+    }
     String::from_utf8_lossy(&out.stdout)
         .trim()
         .parse::<usize>()
@@ -307,7 +315,7 @@ fn audio_channels(t: &Tools, file: &Path) -> Result<usize> {
 fn scan_pcm(t: &Tools, file: &Path) -> Result<(u64, Vec<Interval>)> {
     let channels = audio_channels(t, file)?;
     let mut args = base_args(file);
-    args.extend(["-vn", "-ar", "48000", "-f", "f32le", "-"].map(OsString::from));
+    args.extend(["-vn", "-map", "0:a:0", "-ar", "48000", "-f", "f32le", "-"].map(OsString::from));
     let window_frames = (PCM_RATE as f64 * SILENCE_WINDOW_SEC).round() as usize;
     let (clipped, silent) = stream(t, &args, |out| {
         let mut buf = vec![0u8; window_frames * channels * 4];

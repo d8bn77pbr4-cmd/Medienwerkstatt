@@ -252,3 +252,119 @@ fn measurements_json_uses_exact_camel_case_keys() {
     assert_eq!(keys("/audio/silences/0"), ["end", "start"]);
     assert!(v["format"]["audioCodec"].is_null());
 }
+
+/// Erzeugt (einmal je Name) eine Fixture-Datei im gemeinsamen Temp-Ordner.
+fn make(name: &str, args: &[&str]) -> PathBuf {
+    let f = export_fixture().join(name);
+    if !f.exists() {
+        let part =
+            export_fixture().join(format!("{name}.part.{}", name.rsplit('.').next().unwrap()));
+        let mut a: Vec<&str> = args.to_vec();
+        a.push(part.to_str().unwrap());
+        ffmpeg(&a);
+        fs::rename(&part, &f).unwrap();
+    }
+    f
+}
+
+#[test]
+fn detects_held_frame_as_freeze() {
+    // 2 s bewegt, 3 s eingefrorenes letztes Bild, 2 s bewegt.
+    let f = make(
+        "freeze.mp4",
+        &[
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc2=s=320x240:r=25:d=2,tpad=stop_mode=clone:stop_duration=3",
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc2=s=320x240:r=25:d=2",
+            "-filter_complex",
+            "[0:v][1:v]concat=n=2:v=1:a=0,format=yuv420p[v]",
+            "-map",
+            "[v]",
+            "-c:v",
+            "libx264",
+        ],
+    );
+    let m = analyze(&Tools::from_env(), &f, &[]).unwrap();
+    assert_eq!(m.video.freeze.len(), 1, "{:?}", m.video.freeze);
+    let fr = &m.video.freeze[0];
+    assert!(
+        (fr.start - 2.0).abs() <= 0.25 && (fr.end - 5.0).abs() <= 0.25,
+        "{fr:?}"
+    );
+    assert!(m.video.black.is_empty());
+}
+
+#[test]
+fn detects_digital_silence_between_tones() {
+    // Ton 2 s, digitale Stille 2 s, Ton 2 s.
+    let f = make(
+        "stille-mitte.wav",
+        &[
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=f=440:d=6,volume=0:enable='between(t,2,4)'",
+            "-c:a",
+            "pcm_s16le",
+        ],
+    );
+    let m = analyze(&Tools::from_env(), &f, &[]).unwrap();
+    assert_eq!(m.audio.silences.len(), 1, "{:?}", m.audio.silences);
+    let s = &m.audio.silences[0];
+    assert!(
+        (s.start - 2.0).abs() <= 0.1 && (s.end - 4.0).abs() <= 0.1,
+        "{s:?}"
+    );
+    assert_eq!(m.audio.clipped_samples, 0);
+    assert!(m.audio.integrated_lufs.is_some());
+}
+
+#[test]
+fn quiet_stereo_sine_has_exact_levels_and_no_clipping() {
+    // Stereo, beide Kanäle gleich, 1 kHz, −20 dBFS (Amplitude 0,1). Nach ITU-R BS.1770 ist die
+    // Lautheit zweier gleicher Kanäle = Pegel eines Kanals + 3,01 dB − 0,691 + K-Gewicht bei
+    // 1 kHz (+0,69 dB) ≈ −20,0 LUFS; der True Peak ist −20,0 dBTP.
+    let f = make(
+        "sinus-20.wav",
+        &[
+            "-f",
+            "lavfi",
+            "-i",
+            "aevalsrc=0.1*sin(2*PI*1000*t)|0.1*sin(2*PI*1000*t):s=48000:d=5",
+            "-c:a",
+            "pcm_s16le",
+        ],
+    );
+    let m = analyze(&Tools::from_env(), &f, &[]).unwrap();
+    assert_eq!(m.audio.clipped_samples, 0);
+    let lufs = m.audio.integrated_lufs.unwrap();
+    let peak = m.audio.true_peak_dbtp.unwrap();
+    assert!((lufs + 20.0).abs() <= 0.5, "{lufs}");
+    assert!((peak + 20.0).abs() <= 0.5, "{peak}");
+    assert!(m.audio.silences.is_empty());
+}
+
+#[test]
+fn measures_first_audio_track_only() {
+    // Spur 0: Mono, leise (−40 dBFS); Spur 1: 6 Kanäle, 0 dBFS (würde ffmpeg als „beste“ wählen).
+    let f = make(
+        "zwei-tonspuren.mkv",
+        &[
+            "-f", "lavfi", "-i", "testsrc2=s=320x240:r=25:d=2",
+            "-f", "lavfi", "-i", "aevalsrc=0.01*sin(2*PI*440*t):s=48000:d=2",
+            "-f", "lavfi", "-i",
+            "aevalsrc=sin(2*PI*440*t)|sin(2*PI*440*t)|sin(2*PI*440*t)|sin(2*PI*440*t)|sin(2*PI*440*t)|sin(2*PI*440*t):c=5.1:s=48000:d=2",
+            "-map", "0:v", "-map", "1:a", "-map", "2:a",
+            "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "pcm_s16le",
+        ],
+    );
+    let m = analyze(&Tools::from_env(), &f, &[]).unwrap();
+    assert_eq!(m.audio.clipped_samples, 0);
+    assert!(m.audio.true_peak_dbtp.unwrap() < -35.0, "{:?}", m.audio);
+    assert!(m.audio.integrated_lufs.unwrap() < -35.0, "{:?}", m.audio);
+}
