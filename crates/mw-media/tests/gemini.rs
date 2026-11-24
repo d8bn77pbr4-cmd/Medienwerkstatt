@@ -57,8 +57,8 @@ fn models_are_filtered_stripped_and_sorted() {
 
 #[test]
 fn http_status_maps_to_error_kind() {
-    assert_eq!(status_error(429), GeminiErrorKind::RateLimited);
-    assert_eq!(status_error(401), GeminiErrorKind::InvalidKey);
-    assert_eq!(status_error(403), GeminiErrorKind::InvalidKey);
-    assert_eq!(status_error(500), GeminiErrorKind::Other);
+    assert_eq!(status_error(429, ""), GeminiErrorKind::RateLimited);
+    assert_eq!(status_error(401, ""), GeminiErrorKind::InvalidKey);
+    assert_eq!(status_error(403, ""), GeminiErrorKind::InvalidKey);
+    assert_eq!(status_error(500, ""), GeminiErrorKind::Other);
 }

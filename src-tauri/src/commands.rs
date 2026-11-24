@@ -156,10 +156,48 @@ pub async fn project_dir(app: AppHandle, folder: String) -> CmdResult<String> {
     Ok(path_string(&dir))
 }
 
+/// Dateipfade eines Projekts, die das Asset-Protokoll lesen darf:
+/// `media[].path`, `media[].proxyPath`, `exports[].path`.
+pub fn project_asset_paths(project: &Value) -> Vec<String> {
+    let mut out = Vec::new();
+    for (list, keys) in [
+        ("media", &["path", "proxyPath"][..]),
+        ("exports", &["path"][..]),
+    ] {
+        for item in project
+            .get(list)
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+        {
+            for k in keys {
+                if let Some(p) = item
+                    .get(*k)
+                    .and_then(Value::as_str)
+                    .filter(|p| !p.is_empty())
+                {
+                    out.push(p.to_string());
+                }
+            }
+        }
+    }
+    out
+}
+
 #[tauri::command]
 pub async fn load_project(app: AppHandle, dir: String) -> CmdResult<Loaded> {
     let path = project_dir_checked(&app, &dir)?.join(PROJECT_FILE);
-    blocking(move || load_json(&path, valid_project_shape)).await
+    let loaded = blocking(move || load_json(&path, valid_project_shape)).await?;
+    // Das Asset-Protokoll vergisst Laufzeit-Freigaben beim Neustart: verknüpfte Medien neu freigeben.
+    if let Some(v) = &loaded.value {
+        for p in project_asset_paths(v) {
+            let p = PathBuf::from(p);
+            if p.is_absolute() && p.is_file() {
+                allow_asset(&app, &p);
+            }
+        }
+    }
+    Ok(loaded)
 }
 
 #[tauri::command]
@@ -335,6 +373,7 @@ pub async fn run_ffmpeg(
     duration_sec: f64,
     job_id: String,
 ) -> CmdResult<()> {
+    paths::validate_ffmpeg_args(&[projects_root(&app)?, cache_root(&app)?], &args)?;
     blocking(move || {
         mw_run_ffmpeg(&Tools::from_env(), &args, duration_sec, |p| {
             emit_progress(&app, &job_id, p)
@@ -378,13 +417,13 @@ pub async fn extract_frames(
 // ---------- Gemini (läuft nur auf ausdrücklichen Aufruf) ----------
 
 #[tauri::command]
-pub fn has_gemini_key() -> CmdResult<bool> {
-    Ok(keychain::get_key()?.is_some())
+pub async fn has_gemini_key() -> CmdResult<bool> {
+    blocking(|| Ok(keychain::get_key()?.is_some())).await
 }
 
 #[tauri::command]
-pub fn set_gemini_key(key: Option<String>) -> CmdResult<()> {
-    keychain::set_key(key.as_deref())
+pub async fn set_gemini_key(key: Option<String>) -> CmdResult<()> {
+    blocking(move || keychain::set_key(key.as_deref())).await
 }
 
 fn require_key() -> CmdResult<String> {
@@ -427,8 +466,11 @@ pub async fn gemini_generate(
 // ---------- Finder ----------
 
 #[tauri::command]
-pub fn reveal_in_finder(path: String) -> CmdResult<()> {
-    tauri_plugin_opener::reveal_item_in_dir(path).map_err(|e| CmdError::io(e.to_string()))
+pub async fn reveal_in_finder(path: String) -> CmdResult<()> {
+    blocking(move || {
+        tauri_plugin_opener::reveal_item_in_dir(path).map_err(|e| CmdError::io(e.to_string()))
+    })
+    .await
 }
 
 #[cfg(test)]
@@ -446,6 +488,24 @@ mod tests {
         bad.as_object_mut().unwrap().remove("settings");
         assert!(!valid_state_shape(bad.to_string().as_bytes()));
         assert!(!valid_state_shape(b"{kaputt"));
+    }
+
+    #[test]
+    fn asset_paths_are_collected_from_project() {
+        let p = json!({
+            "version": 1, "assignmentId": "a", "sequences": [],
+            "media": [
+                {"id": "1", "path": "/v/a.mov", "proxyPath": "/p/1.mp4"},
+                {"id": "2", "path": "/v/b.wav", "proxyPath": null},
+                {"id": "3"}
+            ],
+            "exports": [{"path": "/e/out.mp4"}, {"path": ""}, {"name": "x"}]
+        });
+        assert_eq!(
+            project_asset_paths(&p),
+            vec!["/v/a.mov", "/p/1.mp4", "/v/b.wav", "/e/out.mp4"]
+        );
+        assert!(project_asset_paths(&json!({"version": 1})).is_empty());
     }
 
     #[test]

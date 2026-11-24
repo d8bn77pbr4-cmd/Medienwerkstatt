@@ -4,7 +4,7 @@ use serde::Serialize;
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct CmdError {
-    /// tool_missing, tool_failed, io, parse, invalid_key, rate_limited, offline, invalid_path
+    /// tool_missing, tool_failed, io, parse, invalid_key, rate_limited, offline, invalid_path, invalid_args
     pub code: &'static str,
     pub message: String,
 }

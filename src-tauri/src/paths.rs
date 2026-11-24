@@ -59,6 +59,45 @@ pub fn validate_project_dir(root: &Path, dir: &str) -> CmdResult<PathBuf> {
     Ok(p)
 }
 
+fn is_network_arg(arg: &str) -> bool {
+    let a = arg.trim_start().to_ascii_lowercase();
+    let scheme_url = a.split_once("://").is_some_and(|(scheme, _)| {
+        scheme
+            .chars()
+            .next()
+            .is_some_and(|c| c.is_ascii_alphabetic())
+            && scheme
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || matches!(c, '+' | '.' | '-'))
+    });
+    scheme_url
+        || [
+            "http:", "https:", "rtmp:", "rtsp:", "tcp:", "udp:", "ftp:", "srt:", "tls:",
+        ]
+        .iter()
+        .any(|p| a.starts_with(p))
+}
+
+/// Prüft ffmpeg-Argumente vor dem Start: kein Netzwerkprotokoll in irgendeinem Argument,
+/// und das letzte Argument (Ausgabedatei) ist ein absoluter Pfad unter einer der Wurzeln.
+pub fn validate_ffmpeg_args(roots: &[PathBuf], args: &[String]) -> CmdResult<()> {
+    if let Some(bad) = args.iter().find(|a| is_network_arg(a)) {
+        return Err(CmdError::new(
+            "invalid_args",
+            format!("Netzwerkzugriff nicht erlaubt: {bad}"),
+        ));
+    }
+    let out = args
+        .last()
+        .ok_or_else(|| CmdError::invalid_path("Keine Ausgabedatei angegeben"))?;
+    if !roots.iter().any(|r| is_within(r, Path::new(out))) {
+        return Err(CmdError::invalid_path(format!(
+            "Ausgabe außerhalb der Arbeitsordner: {out}"
+        )));
+    }
+    Ok(())
+}
+
 /// Freier Zielname in `dir`: `name`, sonst `name (2).ext`, `name (3).ext` …
 pub fn unique_name(exists: impl Fn(&str) -> bool, file_name: &str) -> String {
     if !exists(file_name) {
@@ -116,6 +155,76 @@ mod tests {
         assert!(validate_project_dir(root, "/etc").is_err());
         assert!(validate_project_dir(root, "relativ").is_err());
         assert!(validate_project_dir(root, "/home/u/Movies/MedienwerkstattX/a").is_err());
+    }
+
+    fn args(v: &[&str]) -> Vec<String> {
+        v.iter().map(|s| s.to_string()).collect()
+    }
+    fn roots() -> Vec<PathBuf> {
+        vec![
+            PathBuf::from("/Users/x/Movies/Medienwerkstatt"),
+            PathBuf::from("/Users/x/Library/Caches/Medienwerkstatt"),
+        ]
+    }
+
+    #[test]
+    fn ffmpeg_args_allow_realistic_export_and_lavfi() {
+        let a = args(&[
+            "-i",
+            "/Users/x/Movies/Medienwerkstatt/A01_X/Medien/a.mov",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=black:s=1920x1080:r=25",
+            "-f",
+            "lavfi",
+            "-i",
+            "anullsrc=r=48000:cl=stereo",
+            "-filter_complex",
+            "[0:v]scale=1920:-2,lut3d=file=/Users/x/Movies/Medienwerkstatt/A01_X/Cache/x.cube[v]",
+            "-c:v",
+            "libx264",
+            "/Users/x/Movies/Medienwerkstatt/A01_X/Export/out.mp4",
+        ]);
+        assert!(validate_ffmpeg_args(&roots(), &a).is_ok());
+        let cache_out = args(&["-i", "x", "/Users/x/Library/Caches/Medienwerkstatt/t.mp4"]);
+        assert!(validate_ffmpeg_args(&roots(), &cache_out).is_ok());
+    }
+
+    #[test]
+    fn ffmpeg_args_reject_outside_output() {
+        for out in [
+            "/Users/x/anything.mp4",
+            "relativ.mp4",
+            "/Users/x/Movies/Medienwerkstatt/../x.mp4",
+        ] {
+            let e = validate_ffmpeg_args(&roots(), &args(&["-i", "a", out])).unwrap_err();
+            assert_eq!(e.code, "invalid_path", "{out}");
+        }
+        assert_eq!(
+            validate_ffmpeg_args(&roots(), &[]).unwrap_err().code,
+            "invalid_path"
+        );
+    }
+
+    #[test]
+    fn ffmpeg_args_reject_network_inputs() {
+        let ok_out = "/Users/x/Movies/Medienwerkstatt/A/Export/o.mp4";
+        for bad in [
+            "http://x",
+            "https://x/y",
+            "rtmp://x",
+            "RTSP://x",
+            "tcp:x",
+            "udp:1.2.3.4:5",
+            "ftp://h",
+            "srt://h",
+            "tls:h",
+            "gopher://h",
+        ] {
+            let e = validate_ffmpeg_args(&roots(), &args(&["-i", bad, ok_out])).unwrap_err();
+            assert_eq!(e.code, "invalid_args", "{bad}");
+        }
     }
 
     #[test]

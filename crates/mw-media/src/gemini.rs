@@ -15,11 +15,13 @@ pub enum GeminiErrorKind {
     Other,
 }
 
-/// Ordnet einen HTTP-Status zu: 429 → Begrenzung, 401/403 → Schlüssel ungültig.
-pub fn status_error(status: u16) -> GeminiErrorKind {
+/// Ordnet einen HTTP-Status zu: 429 → Begrenzung, 401/403 und 400 mit `API_KEY_INVALID`
+/// im Körper → Schlüssel ungültig.
+pub fn status_error(status: u16, body: &str) -> GeminiErrorKind {
     match status {
         429 => GeminiErrorKind::RateLimited,
         401 | 403 => GeminiErrorKind::InvalidKey,
+        400 if body.contains("API_KEY_INVALID") => GeminiErrorKind::InvalidKey,
         _ => GeminiErrorKind::Other,
     }
 }
@@ -78,19 +80,19 @@ fn agent() -> ureq::Agent {
         .build()
 }
 
-fn map_http(e: ureq::Error) -> Error {
+pub(crate) fn map_http(e: ureq::Error) -> Error {
     match e {
-        ureq::Error::Status(code, resp) => match status_error(code) {
-            GeminiErrorKind::RateLimited => Error::RateLimited,
-            GeminiErrorKind::InvalidKey => Error::InvalidKey,
-            GeminiErrorKind::Other => {
-                let body = resp.into_string().unwrap_or_default();
-                Error::Http(format!(
+        ureq::Error::Status(code, resp) => {
+            let body = resp.into_string().unwrap_or_default();
+            match status_error(code, &body) {
+                GeminiErrorKind::RateLimited => Error::RateLimited,
+                GeminiErrorKind::InvalidKey => Error::InvalidKey,
+                GeminiErrorKind::Other => Error::Http(format!(
                     "HTTP {code}: {}",
                     body.chars().take(300).collect::<String>()
-                ))
+                )),
             }
-        },
+        }
         ureq::Error::Transport(t) => Error::Offline(t.to_string()),
     }
 }
@@ -125,4 +127,40 @@ pub fn gemini_models(key: &str) -> Result<Vec<String>> {
         .into_json()
         .map_err(|e| Error::Parse(e.to_string()))?;
     Ok(model_names(&resp))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn status(code: u16, body: &str) -> Error {
+        map_http(ureq::Error::Status(
+            code,
+            ureq::Response::new(code, "x", body).unwrap(),
+        ))
+    }
+
+    #[test]
+    fn http_errors_map_to_library_errors() {
+        let bad_key = r#"{"error":{"code":400,"status":"INVALID_ARGUMENT","details":[{"reason":"API_KEY_INVALID"}]}}"#;
+        assert!(matches!(status(400, bad_key), Error::InvalidKey));
+        assert!(matches!(
+            status(400, "{\"error\":\"anderes\"}"),
+            Error::Http(_)
+        ));
+        assert!(matches!(status(401, ""), Error::InvalidKey));
+        assert!(matches!(status(403, ""), Error::InvalidKey));
+        assert!(matches!(status(429, ""), Error::RateLimited));
+        assert!(matches!(status(500, "boom"), Error::Http(_)));
+    }
+
+    #[test]
+    fn status_error_checks_body_only_for_400() {
+        assert_eq!(
+            status_error(400, "API_KEY_INVALID"),
+            GeminiErrorKind::InvalidKey
+        );
+        assert_eq!(status_error(400, "nope"), GeminiErrorKind::Other);
+        assert_eq!(status_error(500, "API_KEY_INVALID"), GeminiErrorKind::Other);
+    }
 }
