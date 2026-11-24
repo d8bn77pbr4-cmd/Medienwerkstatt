@@ -1,6 +1,6 @@
 import type { Backend } from './Backend';
 import { isValidState } from './schema';
-import type { AppState, Assignment, LoadResult, Measurements, MediaItem, Project } from './types';
+import type { AppState, Assignment, LoadResult, Measurements, MediaItem, Project, Segment } from './types';
 
 /**
  * Browser-/Test-Backend. Spätere Tasks füllen die Methoden mit echtem
@@ -13,6 +13,19 @@ const PROJECT_KEY = (dir: string) => `mw-project:${dir}`;
 const FIXTURES = ['/fixtures/e2e-clip.webm', '/fixtures/e2e-clip2.webm'];
 const PROXY_STEPS = [0.25, 0.5, 0.75, 1];
 const PROXY_STEP_MS = 40;
+/** Export im Mock-Modus: Fortschritt über etwa 1 s. */
+const EXPORT_STEPS = [0.2, 0.4, 0.6, 0.8, 1];
+const EXPORT_STEP_MS = 200;
+
+/** Fixture-Messwerte im Mock-Modus: `?messung=perfekt|zu-laut` (Standard: perfekt). */
+export type MockMeasurement = 'perfekt' | 'zu-laut';
+function measurementFromUrl(): MockMeasurement {
+  try {
+    return new URLSearchParams(window.location.search).get('messung') === 'zu-laut' ? 'zu-laut' : 'perfekt';
+  } catch {
+    return 'perfekt';
+  }
+}
 
 function readItem(key: string): string | null {
   try {
@@ -45,6 +58,12 @@ export class MockBackend implements Backend {
   private memory: AppState | null = null;
   private projects = new Map<string, Project>();
   private geminiKey: string | null = null;
+  /** Einmal beim Start gelesen: Navigation in der App verliert den Suchparameter. */
+  private messung: MockMeasurement = measurementFromUrl();
+
+  setMeasurement(m: MockMeasurement): void {
+    this.messung = m;
+  }
 
   async loadState(): Promise<LoadResult<AppState>> {
     const raw = readItem(KEY);
@@ -119,13 +138,26 @@ export class MockBackend implements Backend {
     return `${dir}/${rel}`;
   }
   async runFfmpeg(_args: string[], _durationSec: number, onProgress: (p: number) => void): Promise<void> {
-    onProgress(1);
+    for (const p of EXPORT_STEPS) {
+      await new Promise((r) => setTimeout(r, EXPORT_STEP_MS));
+      onProgress(p);
+    }
   }
-  async analyze(): Promise<Measurements> {
+  /**
+   * Fixture statt Messung: 1920×1080, 25 fps, H.264/AAC, Länge = Ende der letzten Einstellung, Belichtung neutral.
+   * „perfekt“: −14 LUFS, True Peak −2 dBTP; „zu-laut“: −9,0 LUFS, True Peak −0,5 dBTP.
+   */
+  async analyze(_path: string, segments: Segment[] = []): Promise<Measurements> {
+    const loud = this.messung === 'zu-laut';
     return {
-      format: { width: 1920, height: 1080, fps: 25, durationSec: 0, videoCodec: 'h264', audioCodec: null },
-      audio: { integratedLufs: null, truePeakDbtp: null, clippedSamples: 0, silences: [] },
-      video: { black: [], freeze: [], detectedCuts: [], segments: [] },
+      format: { width: 1920, height: 1080, fps: 25, durationSec: Math.max(0, ...segments.map((s) => s.end)), videoCodec: 'h264', audioCodec: 'aac' },
+      audio: { integratedLufs: loud ? -9.0 : -14.0, truePeakDbtp: loud ? -0.5 : -2.0, clippedSamples: 0, silences: [] },
+      video: {
+        black: [],
+        freeze: [],
+        detectedCuts: segments.slice(1).map((s) => s.start),
+        segments: segments.map((s) => ({ start: s.start, end: s.end, meanLuma: 0.45, highlightsPct: 1, shadowsPct: 1, meanU: 0, meanV: 0 })),
+      },
     };
   }
   async extractFrames(): Promise<string[]> {

@@ -34,6 +34,15 @@ export function exportSize(seq: Sequence, preset: ExportPreset): { width: number
   return preset.size ?? { width: seq.width, height: seq.height };
 }
 
+/** Exportbereich in Bildern: In/Out der Sequenz, sonst die ganze Sequenz (leerer/umgekehrter Bereich = ganz). */
+export function exportRange(seq: Sequence): { inF: number; outF: number; ranged: boolean } {
+  const seqEnd = Math.max(0, ...seq.clips.map((c) => c.start + c.duration));
+  const inF = Math.max(0, seq.inPoint ?? 0);
+  const outF = seq.outPoint ?? seqEnd;
+  if (outF <= inF) return { inF: 0, outF: seqEnd, ranged: false };
+  return { inF, outF, ranged: seq.inPoint !== null || seq.outPoint !== null };
+}
+
 type Graph = { inputs: string[][]; chains: string[] };
 
 /** Fügt einen Eingang hinzu und gibt seinen Index zurück. */
@@ -83,12 +92,7 @@ export function buildExport(
   const byId = new Map(media.map((m) => [m.id, m]));
   const { width: W, height: H } = exportSize(seq, preset);
   const seqEnd = Math.max(0, ...seq.clips.map((c) => c.start + c.duration));
-  let inF = Math.max(0, seq.inPoint ?? 0);
-  let outF = seq.outPoint ?? seqEnd;
-  let ranged = seq.inPoint !== null || seq.outPoint !== null;
-  if (outF <= inF) {
-    [inF, outF, ranged] = [0, seqEnd, false];
-  }
+  const { inF, outF, ranged } = exportRange(seq);
   const durationSec = (outF - inF) / fps;
   if (durationSec <= 0) throw new Error('Die Sequenz ist leer – es gibt nichts zu exportieren.');
   const baseSec = Math.max(seqEnd, outF) / fps;

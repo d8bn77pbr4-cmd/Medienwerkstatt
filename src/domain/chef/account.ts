@@ -1,6 +1,6 @@
 import type { Assignment } from '../assignments/types';
 import type { Level, Rules } from './rules';
-import type { Evaluation } from './types';
+import { allDeductions, type Evaluation } from './types';
 
 export type AccountResult = {
   points: number;
@@ -29,8 +29,7 @@ export function account(evaluations: Evaluation[], assignments: Assignment[], ru
 
   const counts = new Map<string, { label: string; count: number }>();
   for (const e of counted) {
-    const ds = [...e.categories.technik.deductions, ...e.categories.gestaltung.deductions, ...e.categories.auftrag.deductions, ...(e.late ? [e.late] : [])];
-    for (const d of ds) {
+    for (const d of allDeductions(e)) {
       const c = counts.get(d.ruleId);
       if (c) c.count++;
       else counts.set(d.ruleId, { label: d.label, count: 1 });

@@ -51,7 +51,22 @@ export type Evaluation = {
   total: number;
   phrase: string;
   gemini?: GeminiResult;
+  /** Die abgegebenen Dateien (für Showreel-Merkliste und „Im Finder zeigen“). */
+  exports?: { deliverableId: string; fileName: string; path: string }[];
 };
+
+export type ScoredCategory = 'technik' | 'gestaltung' | 'auftrag';
+const SCORED: ScoredCategory[] = ['technik', 'gestaltung', 'auftrag'];
+
+/** Kategorien, die für diesen Auftrag gelten: `max: 0` (Recherche-Auftrag) zählt nicht. */
+export function applicableCategories(e: Pick<Evaluation, 'categories'>): ScoredCategory[] {
+  return SCORED.filter(k => e.categories[k].max > 0);
+}
+
+/** Alle Abzüge der geltenden Kategorien plus Verspätung (ohne Bonus). */
+export function allDeductions(e: Pick<Evaluation, 'categories' | 'late'>): Deduction[] {
+  return [...applicableCategories(e).flatMap(k => e.categories[k].deductions), ...(e.late ? [e.late] : [])];
+}
 
 /** Baut einen Abzug; `prefix` kennzeichnet bei mehreren Videos die Abgabe. */
 export function makeDeduction(

@@ -5,11 +5,18 @@ import type { AppState, Assignment } from '../backend/types';
 import { AVAILABLE_TYPES, generateAssignment, loadCatalogs } from '../domain/assignments/generator';
 import { canAddVacation, tick, type ScheduleState, type Vacation } from '../domain/assignments/schedule';
 import { account, type AccountResult } from '../domain/chef/account';
+import { canCorrect, type CorrectionRefusal } from '../domain/chef/correction';
+import type { Evaluation } from '../domain/chef/types';
 import type { ResearchDoc } from '../domain/chef/research';
 import { loadRules } from '../domain/chef/rules';
 import type { Clock } from '../domain/time';
+import { loadProjectFor } from './projectAccess';
+import { runSubmission } from './submission';
 
 export const SAVE_DEBOUNCE_MS = 2000;
+
+export type SelfChecks = { hookDone: boolean };
+export type CorrectionResult = { ok: true; evaluation: Evaluation } | { ok: false; reason: CorrectionRefusal };
 
 export type InitOptions = {
   /** Vorgegebene Installations-ID (nur Mock-Modus, für deterministische E2E-Tests). */
@@ -29,6 +36,12 @@ export interface AppStore {
   /** Fällige Aufträge ausgeben, Fristen prüfen. Jede Minute und beim Fokussieren des Fensters. */
   tickNow(): void;
   saveResearch(assignmentId: string, deliverableId: string, doc: ResearchDoc): void;
+  /** Abgabe prüfen, messen und bewerten (Spec §9.1); nur für offene Aufträge. */
+  submit(assignmentId: string, selfChecks: SelfChecks, onProgress?: (message: string) => void): Promise<Evaluation>;
+  /** Nachbessern (Spec §9.3): einmal, innerhalb von 24 h nach der ersten Bewertung, gedeckelt. */
+  correction(assignmentId: string, selfChecks: SelfChecks, onProgress?: (message: string) => void): Promise<CorrectionResult>;
+  /** Bewertung ab `showreelMinScore` in die Showreel-Merkliste legen oder wieder herausnehmen. */
+  toggleShowreel(evaluationId: string): void;
   addVacation(v: Vacation): ReturnType<typeof canAddVacation>;
   toggleChecklist(assignmentId: string, itemId: string): void;
   setDevTimeOffset(ms: number): void;
@@ -133,6 +146,28 @@ export const useApp = create<AppStore>()((set, get) => {
     scheduleSave();
   };
 
+  /** Messen, bewerten, Bewertung + Abgabe speichern, Status „bewertet“. */
+  const evaluateAndStore = async (assignmentId: string, selfChecks: SelfChecks, isCorrection: boolean, onProgress?: (m: string) => void): Promise<Evaluation> => {
+    const clock = get().clock;
+    const s = get().state;
+    const a = s?.assignments.find((x) => x.id === assignmentId);
+    if (!s || !clock || !backend || !a) throw new Error('Die App ist noch nicht bereit.');
+    const { project } = await loadProjectFor(a, backend);
+    const research: Record<string, ResearchDoc | null> = {};
+    for (const d of a.deliverables) if (d.kind === 'research') research[d.id] = s.research[researchKey(a.id, d.id)] ?? null;
+    const submittedAt = clock.now();
+    const evaluation = await runSubmission({ backend, rules: loadRules(), assignment: a, project, research, selfChecks, isCorrection, submittedAt, onProgress });
+    commit((cur) => ({
+      ...cur,
+      evaluations: [...cur.evaluations, evaluation],
+      assignments: cur.assignments.map((x) =>
+        x.id === a.id ? { ...x, status: 'evaluated' as const, submissions: [...x.submissions, { at: submittedAt, evaluationId: evaluation.id, isCorrection }] } : x,
+      ),
+    }));
+    await flush();
+    return evaluation;
+  };
+
   const doInit = async (b: Backend, clock: Clock, opts: InitOptions) => {
     cancelTimer();
     dirty = false;
@@ -197,6 +232,33 @@ export const useApp = create<AppStore>()((set, get) => {
 
     saveResearch(assignmentId, deliverableId, doc) {
       commit((s) => ({ ...s, research: { ...s.research, [researchKey(assignmentId, deliverableId)]: doc } }));
+    },
+
+    async submit(assignmentId, selfChecks, onProgress) {
+      const a = get().state?.assignments.find((x) => x.id === assignmentId);
+      if (!a) throw new Error('Auftrag nicht gefunden.');
+      if (a.status !== 'open') throw new Error('Dieser Auftrag ist nicht mehr offen. Zum Verbessern nutze „Nachbessern“.');
+      return evaluateAndStore(a.id, selfChecks, false, onProgress);
+    },
+
+    async correction(assignmentId, selfChecks, onProgress) {
+      const s = get().state;
+      const clock = get().clock;
+      const a = s?.assignments.find((x) => x.id === assignmentId);
+      if (!s || !clock || !a) throw new Error('Auftrag nicht gefunden.');
+      const check = canCorrect(a, s.evaluations, clock.now(), loadRules());
+      if (!check.ok) return check;
+      return { ok: true, evaluation: await evaluateAndStore(a.id, selfChecks, true, onProgress) };
+    },
+
+    toggleShowreel(evaluationId) {
+      commit((s) => {
+        const e = s.evaluations.find((x) => x.id === evaluationId);
+        if (!e) return s;
+        if (s.showreel.includes(evaluationId)) return { ...s, showreel: s.showreel.filter((x) => x !== evaluationId) };
+        if (e.total < loadRules().showreelMinScore) return s;
+        return { ...s, showreel: [...s.showreel, evaluationId] };
+      });
     },
 
     addVacation(v) {

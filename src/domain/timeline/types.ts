@@ -97,6 +97,10 @@ export type ExportRecord = {
   presetId: ExportPresetId;
   version: number;
   at: number;
+  /** Aus welcher Sequenz exportiert wurde (ältere Einträge: aktive Sequenz). */
+  sequenceId?: string;
+  /** Exportierter Bereich in Sekunden der Sequenz (ältere Einträge: In/Out der Sequenz). */
+  rangeSec?: { start: number; end: number };
 };
 
 export type Project = {

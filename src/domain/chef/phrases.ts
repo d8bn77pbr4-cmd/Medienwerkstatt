@@ -1,6 +1,6 @@
 import { fmtDe } from './format';
 import { loadRules, type Rules } from './rules';
-import type { Deduction, Evaluation } from './types';
+import { allDeductions, type Deduction, type Evaluation } from './types';
 
 const num = (s: string): number | null => {
   const m = /[−-]?\d+(?:,\d+)?/.exec(s);
@@ -20,7 +20,7 @@ function plain(d: Deduction): string {
 
 export function phraseFor(e: Evaluation, rules: Rules = loadRules()): string {
   const base = e.total < rules.tone.badBelow ? 'So geht das nicht raus.' : e.total < rules.tone.okBelow ? 'Brauchbar, aber da geht mehr.' : 'Kann so zum Kunden.';
-  const all = [...e.categories.technik.deductions, ...e.categories.gestaltung.deductions, ...e.categories.auftrag.deductions, ...(e.late ? [e.late] : [])];
+  const all = allDeductions(e);
   const top = [...all].sort((x, y) => x.points - y.points).slice(0, 2);
   return [base, ...top.map(plain)].join(' ');
 }

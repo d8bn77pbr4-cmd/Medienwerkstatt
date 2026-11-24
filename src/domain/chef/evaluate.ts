@@ -61,7 +61,9 @@ export function evaluate(input: EvaluationInput, rules: Rules): Evaluation {
   }
 
   const bonus: Deduction[] = [];
-  if (input.submittedAt <= a.deadline - rules.bonus.earlyHours * HOUR_MS) {
+  // Ohne tatsächlich vorliegende Abgabe gibt es keinen Frühbonus (sonst lohnte sich die leere Abgabe).
+  const researchPresent = a.deliverables.filter(x => x.kind === 'research' && input.research[x.id]).length;
+  if (videosPresent + researchPresent > 0 && input.submittedAt <= a.deadline - rules.bonus.earlyHours * HOUR_MS) {
     bonus.push(makeDeduction('', 'early24h', 'bonus', 'Früh abgegeben', `≥ ${rules.bonus.earlyHours} h vor der Frist`, 'erfüllt', rules.bonus.early24h, ''));
   }
   if (videosPresent > 0 && videosPresent === videoDeliverables.length && technik.length === 0) {
