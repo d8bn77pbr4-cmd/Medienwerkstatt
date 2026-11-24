@@ -108,11 +108,14 @@ export function Timeline({ engine, ctx }: Props) {
   useEffect(() => {
     const down = (e: KeyboardEvent) => e.key === ' ' && (space.current = true);
     const up = (e: KeyboardEvent) => e.key === ' ' && (space.current = false);
+    const reset = () => (space.current = false);
     window.addEventListener('keydown', down);
     window.addEventListener('keyup', up);
+    window.addEventListener('blur', reset);
     return () => {
       window.removeEventListener('keydown', down);
       window.removeEventListener('keyup', up);
+      window.removeEventListener('blur', reset);
     };
   }, []);
 

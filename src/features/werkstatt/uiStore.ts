@@ -47,6 +47,10 @@ export interface WerkstattUi {
   /** Springt zum Bereich `panel` ('audio' | 'farbe' | 'export' | 'timeline' | 'medien'). */
   focusPanel(panel: Panel): void;
   showNotice(text: string | null): void;
+  /** Sprungziel erledigt. */
+  clearFocusRequest(): void;
+  /** Neues Projekt: Auswahl, Marken, Ansicht und Hinweise zurücksetzen (Werkzeug, Einrasten und ein offenes Sprungziel bleiben). */
+  resetForProject(): void;
   reset(): void;
 }
 
@@ -95,6 +99,11 @@ export const useWerkstatt = create<WerkstattUi>()((set, get) => ({
     set({ focusRequest: { panel, n: (get().focusRequest?.n ?? 0) + 1 }, ...(tab ? { inspectorTab: tab } : {}) });
   },
   showNotice: (notice) => set({ notice }),
+  clearFocusRequest: () => (get().focusRequest ? set({ focusRequest: null }) : undefined),
+  resetForProject: () => {
+    const { tool, snapping, focusRequest, inspectorTab, pxPerSec } = get();
+    set({ ...initial(), tool, snapping, focusRequest, inspectorTab, pxPerSec });
+  },
   reset: () => set(initial()),
 }));
 

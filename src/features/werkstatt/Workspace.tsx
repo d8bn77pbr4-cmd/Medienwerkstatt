@@ -76,7 +76,7 @@ export function Workspace({ assignment, heading }: { assignment: Assignment; hea
     const offUi = useWerkstatt.subscribe((s, prev) => {
       if (s.colorBypass !== prev.colorBypass || (s.colorBypass && s.selection !== prev.selection)) program.invalidate();
     });
-    useWerkstatt.getState().reset();
+    useWerkstatt.getState().resetForProject();
     return () => {
       offProject();
       offUi();
@@ -97,11 +97,15 @@ export function Workspace({ assignment, heading }: { assignment: Assignment; hea
   }, [ctx, shortcutsOpen]);
   useKeymap(handlers, engines !== null);
 
-  // Sprung in einen Bereich (Protokoll „So behebst du es“): Timeline und Medien bekommen den Fokus.
+  // Sprung in einen Bereich (Protokoll „So behebst du es“, ⌘M): Fokus auf Timeline, Medien oder den Inspektor-Reiter.
   useEffect(() => {
-    if (focusRequest?.panel === 'timeline') tlRef.current?.focus();
-    if (focusRequest?.panel === 'medien') binRef.current?.focus();
-  }, [focusRequest]);
+    if (!focusRequest || !engines) return;
+    const p = focusRequest.panel;
+    if (p === 'timeline') tlRef.current?.focus();
+    else if (p === 'medien') binRef.current?.focus();
+    else document.getElementById(`insp-tab-${useWerkstatt.getState().inspectorTab}`)?.focus();
+    useWerkstatt.getState().clearFocusRequest();
+  }, [focusRequest, engines]);
 
   const loadSource = (m: MediaItem) => {
     engines?.source.load(m);

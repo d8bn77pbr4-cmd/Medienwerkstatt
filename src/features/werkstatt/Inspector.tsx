@@ -1,5 +1,5 @@
 import { CircleCheck, TriangleAlert } from 'lucide-react';
-import { useEffect, useRef, type KeyboardEvent } from 'react';
+import { useRef, type KeyboardEvent } from 'react';
 import type { VideoSpec } from '../../domain/assignments/types';
 import { withFormat } from '../../domain/timeline/sequence';
 import type { Clip, Sequence } from '../../domain/timeline/types';
@@ -33,15 +33,8 @@ export function Inspector({ spec, playhead }: Props) {
   const selection = useWerkstatt((s) => s.selection);
   const tab = useWerkstatt((s) => s.inspectorTab);
   const setTab = useWerkstatt((s) => s.setInspectorTab);
-  const focusRequest = useWerkstatt((s) => s.focusRequest);
   const tabRefs = useRef(new Map<InspectorTab, HTMLButtonElement>());
   const primary = primaryClip(seq, selection);
-
-  // Sprung aus dem Protokoll („So behebst du es“) oder ⌘M: Reiter fokussieren.
-  useEffect(() => {
-    const p = focusRequest?.panel;
-    if (p === 'audio' || p === 'farbe' || p === 'export') tabRefs.current.get(useWerkstatt.getState().inspectorTab)?.focus();
-  }, [focusRequest]);
 
   const onTabKey = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;

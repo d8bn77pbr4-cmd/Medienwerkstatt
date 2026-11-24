@@ -94,6 +94,63 @@ test('Auftrag öffnen → Import → Einstellungsgröße → Einfügen → Rasie
   await expect(page.getByLabel('Einstellungsgröße für e2e-clip.webm')).toHaveValue('halbnah');
 });
 
+const Y_V1 = RULER_H + ROW_H.video * 1.5;
+const Y_A1 = RULER_H + 2 * ROW_H.video + ROW_H.audio / 2;
+
+/** Zug in der Timeline von Bild `from` nach Bild `to` auf Höhe `y` (optional mit ⌥). */
+async function dragTimeline(page: Page, from: number, to: number, y: number, alt = false) {
+  const box = await page.getByTestId('timeline-canvas').boundingBox();
+  if (!box) throw new Error('keine Timeline');
+  await page.mouse.move(box.x + frameToX(from, VIEW), box.y + y);
+  if (alt) await page.keyboard.down('Alt');
+  await page.mouse.down();
+  await page.mouse.move(box.x + frameToX(to, VIEW), box.y + y, { steps: 6 });
+  await page.mouse.up();
+  if (alt) await page.keyboard.up('Alt');
+}
+
+test('Timeline: Ziehen 1:1 mit Greif-Versatz, Trimmen, ⌥-Rollen für einen L-Cut', async ({ page }) => {
+  await openFromAuftraege(page);
+  const bin = page.getByRole('region', { name: 'Medienbibliothek' });
+  await bin.getByRole('button', { name: 'Importieren' }).click();
+  // Clip 1: nur 0–2 s aus der Quelle (I/O), dann Clip 2 ganz dahinter
+  await bin.getByRole('button', { name: 'e2e-clip.webm', exact: true }).dblclick();
+  await page.keyboard.press('i');
+  for (let i = 0; i < 10; i++) await page.keyboard.press('Shift+ArrowRight');
+  await page.keyboard.press('o');
+  await expect(page.getByRole('region', { name: 'Quelle-Monitor' }).getByTestId('io-marks')).toContainText('00:00:02:00');
+  await page.keyboard.press(',');
+  await bin.getByRole('button', { name: 'e2e-clip2.webm', exact: true }).dblclick();
+  await page.keyboard.press(',');
+  await expect(seqLength(page)).toHaveText('00:00:07:00');
+
+  // ⌥ + Rollen am Tonschnitt: nur A1 rollt 10 Bilder später → L-Cut
+  await page.keyboard.press('n');
+  await dragTimeline(page, 50, 60, Y_A1, true);
+  await expect(page.getByRole('button', { name: 'A1 · e2e-clip.webm · 00:00:00:00 bis 00:00:02:10' })).toBeAttached();
+  await expect(page.getByRole('button', { name: 'V1 · e2e-clip.webm · 00:00:00:00 bis 00:00:02:00' })).toBeAttached();
+  await page.keyboard.press('Meta+z');
+  await expect(page.getByRole('button', { name: 'A1 · e2e-clip.webm · 00:00:00:00 bis 00:00:02:00' })).toBeAttached();
+
+  // Auswahl: Clip 2 am Körper greifen und 1 s nach rechts ziehen; der Ton folgt (verknüpft)
+  await page.keyboard.press('v');
+  await dragTimeline(page, 100, 125, Y_V1);
+  await expect(page.getByRole('button', { name: 'V1 · e2e-clip2.webm · 00:00:03:00 bis 00:00:08:00' })).toBeAttached();
+  await expect(page.getByRole('button', { name: 'A1 · e2e-clip2.webm · 00:00:03:00 bis 00:00:08:00' })).toBeAttached();
+  await expect(seqLength(page)).toHaveText('00:00:08:00');
+
+  // Ende von Clip 2 um 1 s kürzen (Trimm-Griff), Ton folgt
+  await dragTimeline(page, 199, 174, Y_V1);
+  await expect(page.getByRole('button', { name: 'V1 · e2e-clip2.webm · 00:00:03:00 bis 00:00:07:00' })).toBeAttached();
+  await expect(page.getByRole('button', { name: 'A1 · e2e-clip2.webm · 00:00:03:00 bis 00:00:07:00' })).toBeAttached();
+
+  // ein Verlaufsschritt je Zug
+  await page.keyboard.press('Meta+z');
+  await expect(seqLength(page)).toHaveText('00:00:08:00');
+  await page.keyboard.press('Meta+Shift+z');
+  await expect(seqLength(page)).toHaveText('00:00:07:00');
+});
+
 test('Werkzeugleiste: aktives Werkzeug in Akzentfarbe, Tooltip mit Adobe-Namen, ohne Animation', async ({ page }) => {
   await openFromAuftraege(page);
   const razor = page.getByRole('button', { name: /^Rasierklinge/ });
