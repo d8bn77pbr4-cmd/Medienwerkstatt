@@ -1,0 +1,39 @@
+/* Projektübersicht (/projekte): Teil der Werkstatt, also immer dunkel und in macOS-Dichte (nie unter 12 px).
+   Zeilen wie die Auftragskarten: Haarlinie statt Schatten, Rückmeldung beim Drücken über .pressable. */
+.proj-page { max-width: 880px; }
+.proj-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.proj-head .page-lead { margin-top: 8px; }
+.proj-loading { margin-top: 24px; }
+.proj-list-h { font-size: 13px; font-weight: 650; letter-spacing: 0; color: var(--ink-2); margin: 28px 0 8px; }
+.proj-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.proj-row { display: flex; align-items: center; gap: 8px; }
+.proj-open {
+  flex: 1; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 12px 14px; text-align: left; font: inherit; color: var(--ink); cursor: pointer;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-sm);
+  transition: transform var(--dur-1) var(--ease-out-fast), border-color var(--dur-1) var(--ease-out-fast);
+}
+.proj-open:hover { border-color: var(--line-strong); }
+.proj-main { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; }
+.proj-name { max-width: 100%; font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.proj-meta { font-size: 13px; color: var(--ink-2); }
+.proj-badge {
+  display: inline-flex; padding: 0 8px; border-radius: var(--r-pill); border: 1px solid var(--line-strong);
+  font-size: 12px; font-weight: 600; line-height: 18px; color: var(--ink-2);
+}
+.proj-side { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex: none; }
+.proj-side .countdown { font-size: 12px; }
+.proj-rename-slot { width: 28px; flex: none; }
+.proj-empty {
+  margin-top: 24px; padding: 28px; border: 1px dashed var(--line-strong); border-radius: var(--radius);
+  display: flex; flex-direction: column; align-items: flex-start; gap: 10px;
+}
+.proj-empty h2 { font-size: var(--fs-title3); font-weight: 650; }
+.proj-empty p { max-width: 52ch; }
+
+/* Blatt „Neues Projekt“ */
+.proj-formats { border: 0; padding: 0; margin: 4px 0 0; min-width: 0; }
+.proj-formats legend { font-size: 12px; font-weight: 600; color: var(--ink-2); padding: 0; margin-bottom: 6px; }
+.proj-format { display: flex; align-items: center; gap: 8px; height: 28px; font-size: 13px; cursor: pointer; font-variant-numeric: tabular-nums; }
+.proj-format input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
+.proj-hint { font-size: 12px; }

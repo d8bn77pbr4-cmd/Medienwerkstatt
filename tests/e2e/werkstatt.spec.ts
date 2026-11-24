@@ -253,9 +253,25 @@ test('Tastenkürzel-Übersicht (⌘/): Tabelle, Fokus bleibt im Dialog, Esc schl
   await expect(dialog).toHaveCount(0);
 });
 
-test('Reiner Recherche-Auftrag: leerer Zustand mit Weg zum Formular', async ({ page }) => {
+test('Reiner Recherche-Auftrag: keine Sackgasse – die Werkstatt zeigt die Projektübersicht', async ({ page }) => {
   await page.goto('/?seed=e2e-research-1');
-  await expect(page.getByText('Dieser Auftrag braucht keine Werkstatt.')).toBeVisible();
+  await expect(page).toHaveURL(/\/projekte$/);
+  await expect(page.getByRole('heading', { level: 1, name: 'Projekte' })).toBeVisible();
+  await expect(page.getByText('Dieser Auftrag braucht keine Werkstatt.', { exact: false })).toHaveCount(0);
+});
+
+test('Recherche-Auftrag ausdrücklich geöffnet (z. B. „Nachbessern“): Weg zum Formular und zur Projektübersicht', async ({ page }) => {
+  await page.goto('/auftraege?seed=e2e-research-1');
+  await expect(page.getByRole('heading', { level: 1, name: 'Aufträge' })).toBeVisible();
+  // Wie navigate('/', { state: { assignmentId } }) aus dem Chefbüro (React Router liest den Verlaufszustand bei popstate).
+  await page.evaluate(() => {
+    window.history.pushState({ usr: { assignmentId: 'A01' }, key: 'e2e', idx: 1 }, '', '/');
+    window.dispatchEvent(new PopStateEvent('popstate', { state: window.history.state }));
+  });
+  await expect(page.getByText('Dieser Auftrag braucht keine Werkstatt.', { exact: false })).toBeVisible();
+  await page.getByRole('button', { name: 'Zur Projektübersicht' }).click();
+  await expect(page).toHaveURL(/\/projekte$/);
+  await page.goBack();
   await page.getByRole('button', { name: 'Recherche bearbeiten' }).click();
   await expect(page).toHaveURL(/\/auftraege\/A01\/recherche\//);
 });

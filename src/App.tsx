@@ -8,6 +8,7 @@ import { Einstellungen } from './features/einstellungen/Einstellungen';
 import { applyTheme } from './features/einstellungen/theme';
 import { useApp } from './state/appStore';
 import { Werkstatt } from './features/werkstatt/Werkstatt';
+import { Projekte } from './features/werkstatt/Projekte';
 import { RestoreBanner } from './shell/RestoreBanner';
 import { attachLifecycle } from './state/lifecycle';
 import { startApp } from './state/bootstrap';
@@ -56,6 +57,8 @@ function Shell() {
         <TopBar />
         <RestoreBanner />
         <Routes>
+          {/* Projektübersicht: gehört zur Werkstatt (areaForPath → Werkstatt, dunkel, Seitenleiste markiert „Werkstatt“). */}
+          <Route path="/projekte" element={<Projekte />} />
           <Route path="/auftraege/:id" element={<AuftragDetail />} />
           <Route path="/auftraege/:id/recherche/:deliverableId" element={<ResearchForm />} />
           <Route path="/chefbuero/:evaluationId" element={<ChefbueroView lead={AREAS[2].lead} />} />
