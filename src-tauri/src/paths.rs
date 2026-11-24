@@ -59,43 +59,116 @@ pub fn validate_project_dir(root: &Path, dir: &str) -> CmdResult<PathBuf> {
     Ok(p)
 }
 
+const PROTOCOLS: [&str; 17] = [
+    "http", "https", "rtmp", "rtmps", "rtsp", "tcp", "udp", "ftp", "srt", "tls", "crypto", "cache",
+    "async", "subfile", "concat", "gopher", "unix",
+];
+
+/// Argument spricht ein Netzwerk- oder Hüllprotokoll an (`://`, `movie=`, `proto:` nach Trennzeichen).
+/// Filterketten wie `afade=t=in:st=0:d=0.5` oder `concat=n=2:v=1:a=1` bleiben erlaubt.
 fn is_network_arg(arg: &str) -> bool {
-    let a = arg.trim_start().to_ascii_lowercase();
-    let scheme_url = a.split_once("://").is_some_and(|(scheme, _)| {
-        scheme
-            .chars()
-            .next()
-            .is_some_and(|c| c.is_ascii_alphabetic())
-            && scheme
-                .chars()
-                .all(|c| c.is_ascii_alphanumeric() || matches!(c, '+' | '.' | '-'))
-    });
-    scheme_url
-        || [
-            "http:", "https:", "rtmp:", "rtsp:", "tcp:", "udp:", "ftp:", "srt:", "tls:",
-        ]
-        .iter()
-        .any(|p| a.starts_with(p))
+    let a = arg.to_ascii_lowercase();
+    if a.contains("://") || a.contains("movie=") {
+        return true;
+    }
+    let bytes = a.as_bytes();
+    (0..bytes.len()).any(|i| {
+        let boundary = i == 0 || matches!(bytes[i - 1], b'|' | b',' | b';' | b':' | b'=');
+        boundary
+            && (PROTOCOLS.iter().chain(["data"].iter()))
+                .any(|p| a[i..].strip_prefix(p).is_some_and(|r| r.starts_with(':')))
+    })
 }
 
-/// Prüft ffmpeg-Argumente vor dem Start: kein Netzwerkprotokoll in irgendeinem Argument,
-/// und das letzte Argument (Ausgabedatei) ist ein absoluter Pfad unter einer der Wurzeln.
+const FORBIDDEN_OPTIONS: [&str; 6] = [
+    "-progress",
+    "-report",
+    "-passlogfile",
+    "-vstats_file",
+    "-sdp_file",
+    "-dump_attachment",
+];
+const FORBIDDEN_FORMATS: [&str; 7] = [
+    "tee",
+    "segment",
+    "stream_segment",
+    "ssegment",
+    "hls",
+    "dash",
+    "image2",
+];
+const NO_VALUE_FLAGS: [&str; 10] = [
+    "-y",
+    "-n",
+    "-hide_banner",
+    "-nostdin",
+    "-nostats",
+    "-shortest",
+    "-an",
+    "-vn",
+    "-sn",
+    "-dn",
+];
+
+fn args_error(msg: String) -> CmdError {
+    CmdError::new("invalid_args", msg)
+}
+
+/// Prüft ffmpeg-Argumente vor dem Start: kein Netzwerk-/Hüllprotokoll, keine dateischreibenden
+/// Nebenoptionen oder Mehrfach-Ausgabeformate, und jede Ausgabe (Positionsargument) ist ein
+/// absoluter Pfad unter einer der Wurzeln (mindestens eine Ausgabe).
 pub fn validate_ffmpeg_args(roots: &[PathBuf], args: &[String]) -> CmdResult<()> {
     if let Some(bad) = args.iter().find(|a| is_network_arg(a)) {
-        return Err(CmdError::new(
-            "invalid_args",
-            format!("Netzwerkzugriff nicht erlaubt: {bad}"),
-        ));
+        return Err(args_error(format!("Netzwerkzugriff nicht erlaubt: {bad}")));
     }
-    let out = args
-        .last()
-        .ok_or_else(|| CmdError::invalid_path("Keine Ausgabedatei angegeben"))?;
-    if !roots.iter().any(|r| is_within(r, Path::new(out))) {
-        return Err(CmdError::invalid_path(format!(
-            "Ausgabe außerhalb der Arbeitsordner: {out}"
-        )));
+    let mut outputs = 0;
+    let mut i = 0;
+    while i < args.len() {
+        let a = &args[i];
+        if a.len() > 1 && a.starts_with('-') {
+            let name = a.to_ascii_lowercase();
+            if FORBIDDEN_OPTIONS.contains(&name.as_str()) {
+                return Err(args_error(format!("Option nicht erlaubt: {a}")));
+            }
+            if NO_VALUE_FLAGS.contains(&name.as_str()) {
+                i += 1;
+                continue;
+            }
+            if name == "-f" {
+                if let Some(v) = args.get(i + 1) {
+                    if FORBIDDEN_FORMATS.contains(&v.to_ascii_lowercase().as_str()) {
+                        return Err(args_error(format!("Format nicht erlaubt: {v}")));
+                    }
+                }
+            }
+            i += 2;
+        } else {
+            if !roots.iter().any(|r| is_within(r, Path::new(a))) {
+                return Err(CmdError::invalid_path(format!(
+                    "Ausgabe außerhalb der Arbeitsordner: {a}"
+                )));
+            }
+            outputs += 1;
+            i += 1;
+        }
+    }
+    if outputs == 0 {
+        return Err(CmdError::invalid_path("Keine Ausgabedatei angegeben"));
     }
     Ok(())
+}
+
+/// Setzt vor jedes `-i` die Eingabe-Einschränkung `-protocol_whitelist file,pipe`
+/// (zweite Verteidigungslinie gegen Netzwerk-Eingaben).
+pub fn with_protocol_whitelist(args: &[String]) -> Vec<String> {
+    let mut out = Vec::with_capacity(args.len() + 4);
+    for a in args {
+        if a == "-i" {
+            out.extend(["-protocol_whitelist".to_string(), "file,pipe".to_string()]);
+        }
+        out.push(a.clone());
+    }
+    out
 }
 
 /// Freier Zielname in `dir`: `name`, sonst `name (2).ext`, `name (3).ext` …
@@ -166,25 +239,22 @@ mod tests {
             PathBuf::from("/Users/x/Library/Caches/Medienwerkstatt"),
         ]
     }
+    const OUT: &str = "/Users/x/Movies/Medienwerkstatt/A01_X/Export/out.mp4";
+
+    fn code(a: &[&str]) -> &'static str {
+        validate_ffmpeg_args(&roots(), &args(a)).unwrap_err().code
+    }
 
     #[test]
     fn ffmpeg_args_allow_realistic_export_and_lavfi() {
         let a = args(&[
-            "-i",
-            "/Users/x/Movies/Medienwerkstatt/A01_X/Medien/a.mov",
-            "-f",
-            "lavfi",
-            "-i",
-            "color=c=black:s=1920x1080:r=25",
-            "-f",
-            "lavfi",
-            "-i",
-            "anullsrc=r=48000:cl=stereo",
+            "-y", "-i", "/Users/x/Movies/Medienwerkstatt/A01_X/Medien/a.mov",
+            "-f", "lavfi", "-i", "color=black:s=1920x1080:r=25:d=10",
+            "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo",
             "-filter_complex",
-            "[0:v]scale=1920:-2,lut3d=file=/Users/x/Movies/Medienwerkstatt/A01_X/Cache/x.cube[v]",
-            "-c:v",
-            "libx264",
-            "/Users/x/Movies/Medienwerkstatt/A01_X/Export/out.mp4",
+            "[0:v]scale=1920:1080,lut3d=file=/Users/x/Movies/Medienwerkstatt/A01_X/Cache/x.cube[a];[1:v]null[b];[a][b]xfade=transition=fade:duration=1:offset=4[c];[c]overlay=enable='between(t,1,2)'[v];[0:a]afade=t=in:st=0:d=0.5[a1];[a1][2:a]amix=inputs=2[m];[v][m]concat=n=1:v=1:a=1[ov][oa]",
+            "-map", "[ov]", "-map", "[oa]", "-c:v", "h264_videotoolbox", "-c:v", "libx264",
+            "-r", "25", "-s", "1920x1080", "-shortest", OUT,
         ]);
         assert!(validate_ffmpeg_args(&roots(), &a).is_ok());
         let cache_out = args(&["-i", "x", "/Users/x/Library/Caches/Medienwerkstatt/t.mp4"]);
@@ -192,24 +262,23 @@ mod tests {
     }
 
     #[test]
-    fn ffmpeg_args_reject_outside_output() {
+    fn ffmpeg_args_reject_outside_or_missing_outputs() {
         for out in [
             "/Users/x/anything.mp4",
             "relativ.mp4",
             "/Users/x/Movies/Medienwerkstatt/../x.mp4",
+            "-",
         ] {
-            let e = validate_ffmpeg_args(&roots(), &args(&["-i", "a", out])).unwrap_err();
-            assert_eq!(e.code, "invalid_path", "{out}");
+            assert_eq!(code(&["-i", "a", out]), "invalid_path", "{out}");
         }
-        assert_eq!(
-            validate_ffmpeg_args(&roots(), &[]).unwrap_err().code,
-            "invalid_path"
-        );
+        assert_eq!(code(&["-i", "a"]), "invalid_path");
+        assert_eq!(code(&[]), "invalid_path");
+        // Jede Ausgabe zählt, nicht nur die letzte.
+        assert_eq!(code(&["-i", "a", "/tmp/evil.mp4", OUT]), "invalid_path");
     }
 
     #[test]
-    fn ffmpeg_args_reject_network_inputs() {
-        let ok_out = "/Users/x/Movies/Medienwerkstatt/A/Export/o.mp4";
+    fn ffmpeg_args_reject_network_and_wrapper_inputs() {
         for bad in [
             "http://x",
             "https://x/y",
@@ -221,10 +290,78 @@ mod tests {
             "srt://h",
             "tls:h",
             "gopher://h",
+            "concat:http://x/a|http://x/b",
+            "concat:a|b",
+            "subfile,,start,0:::http://x",
+            "crypto:http://x",
+            "crypto:file",
+            "data:text/plain,x",
+            "movie=http://x",
+            "movie=/etc/x",
+            "[0:v]x,amovie=/etc/x",
+            "a=b:udp:x",
         ] {
-            let e = validate_ffmpeg_args(&roots(), &args(&["-i", bad, ok_out])).unwrap_err();
-            assert_eq!(e.code, "invalid_args", "{bad}");
+            assert_eq!(code(&["-i", bad, OUT]), "invalid_args", "{bad}");
         }
+        assert_eq!(
+            code(&["-f", "lavfi", "-i", "movie=http://x", OUT]),
+            "invalid_args"
+        );
+        assert_eq!(
+            code(&["-filter_complex", "amovie=/etc/x", OUT]),
+            "invalid_args"
+        );
+    }
+
+    #[test]
+    fn ffmpeg_args_reject_side_effect_options_and_formats() {
+        assert_eq!(
+            code(&["-i", "a", "-progress", "/tmp/x", OUT]),
+            "invalid_args"
+        );
+        for o in [
+            "-report",
+            "-passlogfile",
+            "-vstats_file",
+            "-sdp_file",
+            "-dump_attachment",
+        ] {
+            assert_eq!(code(&["-i", "a", o, "x", OUT]), "invalid_args", "{o}");
+        }
+        for f in [
+            "tee",
+            "segment",
+            "stream_segment",
+            "ssegment",
+            "hls",
+            "dash",
+            "image2",
+            "SEGMENT",
+        ] {
+            assert_eq!(code(&["-i", "a", "-f", f, OUT]), "invalid_args", "{f}");
+        }
+        assert!(validate_ffmpeg_args(&roots(), &args(&["-i", "a", "-f", "mp4", OUT])).is_ok());
+    }
+
+    #[test]
+    fn whitelist_is_inserted_before_every_input() {
+        let a = with_protocol_whitelist(&args(&["-i", "a", "-f", "lavfi", "-i", "b", OUT]));
+        assert_eq!(
+            a,
+            args(&[
+                "-protocol_whitelist",
+                "file,pipe",
+                "-i",
+                "a",
+                "-f",
+                "lavfi",
+                "-protocol_whitelist",
+                "file,pipe",
+                "-i",
+                "b",
+                OUT
+            ])
+        );
     }
 
     #[test]

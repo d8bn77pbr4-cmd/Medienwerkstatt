@@ -374,6 +374,7 @@ pub async fn run_ffmpeg(
     job_id: String,
 ) -> CmdResult<()> {
     paths::validate_ffmpeg_args(&[projects_root(&app)?, cache_root(&app)?], &args)?;
+    let args = paths::with_protocol_whitelist(&args);
     blocking(move || {
         mw_run_ffmpeg(&Tools::from_env(), &args, duration_sec, |p| {
             emit_progress(&app, &job_id, p)
@@ -476,6 +477,56 @@ pub async fn reveal_in_finder(path: String) -> CmdResult<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn whitelisted_export_like_command_runs_with_real_ffmpeg() {
+        let d = std::env::temp_dir().join(format!("mw-ff-{}", uuid::Uuid::new_v4()));
+        fs::create_dir_all(&d).unwrap();
+        let tools = Tools::from_env();
+        let s = |p: &Path| path_string(p);
+        let src = d.join("src.mp4");
+        let make: Vec<String> = [
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=red:s=320x240:r=25:d=1",
+            "-f",
+            "lavfi",
+            "-i",
+            "anullsrc=r=48000:cl=stereo",
+            "-t",
+            "1",
+            "-c:v",
+            "mpeg4",
+            "-c:a",
+            "aac",
+            "-shortest",
+        ]
+        .iter()
+        .map(|x| x.to_string())
+        .chain([s(&src)])
+        .collect();
+        mw_run_ffmpeg(&tools, &make, 1.0, |_| {}).unwrap();
+        let out = d.join("out.mp4");
+        let args: Vec<String> = [
+            "-i", &s(&src), "-f", "lavfi", "-i", "color=black:s=320x240:r=25:d=1", "-f", "lavfi",
+            "-i", "anullsrc=r=48000:cl=stereo", "-filter_complex",
+            "[0:v][1:v]overlay=enable='between(t,0,1)'[v];[0:a][2:a]amix=inputs=2:duration=first[a]",
+            "-map", "[v]", "-map", "[a]", "-t", "1", "-c:v", "mpeg4", "-c:a", "aac", "-r", "25",
+        ].iter().map(|x| x.to_string()).chain([s(&out)]).collect();
+        paths::validate_ffmpeg_args(std::slice::from_ref(&d), &args).unwrap();
+        let guarded = paths::with_protocol_whitelist(&args);
+        assert_eq!(
+            guarded
+                .iter()
+                .filter(|a| *a == "-protocol_whitelist")
+                .count(),
+            3
+        );
+        mw_run_ffmpeg(&tools, &guarded, 1.0, |_| {}).unwrap();
+        assert!(out.metadata().unwrap().len() > 0);
+        fs::remove_dir_all(&d).unwrap();
+    }
 
     #[test]
     fn state_shape_needs_all_core_fields() {
