@@ -40,6 +40,10 @@ export interface ProjectStore {
   setShotSize(mediaId: string, s: ShotSize | null): void;
   /** Export-Eintrag anhängen und das Projekt sofort sichern. */
   recordExport(rec: ExportRecord): Promise<void>;
+  /** Wechselt die aktive Sequenz (nicht rückgängig zu machen; der Verlauf gilt projektweit). */
+  switchSequence(id: string): void;
+  /** Ersetzt Clips, Blenden, Marker und Bereich der Sequenz `id` durch eine Kopie der aktiven (Format, Name, ID bleiben). */
+  refreshSequenceFromActive(id: string): boolean;
   /** Kopie der aktiven Sequenz mit Format und Namen einer Abgabe (z. B. zweites Format); gibt deren ID zurück. */
   addSequenceFor(name: string, format: { width: number; height: number; fps: number }): string | null;
   /** Bearbeitung der aktiven Sequenz als Verlaufsschritt; `coalesce` fasst eine Geste (Regler) zu einem Schritt zusammen. */
@@ -54,7 +58,8 @@ export interface ProjectStore {
 }
 
 let backend: Backend | null = null;
-let history: History<Sequence> | null = null;
+/** Projektweiter Verlauf: Schnappschüsse aller Sequenzen (die aktive Sequenz wählt `activeSequenceId`, nicht der Verlauf). */
+let history: History<Sequence[]> | null = null;
 let timer: ReturnType<typeof setTimeout> | null = null;
 let dirty = false;
 let gesture: string | null = null;
@@ -131,12 +136,13 @@ export const useProject = create<ProjectStore>()((set, get) => {
   const syncFromHistory = () => {
     const p = get().project;
     if (!history || !p) return;
-    const seq = history.present;
+    const sequences = history.present;
+    const seq = sequences.find((s) => s.id === p.activeSequenceId) ?? sequences[0];
     set({
       seq,
       canUndo: history.canUndo,
       canRedo: history.canRedo,
-      project: { ...p, sequences: p.sequences.map((s) => (s.id === seq.id ? seq : s)) },
+      project: { ...p, sequences, activeSequenceId: seq.id },
     });
     scheduleSave();
   };
@@ -176,7 +182,7 @@ export const useProject = create<ProjectStore>()((set, get) => {
       return;
     }
     const seq = activeOf(project);
-    history = new History(seq);
+    history = new History(project.sequences);
     set({ status: 'ready', dir, project, seq, canUndo: false, canRedo: false, restoredFromBackup: loaded.restoredFromBackup });
     if (created) {
       // Das neue Projekt muss ein sofortiges Neuladen überleben.
@@ -240,11 +246,34 @@ export const useProject = create<ProjectStore>()((set, get) => {
     },
 
     addSequenceFor(name, format) {
-      const { project, seq } = get();
-      if (!project || !seq) return null;
+      const { seq } = get();
+      if (!history || !seq) return null;
       const copy: Sequence = { ...withFormat(seq, format), id: crypto.randomUUID(), name };
-      commitProject((p) => ({ ...p, sequences: [...p.sequences, copy] }));
+      gesture = null;
+      history.push([...history.present, copy]);
+      syncFromHistory();
       return copy.id;
+    },
+
+    switchSequence(id) {
+      const p = get().project;
+      const target = p?.sequences.find((s) => s.id === id);
+      if (!p || !target || p.activeSequenceId === id) return;
+      gesture = null;
+      set({ seq: target, project: { ...p, activeSequenceId: id } });
+      scheduleSave();
+    },
+
+    refreshSequenceFromActive(id) {
+      const { seq } = get();
+      const target = history?.present.find((s) => s.id === id);
+      if (!history || !seq || !target || seq.id === id) return false;
+      // Inhalt der aktiven Sequenz in Format und Namen der Zielsequenz (Bildrate wird umgerechnet).
+      const fresh: Sequence = { ...withFormat(seq, { width: target.width, height: target.height, fps: target.fps }), id: target.id, name: target.name };
+      gesture = null;
+      history.push(history.present.map((s) => (s.id === id ? fresh : s)));
+      syncFromHistory();
+      return true;
     },
 
     setShotSize(mediaId, s) {
@@ -254,11 +283,13 @@ export const useProject = create<ProjectStore>()((set, get) => {
     apply(op, opts = {}) {
       const p = get().project;
       if (!history || !p) return false;
-      const cur = history.present;
+      const cur = get().seq;
+      if (!cur) return false;
       const next = op(cur, p.media);
       if (next === cur) return false;
-      if (opts.coalesce && gesture === opts.coalesce && history.canUndo) history.replace(next);
-      else history.push(next);
+      const all = history.present.map((s) => (s.id === cur.id ? next : s));
+      if (opts.coalesce && gesture === opts.coalesce && history.canUndo) history.replace(all);
+      else history.push(all);
       gesture = opts.coalesce ?? null;
       syncFromHistory();
       return true;

@@ -31,6 +31,31 @@ const TOOLS: { tool: Tool; command: CommandId; icon: LucideIcon }[] = [
   { tool: 'hand', command: 'tool.hand', icon: Hand },
 ];
 
+/** Auswahl der aktiven Sequenz (nur, wenn das Projekt mehrere hat, z. B. Hoch- und Querformat). */
+function SequenceSwitcher() {
+  const sequences = useProject((s) => s.project?.sequences);
+  const activeId = useProject((s) => s.project?.activeSequenceId);
+  if (!sequences || sequences.length < 2) return null;
+  return (
+    <label className="ws-seq">
+      <span>Sequenz</span>
+      <select
+        value={activeId}
+        onChange={(e) => {
+          useProject.getState().switchSequence(e.target.value);
+          useWerkstatt.getState().clearSelection();
+        }}
+      >
+        {sequences.map((s) => (
+          <option key={s.id} value={s.id}>
+            {s.name || 'Sequenz'} · {s.width}×{s.height}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 /** Programm-Vorschau: bei „Vorher zeigen“ ohne Farbkorrektur des gewählten Clips (zwischengespeichert je Stand). */
 function previewSequence(): () => Sequence {
   let last: { seq: Sequence; id: string; out: Sequence } | null = null;
@@ -148,6 +173,7 @@ export function Workspace({ assignment, heading }: { assignment: Assignment; hea
               <span className="tool-key" aria-hidden="true">S</span>
             </button>
           </div>
+          <SequenceSwitcher />
           <span className="ws-format" data-testid="seq-format">
             {seq.width}×{seq.height} · {seq.fps} fps
           </span>

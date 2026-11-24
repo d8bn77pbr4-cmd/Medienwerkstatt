@@ -1,4 +1,4 @@
-import { CircleAlert, CircleCheck } from 'lucide-react';
+import { CircleAlert, CircleCheck, TriangleAlert } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getBackend } from '../../backend';
@@ -11,11 +11,11 @@ import type { Project } from '../../domain/timeline/types';
 import { Sheet } from '../../shell/Sheet';
 import { researchKey, useApp } from '../../state/appStore';
 import { loadProjectFor } from '../../state/projectAccess';
-import { latestExport } from '../../state/submission';
+import { exportStale, latestExport } from '../../state/submission';
 import { useNow } from '../../state/useNow';
 import './chefbuero.css';
 
-type Line = { id: string; label: string; ok: boolean; text: string; action?: { label: string; to: string } };
+type Line = { id: string; label: string; ok: boolean; stale?: boolean; text: string; action?: { label: string; to: string } };
 
 /** Abgabe-Blatt: Liste der Abgaben mit Status, Haken-Bestätigung, Primärbutton „Abgeben“ (bzw. beim Nachbessern „Korrektur abgeben“). */
 export function SubmitSheet({ assignment, onClose, onDone }: { assignment: Assignment; onClose(): void; onDone?(e: Evaluation): void }) {
@@ -50,7 +50,7 @@ export function SubmitSheet({ assignment, onClose, onDone }: { assignment: Assig
         if (d.kind === 'video') {
           const rec = latestExport(project ?? null, d.id);
           return rec
-            ? { id: d.id, label: d.label, ok: true, text: `Version ${rec.version} · ${rec.fileName}` }
+            ? { id: d.id, label: d.label, ok: true, stale: exportStale(project ?? null, rec), text: `Version ${rec.version} · ${rec.fileName}` }
             : { id: d.id, label: d.label, ok: false, text: 'Noch nicht exportiert – ohne diese Abgabe gibt es Abzug.' };
         }
         const doc = research?.[researchKey(assignment.id, d.id)];
@@ -82,7 +82,7 @@ export function SubmitSheet({ assignment, onClose, onDone }: { assignment: Assig
       if (correction) {
         const r = await app.correction(assignment.id, checks, setMessage);
         if (!r.ok) {
-          setError(correctionBlockedText(r.reason, rules));
+          setError(r.reason === 'busy' ? 'Die Abgabe läuft schon.' : correctionBlockedText(r.reason, rules));
           setBusy(false);
           return;
         }
@@ -133,6 +133,11 @@ export function SubmitSheet({ assignment, onClose, onDone }: { assignment: Assig
               <span>
                 <strong>{l.label}</strong> · <span className="submit-state">{l.ok ? 'bereit' : 'fehlt'}</span>
                 <span className="submit-detail">{l.text}</span>
+                {l.stale && (
+                  <span className="submit-stale" role="status">
+                    <TriangleAlert aria-hidden="true" /> Seit dem Export geändert – bitte neu exportieren
+                  </span>
+                )}
                 {!l.ok && l.action && (
                   <button type="button" className="inline-link" onClick={() => navigate(l.action!.to)}>
                     {l.action.label}

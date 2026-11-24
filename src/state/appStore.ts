@@ -16,7 +16,7 @@ import { runSubmission } from './submission';
 export const SAVE_DEBOUNCE_MS = 2000;
 
 export type SelfChecks = { hookDone: boolean };
-export type CorrectionResult = { ok: true; evaluation: Evaluation } | { ok: false; reason: CorrectionRefusal };
+export type CorrectionResult = { ok: true; evaluation: Evaluation } | { ok: false; reason: CorrectionRefusal | 'busy' };
 
 export type InitOptions = {
   /** Vorgegebene Installations-ID (nur Mock-Modus, für deterministische E2E-Tests). */
@@ -168,6 +168,18 @@ export const useApp = create<AppStore>()((set, get) => {
     return evaluation;
   };
 
+  /** Laufende Abgaben je Auftrag (Schutz gegen Doppelklick und parallele Aufrufe). */
+  const inFlight = new Map<string, { kind: 'submit' | 'correction'; promise: Promise<unknown> }>();
+  const track = <T,>(id: string, kind: 'submit' | 'correction', p: Promise<T>): Promise<T> => {
+    const entry = { kind, promise: p };
+    inFlight.set(id, entry);
+    const clear = () => {
+      if (inFlight.get(id) === entry) inFlight.delete(id);
+    };
+    p.then(clear, clear);
+    return p;
+  };
+
   const doInit = async (b: Backend, clock: Clock, opts: InitOptions) => {
     cancelTimer();
     dirty = false;
@@ -234,21 +246,30 @@ export const useApp = create<AppStore>()((set, get) => {
       commit((s) => ({ ...s, research: { ...s.research, [researchKey(assignmentId, deliverableId)]: doc } }));
     },
 
-    async submit(assignmentId, selfChecks, onProgress) {
+    submit(assignmentId, selfChecks, onProgress) {
+      // Läuft für diesen Auftrag schon eine Abgabe, bekommt ein zweiter Aufruf dasselbe Ergebnis (nie zwei Bewertungen).
+      const running = inFlight.get(assignmentId);
+      if (running) return running.kind === 'submit' ? (running.promise as Promise<Evaluation>) : Promise.reject(new Error('Für diesen Auftrag läuft gerade eine Korrektur.'));
       const a = get().state?.assignments.find((x) => x.id === assignmentId);
-      if (!a) throw new Error('Auftrag nicht gefunden.');
-      if (a.status !== 'open') throw new Error('Dieser Auftrag ist nicht mehr offen. Zum Verbessern nutze „Nachbessern“.');
-      return evaluateAndStore(a.id, selfChecks, false, onProgress);
+      if (!a) return Promise.reject(new Error('Auftrag nicht gefunden.'));
+      if (a.status !== 'open') return Promise.reject(new Error('Dieser Auftrag ist nicht mehr offen. Zum Verbessern nutze „Nachbessern“.'));
+      return track(assignmentId, 'submit', evaluateAndStore(a.id, selfChecks, false, onProgress));
     },
 
-    async correction(assignmentId, selfChecks, onProgress) {
+    correction(assignmentId, selfChecks, onProgress) {
+      const running = inFlight.get(assignmentId);
+      if (running) return running.kind === 'correction' ? (running.promise as Promise<CorrectionResult>) : Promise.resolve<CorrectionResult>({ ok: false, reason: 'busy' });
       const s = get().state;
       const clock = get().clock;
       const a = s?.assignments.find((x) => x.id === assignmentId);
-      if (!s || !clock || !a) throw new Error('Auftrag nicht gefunden.');
+      if (!s || !clock || !a) return Promise.reject(new Error('Auftrag nicht gefunden.'));
       const check = canCorrect(a, s.evaluations, clock.now(), loadRules());
-      if (!check.ok) return check;
-      return { ok: true, evaluation: await evaluateAndStore(a.id, selfChecks, true, onProgress) };
+      if (!check.ok) return Promise.resolve<CorrectionResult>(check);
+      return track(
+        assignmentId,
+        'correction',
+        evaluateAndStore(a.id, selfChecks, true, onProgress).then((evaluation): CorrectionResult => ({ ok: true, evaluation })),
+      );
     },
 
     toggleShowreel(evaluationId) {

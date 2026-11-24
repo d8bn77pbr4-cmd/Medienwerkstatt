@@ -83,6 +83,8 @@
 .submit-state { font-weight: 600; }
 .submit-detail { display: block; font-size: var(--fs-sub); color: var(--ink-2); }
 .submit-list .inline-link { background: none; border: 0; padding: 0; font: inherit; font-size: var(--fs-sub); cursor: pointer; }
+.submit-stale { display: flex; align-items: center; gap: 6px; margin-top: 2px; font-size: var(--fs-sub); font-weight: 600; color: var(--sig-care); }
+.submit-list .submit-stale svg { width: 16px; height: 16px; margin: 0; color: var(--sig-care); }
 .submit-check { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
 .submit-check input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--accent); flex: none; }
 .submit-note { margin: 8px 0; padding: 8px 12px; background: var(--surface-2); border-radius: var(--r-sm); font-size: var(--fs-sub); }

@@ -7,7 +7,8 @@ import { EXPORT_PRESETS } from '../../domain/render/presets';
 import type { ExportPresetId } from '../../domain/timeline/types';
 import { useApp } from '../../state/appStore';
 import { useNow } from '../../state/useNow';
-import { defaultEncoder, exportDeliverable } from '../../state/exporter';
+import { defaultEncoder } from '../../state/exporter';
+import { exportRows } from '../../state/exportRun';
 import { useProject } from '../../state/projectStore';
 import { latestExport } from '../../state/submission';
 import { Sheet } from '../../shell/Sheet';
@@ -60,6 +61,11 @@ function ExportRow({ d, row, onChange, progress, busy }: { d: Deliverable; row: 
           </select>
         </div>
       </div>
+      {row.sequenceId !== project?.activeSequenceId && sequences.some((x) => x.id === row.sequenceId) && (
+        <button type="button" className="btn btn-small exp-add" onClick={() => useProject.getState().refreshSequenceFromActive(row.sequenceId)}>
+          Neu aus aktiver Sequenz
+        </button>
+      )}
       {!hasOwn && (
         <button type="button" className="btn btn-small exp-add" onClick={addSequence}>
           Sequenz für {d.label} anlegen
@@ -103,25 +109,19 @@ export function ExportSheet({ assignment, onClose, onSubmit }: { assignment: Ass
     setBusy(true);
     setError(null);
     setDone(false);
-    setProgress({});
+    setProgress(Object.fromEntries(deliverables.map((d) => [d.id, 0])));
     try {
-      for (const d of deliverables) {
-        const row = rows[d.id];
-        const store = useProject.getState();
-        const current = store.project;
-        const seq = current?.sequences.find((s) => s.id === row.sequenceId);
-        if (!current || !seq) throw new Error(`Für „${d.label}“ ist keine Sequenz gewählt.`);
-        setProgress((p) => ({ ...p, [d.id]: 0 }));
-        const rec = await exportDeliverable(current, seq, d, row.presetId, {
+      await exportRows(
+        assignment,
+        deliverables.map((d) => ({ deliverable: d, sequenceId: rows[d.id].sequenceId, presetId: rows[d.id].presetId })),
+        {
           backend: getBackend(),
           dir,
-          assignment,
           now: () => clock.now(),
           h264Encoder: defaultEncoder(),
-          onProgress: (v) => setProgress((p) => ({ ...p, [d.id]: v })),
-        });
-        await store.recordExport(rec);
-      }
+          onProgress: (id, v) => setProgress((p) => ({ ...p, [id]: v })),
+        },
+      );
       setDone(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

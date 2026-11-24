@@ -5,6 +5,8 @@ import { buildExport, exportRange, exportSize, type ExportAssets } from '../doma
 import { buildCubeLut } from '../domain/render/lut';
 import { getPreset } from '../domain/render/presets';
 import { renderTitle, type TitleCtx } from '../domain/render/titles';
+import { hashOf, sequenceHash } from './hash';
+import { factsForExport } from './submission';
 import type { ExportPresetId, ExportRecord, Project, Sequence, TitleParams } from '../domain/timeline/types';
 
 export type ExportDeps = {
@@ -19,14 +21,6 @@ export type ExportDeps = {
   renderTitlePng?: (t: TitleParams, width: number, height: number) => Promise<Uint8Array>;
   onProgress?: (p: number) => void;
 };
-
-/** Kurzer, stabiler Hash (FNV-1a, 32 Bit) für Dateinamen im Cache. */
-export function hashOf(value: unknown): string {
-  const text = JSON.stringify(value);
-  let h = 0x811c9dc5;
-  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 0x01000193);
-  return (h >>> 0).toString(16).padStart(8, '0');
-}
 
 /** Titel-PNG im Browser (OffscreenCanvas); in Umgebungen ohne Canvas wirft es. */
 export async function renderTitlePngDefault(t: TitleParams, width: number, height: number): Promise<Uint8Array> {
@@ -96,6 +90,9 @@ export async function exportDeliverable(
   await backend.runFfmpeg(args, durationSec, (p) => deps.onProgress?.(p));
 
   const { inF, outF } = exportRange(seq);
+  const rangeSec = { start: inF / seq.fps, end: outF / seq.fps };
+  // Momentaufnahme: Die Messung gilt der Datei, nicht dem späteren Stand der Sequenz.
+  const facts = factsForExport(seq, project.media, rangeSec);
   return {
     deliverableId: deliverable.id,
     path: output,
@@ -104,6 +101,9 @@ export async function exportDeliverable(
     version,
     at: deps.now(),
     sequenceId: seq.id,
-    rangeSec: { start: inF / seq.fps, end: outF / seq.fps },
+    rangeSec,
+    facts,
+    segments: facts.shots.map((x) => ({ start: x.start, end: x.end })),
+    sequenceHash: sequenceHash(seq),
   };
 }

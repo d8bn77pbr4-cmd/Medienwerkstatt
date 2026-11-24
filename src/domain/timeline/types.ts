@@ -1,4 +1,5 @@
 import type { MediaInfo } from '../../backend/types';
+import type { ProjectFacts } from '../chef/types';
 import type { ShotSize } from '../assignments/types';
 
 /** Ganze Bilder in der Bildrate der Sequenz. */
@@ -101,6 +102,10 @@ export type ExportRecord = {
   sequenceId?: string;
   /** Exportierter Bereich in Sekunden der Sequenz (ältere Einträge: In/Out der Sequenz). */
   rangeSec?: { start: number; end: number };
+  /** Momentaufnahme zum Export (Fakten auf den Exportbereich verschoben, Messsegmente, Hash der Sequenz). Ältere Einträge: keine. */
+  facts?: ProjectFacts;
+  segments?: { start: number; end: number }[];
+  sequenceHash?: string;
 };
 
 export type Project = {

@@ -7,6 +7,7 @@ import type { Rules } from '../domain/chef/rules';
 import type { Evaluation, ProjectFacts, VideoInput } from '../domain/chef/types';
 import { exportRange } from '../domain/render/filtergraph';
 import { projectFacts } from '../domain/timeline/facts';
+import { sequenceHash } from './hash';
 import type { ExportRecord, MediaItem, Project, Sequence } from '../domain/timeline/types';
 
 export type TimeRange = { start: number; end: number };
@@ -16,6 +17,18 @@ export function latestExport(project: Project | null, deliverableId: string): Ex
   let best: ExportRecord | null = null;
   for (const r of project?.exports ?? []) if (r.deliverableId === deliverableId && (!best || r.version > best.version)) best = r;
   return best;
+}
+
+/** Sequenz, aus der exportiert wurde (ältere Einträge ohne `sequenceId`: die aktive). */
+export function sequenceOfExport(project: Project, rec: ExportRecord): Sequence {
+  return project.sequences.find((s) => s.id === rec.sequenceId) ?? project.sequences.find((s) => s.id === project.activeSequenceId) ?? project.sequences[0];
+}
+
+/** Wurde die Sequenz seit dem Export geändert? Ältere Einträge ohne Hash gelten nie als veraltet. */
+export function exportStale(project: Project | null, rec: ExportRecord): boolean {
+  if (!project || !rec.sequenceHash) return false;
+  const seq = project.sequences.find((s) => s.id === rec.sequenceId);
+  return !!seq && sequenceHash(seq) !== rec.sequenceHash;
 }
 
 /** Exportierter Bereich in Sekunden der Sequenz (In/Out, sonst ganze Sequenz). */
@@ -73,11 +86,16 @@ export async function runSubmission(r: SubmissionRequest): Promise<Evaluation> {
       videos[d.id] = null;
       continue;
     }
-    const seq = project.sequences.find((s) => s.id === rec.sequenceId) ?? project.sequences.find((s) => s.id === project.activeSequenceId) ?? project.sequences[0];
-    const range = rec.rangeSec ?? rangeOfSequence(seq);
-    const facts = factsForExport(seq, project.media, range);
+    // Momentaufnahme des Exports; ältere Einträge: aus dem Stand der Sequenz berechnen.
+    let facts = rec.facts;
+    let segments = rec.segments;
+    if (!facts || !segments) {
+      const seq = sequenceOfExport(project, rec);
+      facts = factsForExport(seq, project.media, rec.rangeSec ?? rangeOfSequence(seq));
+      segments = facts.shots.map((s) => ({ start: s.start, end: s.end }));
+    }
     r.onProgress?.('Messe Ton …');
-    const measurements = await r.backend.analyze(rec.path, facts.shots.map((s) => ({ start: s.start, end: s.end })));
+    const measurements = await r.backend.analyze(rec.path, segments);
     r.onProgress?.('Prüfe Belichtung …');
     videos[d.id] = { measurements, facts, fileName: rec.fileName };
     files.push({ deliverableId: d.id, fileName: rec.fileName, path: rec.path });

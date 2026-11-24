@@ -22,8 +22,8 @@ const axe = async (page: Page) => {
   return v.map((x) => `${x.id}: ${x.nodes.map((n) => n.html.slice(0, 100)).join(' | ')}`);
 };
 
-async function openFromAuftraege(page: Page, messung: 'perfekt' | 'zu-laut') {
-  await page.goto(`/auftraege/A01?seed=e2e-laut&messung=${messung}`);
+async function openFromAuftraege(page: Page, messung: 'perfekt' | 'zu-laut', seed = 'e2e-laut') {
+  await page.goto(`/auftraege/A01?seed=${seed}&messung=${messung}`);
   await page.getByRole('button', { name: 'In der Werkstatt öffnen' }).click();
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Auftrag #1');
 }
@@ -153,4 +153,48 @@ test('Export- und Abgabe-Blatt ohne axe-Verstöße (hell und dunkel)', async ({ 
     await page.keyboard.press('Escape');
     await expect(page.getByRole('dialog')).toHaveCount(0);
   }
+});
+
+test('Zweites Format: Sequenz anlegen, wechseln, dort schneiden, zurück; „Neu aus aktiver Sequenz“', async ({ page }) => {
+  // Seed e2e-6: Auftrag #1 mit Hochformat (9:16) UND Querformat (16:9)
+  await openFromAuftraege(page, 'perfekt', 'e2e-6');
+  await cut(page);
+  const clips = page.getByRole('list', { name: 'Clips in der Timeline' }).getByRole('button');
+  await expect(page.locator('.ws-seq select')).toHaveCount(0);
+  await expect(page.getByTestId('seq-format')).toHaveText('1080×1920 · 25 fps');
+
+  await page.keyboard.press('Meta+m');
+  const sheet = page.getByRole('dialog', { name: 'Exportieren' });
+  await sheet.getByRole('button', { name: /^Sequenz für .* anlegen$/ }).click();
+  await page.keyboard.press('Escape');
+  await expect(sheet).toHaveCount(0);
+
+  // Umschalter erscheint; die Kopie hat das Querformat der zweiten Abgabe
+  const select = page.locator('.ws-seq select');
+  await expect(select).toBeVisible();
+  await select.selectOption({ index: 1 });
+  await expect(page.getByTestId('seq-format')).toHaveText('1920×1080 · 25 fps');
+  await expect(clips).toHaveCount(4);
+
+  // Schnitt in der Kopie: Clip entfernen
+  const v1 = clips.filter({ hasText: /^V1 · e2e-clip\.webm · 00:00:02:00/ });
+  await v1.focus();
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Shift+Backspace');
+  await expect(clips).toHaveCount(2);
+
+  // Zurück: das Original ist unberührt
+  await select.selectOption({ index: 0 });
+  await expect(page.getByTestId('seq-format')).toHaveText('1080×1920 · 25 fps');
+  await expect(clips).toHaveCount(4);
+
+  // „Neu aus aktiver Sequenz“ stellt die Kopie wieder her (Format bleibt Querformat)
+  await page.keyboard.press('Meta+m');
+  const again = page.getByRole('dialog', { name: 'Exportieren' });
+  await again.getByLabel('Sequenz', { exact: true }).last().selectOption({ index: 1 });
+  await again.getByRole('button', { name: 'Neu aus aktiver Sequenz' }).click();
+  await page.keyboard.press('Escape');
+  await select.selectOption({ index: 1 });
+  await expect(page.getByTestId('seq-format')).toHaveText('1920×1080 · 25 fps');
+  await expect(clips).toHaveCount(4);
 });
