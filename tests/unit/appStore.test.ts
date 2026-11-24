@@ -198,6 +198,35 @@ describe('Aktionen und Selektoren', () => {
     expect(st().schedule.vacations).toHaveLength(1);
   });
 
+  it('addVacation verlängert die Frist des laufenden Auftrags sofort; removeVacation nimmt das zurück', async () => {
+    const clock = stubClock();
+    await app().init(new MockBackend(), clock);
+    const before = st().assignments[0];
+    expect(before.deadline).toBe(Date.parse('2026-11-26T18:00:00+01:00'));
+    clock.advance(H);
+    const v = { start: t0 + H, end: t0 + H + 7 * 24 * H };
+    expect(app().addVacation(v)).toEqual({ ok: true });
+    expect(st().assignments[0].deadline).toBe(Date.parse('2026-12-03T18:00:00+01:00'));
+    expect(st().assignments[0].expiresAt).toBe(Date.parse('2026-12-06T18:00:00+01:00'));
+    // Noch nicht begonnener Urlaub (Beginn liegt in der Zukunft) kann entfernt werden → Frist wie vorher
+    const v2 = { start: t0 + 30 * 24 * H, end: t0 + 31 * 24 * H };
+    app().removeVacation(v.start); // begonnen → bleibt
+    expect(app().addVacation(v2)).toEqual({ ok: true });
+    app().removeVacation(v2.start);
+    expect(st().schedule.vacations).toEqual([v]);
+    expect(st().assignments[0].deadline).toBe(Date.parse('2026-12-03T18:00:00+01:00'));
+  });
+
+  it('removeVacation eines künftigen Urlaubs verkürzt die verlängerte Frist wieder', async () => {
+    const clock = stubClock();
+    await app().init(new MockBackend(), clock);
+    const v = { start: t0 + 24 * H, end: t0 + 48 * H };
+    expect(app().addVacation(v)).toEqual({ ok: true });
+    expect(st().assignments[0].deadline).toBe(Date.parse('2026-11-27T18:00:00+01:00'));
+    app().removeVacation(v.start);
+    expect(st().assignments[0].deadline).toBe(Date.parse('2026-11-26T18:00:00+01:00'));
+  });
+
   it('setDevTimeOffset verschiebt die Uhr und gibt fällige Aufträge aus', async () => {
     let offset = 0;
     const base = t0;

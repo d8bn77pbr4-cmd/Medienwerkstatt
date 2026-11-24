@@ -121,9 +121,7 @@ function ticked(s: AppState, now: number): AppState {
     (number, issuedAt) => generateAssignment(s.installId, number, issuedAt, level, AVAILABLE_TYPES, catalogs, rules),
     rules,
   );
-  const sameSchedule =
-    r.schedule.nextIssueAt === s.schedule.nextIssueAt && r.schedule.nextNumber === s.schedule.nextNumber;
-  if (r.events.length === 0 && sameSchedule) return s;
+  if (!r.changed) return s;
   return { ...s, schedule: r.schedule, assignments: r.assignments };
 }
 
@@ -322,7 +320,8 @@ export const useApp = create<AppStore>()((set, get) => {
       if (v.start === today && today < now) v = { ...v, start: now };
       const check = canAddVacation(s.schedule.vacations, v, now);
       if (!check.ok) return check;
-      commit((cur) => ({ ...cur, schedule: { ...cur.schedule, vacations: [...cur.schedule.vacations, v] } as ScheduleState }));
+      // Laufende Fristen sofort neu rechnen: im Urlaub steht die Uhr (Spec §8.1).
+      commit((cur) => ticked({ ...cur, schedule: { ...cur.schedule, vacations: [...cur.schedule.vacations, v] } as ScheduleState }, now));
       return check;
     },
 
@@ -330,7 +329,7 @@ export const useApp = create<AppStore>()((set, get) => {
       const now = get().clock?.now() ?? 0;
       commit((s) => {
         const vs = s.schedule.vacations.filter((v) => v.start !== start || v.start <= now);
-        return vs.length === s.schedule.vacations.length ? s : { ...s, schedule: { ...s.schedule, vacations: vs } };
+        return vs.length === s.schedule.vacations.length ? s : ticked({ ...s, schedule: { ...s.schedule, vacations: vs } }, now);
       });
     },
 

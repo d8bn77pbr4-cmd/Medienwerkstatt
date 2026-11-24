@@ -58,9 +58,10 @@ describe('tick', () => {
     const s: ScheduleState = { ...start(t0), vacations: [{ start: vStart, end: vEnd }] };
     const r = tick(s, [], t0 + 9 * 24 * H, issueStub, rules);
     expect(r.assignments.map(a => a.issuedAt)).toEqual([t0, vEnd, vEnd + 72 * H]);
-    // Auftrag 1: Frist läuft in den Urlaub (32 h Überlappung) -> 28.11. 02:00, aufgerundet auf 18:00
-    expect(r.assignments[0].deadline).toBe(Date.parse('2026-11-28T18:00:00+01:00'));
-    expect(r.assignments[0].expiresAt).toBe(Date.parse('2026-12-01T18:00:00+01:00'));
+    // Auftrag 1: 48 h laufen vor dem Urlaub (23.11. 10:00 – 25.11. 10:00), die Uhr steht 72 h still,
+    // die restlichen 32 h laufen ab 28.11. 10:00 → 29.11. 18:00 (Spec §8.1: im Urlaub laufen keine Fristen)
+    expect(r.assignments[0].deadline).toBe(Date.parse('2026-11-29T18:00:00+01:00'));
+    expect(r.assignments[0].expiresAt).toBe(Date.parse('2026-12-02T18:00:00+01:00'));
     // Auftrag 2 liegt nach dem Urlaub: Frist unverändert
     expect(r.assignments[1].deadline).toBe(Date.parse('2026-12-01T18:00:00+01:00'));
   });
@@ -71,9 +72,10 @@ describe('tick', () => {
       vacations: [{ start: Date.parse('2027-03-26T12:00:00+01:00'), end: Date.parse('2027-03-29T12:00:00+02:00') }],
     };
     const a = tick(s, [], issued, issueStub, rules).assignments[0];
-    expect(a.deadline).toBe(Date.parse('2027-03-29T18:00:00+02:00'));
+    // 50 h vor dem Urlaub, 30 h Rest ab 29.03. 12:00 (Sommerzeit) → 30.03. 18:00
+    expect(a.deadline).toBe(Date.parse('2027-03-30T18:00:00+02:00'));
     expect(new Date(a.deadline).getHours()).toBe(18);
-    expect(a.expiresAt).toBe(Date.parse('2027-04-01T18:00:00+02:00'));
+    expect(a.expiresAt).toBe(Date.parse('2027-04-02T18:00:00+02:00'));
   });
   it('Verfallszeit bleibt über die Zeitumstellung (Oktober 2027) 18:00', () => {
     const issued = Date.parse('2027-10-26T10:00:00+02:00');
@@ -83,7 +85,7 @@ describe('tick', () => {
   });
   it('Limit: 3 offene Aufträge mit fernem expiresAt + neue Ausgabe → ältester expired (limit)', () => {
     const far = t0 + 365 * 24 * H;
-    const open = [1, 2, 3].map(n => ({ ...issueStub(n, t0 - (4 - n) * H), deadline: far, expiresAt: far }));
+    const open = [1, 2, 3].map(n => ({ ...issueStub(n, t0 - (4 - n) * H), baseDeadline: far, deadline: far, expiresAt: far }));
     const s: ScheduleState = { nextIssueAt: t0, nextNumber: 4, vacations: [] };
     const r = tick(s, open, t0, issueStub, rules);
     expect(r.assignments.map(a => a.status)).toEqual(['expired', 'open', 'open', 'open']);
@@ -97,6 +99,57 @@ describe('tick', () => {
     const r = tick({ nextIssueAt: t0 + 1000 * H, nextNumber: 3, vacations: [] }, [a, b], t0 + 100 * H, issueStub, rules);
     expect(r.assignments.map(x => x.status)).toEqual(['submitted', 'evaluated']);
     expect(r.events).toEqual([]);
+  });
+  it('Urlaub, der nach der Ausgabe eingetragen wird, verschiebt Frist und Verfall des laufenden Auftrags', () => {
+    // Ausgabe 23.11. 10:00, Frist 26.11. 18:00, Verfall 29.11. 18:00
+    const first = tick(start(t0), [], t0, issueStub, rules);
+    const a0 = first.assignments[0];
+    expect(a0.deadline).toBe(Date.parse('2026-11-26T18:00:00+01:00'));
+    // 1 h später: 7 Tage Urlaub ab 23.11. 11:00 → die Uhr steht 168 h still
+    const vStart = t0 + H;
+    const vEnd = vStart + 7 * 24 * H;
+    const s: ScheduleState = { ...first.schedule, vacations: [{ start: vStart, end: vEnd }] };
+    const r = tick(s, first.assignments, t0 + H, issueStub, rules);
+    expect(r.changed).toBe(true);
+    expect(r.assignments[0].deadline).toBe(Date.parse('2026-12-03T18:00:00+01:00'));
+    expect(r.assignments[0].expiresAt).toBe(Date.parse('2026-12-06T18:00:00+01:00'));
+    expect(r.assignments[0].deadline).toBeGreaterThan(vEnd);
+    // Neu rechnen ist idempotent
+    const again = tick(r.schedule, r.assignments, t0 + 2 * H, issueStub, rules);
+    expect(again.changed).toBe(false);
+    expect(again.assignments[0].deadline).toBe(r.assignments[0].deadline);
+    expect(again.assignments[0].expiresAt).toBe(r.assignments[0].expiresAt);
+  });
+  it('verlängerte Frist, die in einen zweiten Urlaub läuft, verlängert sich weiter (Kaskade)', () => {
+    const first = tick(start(t0), [], t0, issueStub, rules);
+    // Urlaub 1: 24.11. 10:00 – 26.11. 10:00 (48 h) → Frist ohne Kaskade 28.11. 18:00
+    // Urlaub 2: 27.11. 00:00 – 29.11. 00:00 (48 h) liegt in der verlängerten Frist → 30.11. 18:00
+    const v1 = { start: Date.parse('2026-11-24T10:00:00+01:00'), end: Date.parse('2026-11-26T10:00:00+01:00') };
+    const v2 = { start: Date.parse('2026-11-27T00:00:00+01:00'), end: Date.parse('2026-11-29T00:00:00+01:00') };
+    const s: ScheduleState = { ...first.schedule, vacations: [v1, v2] };
+    const r = tick(s, first.assignments, t0 + H, issueStub, rules);
+    expect(r.assignments[0].deadline).toBe(Date.parse('2026-11-30T18:00:00+01:00'));
+    // Verfall: 72 h nach der Frist, kein Urlaub mehr dazwischen
+    expect(r.assignments[0].expiresAt).toBe(Date.parse('2026-12-03T18:00:00+01:00'));
+  });
+  it('Urlaub in der Spätfrist verschiebt nur den Verfall', () => {
+    const first = tick(start(t0), [], t0, issueStub, rules);
+    const v = { start: Date.parse('2026-11-27T10:00:00+01:00'), end: Date.parse('2026-11-28T10:00:00+01:00') };
+    const r = tick({ ...first.schedule, vacations: [v] }, first.assignments, t0 + H, issueStub, rules);
+    expect(r.assignments[0].deadline).toBe(Date.parse('2026-11-26T18:00:00+01:00'));
+    expect(r.assignments[0].expiresAt).toBe(Date.parse('2026-11-30T18:00:00+01:00'));
+  });
+  it('alter Stand ohne baseDeadline: Grundfrist wird aus der Ausgabezeit abgeleitet', () => {
+    const old: Assignment = {
+      ...issueStub(1, t0),
+      deadline: Date.parse('2026-11-26T18:00:00+01:00'),
+      expiresAt: Date.parse('2026-11-29T18:00:00+01:00'),
+    };
+    delete (old as Partial<Assignment>).baseDeadline;
+    const v = { start: t0 + H, end: t0 + H + 7 * 24 * H };
+    const r = tick({ nextIssueAt: t0 + ISSUE_INTERVAL, nextNumber: 2, vacations: [v] }, [old], t0 + H, issueStub, rules);
+    expect(r.assignments[0].baseDeadline).toBe(Date.parse('2026-11-26T18:00:00+01:00'));
+    expect(r.assignments[0].deadline).toBe(Date.parse('2026-12-03T18:00:00+01:00'));
   });
   it('mutiert die Eingaben nicht', () => {
     const s = start(t0);

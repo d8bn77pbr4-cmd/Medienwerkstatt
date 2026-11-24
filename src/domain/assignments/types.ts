@@ -49,6 +49,8 @@ export interface Assignment {
   issuedAt: number;
   deadline: number;
   expiresAt: number;
+  /** Frist ohne Urlaub (18:00 nach dem Ausgabetakt); Ursprung für das Neuberechnen bei Urlaub. Fehlt in alten Ständen. */
+  baseDeadline?: number;
   level: Level;
   type: AssignmentType | 'kombi';
   client: { name: string; branche: string };

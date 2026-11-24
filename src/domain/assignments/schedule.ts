@@ -31,18 +31,58 @@ function overlapWithVacations(from: number, to: number, vs: Vacation[]): number 
   return sum;
 }
 
+/**
+ * Während eines Urlaubs steht die Uhr (Spec §8.1): `raw` wird um die Urlaubszeit in [from, Ergebnis) verlängert und auf
+ * 18:00 gerundet. Läuft die Verlängerung in einen weiteren Urlaub, wächst sie weiter, bis sich nichts mehr ändert.
+ */
+function extendByVacations(from: number, raw: number, vs: Vacation[], hour: number): number {
+  let end = roundUpTo18(raw, hour);
+  for (let i = 0; i <= vs.length + 1; i++) {
+    const next = roundUpTo18(raw + overlapWithVacations(from, end, vs), hour);
+    if (next === end) break;
+    end = next;
+  }
+  return end;
+}
+
+/** Grundfrist ohne Urlaub: 18:00 nach Ablauf des Ausgabetakts. */
+export function baseDeadlineFor(issuedAt: number, rules: Rules): number {
+  return roundUpTo18(issuedAt + rules.schedule.intervalHours * H, rules.schedule.deadlineHour);
+}
+
+/** Frist und Verfall aus Ausgabezeit, Grundfrist und allen Urlauben – immer frisch aus dem Ursprung, daher idempotent. */
+export function assignmentTimes(
+  issuedAt: number,
+  baseDeadline: number,
+  vacations: Vacation[],
+  rules: Rules,
+): { deadline: number; expiresAt: number } {
+  const hour = rules.schedule.deadlineHour;
+  const deadline = extendByVacations(issuedAt, baseDeadline, vacations, hour);
+  const rawExpiry = addWallClock(deadline, rules.schedule.lateWindowHours * H);
+  const expiresAt = extendByVacations(deadline, rawExpiry, vacations, hour);
+  return { deadline, expiresAt };
+}
+
 export function tick(
   s: ScheduleState,
   assignments: Assignment[],
   now: number,
   issue: (number: number, issuedAt: number) => Assignment,
   rules: Rules,
-): { schedule: ScheduleState; assignments: Assignment[]; events: ScheduleEvent[] } {
-  const list = assignments.map(a => ({ ...a }));
+): { schedule: ScheduleState; assignments: Assignment[]; events: ScheduleEvent[]; changed: boolean } {
+  let changed = false;
+  // Offene Aufträge neu terminieren: ein später eingetragener (oder entfernter) Urlaub verschiebt laufende Fristen.
+  const list = assignments.map(a => {
+    if (a.status !== 'open') return { ...a };
+    const baseDeadline = a.baseDeadline ?? baseDeadlineFor(a.issuedAt, rules);
+    const t = assignmentTimes(a.issuedAt, baseDeadline, s.vacations, rules);
+    if (t.deadline !== a.deadline || t.expiresAt !== a.expiresAt || baseDeadline !== a.baseDeadline) changed = true;
+    return { ...a, baseDeadline, ...t };
+  });
   const events: ScheduleEvent[] = [];
   let { nextIssueAt, nextNumber } = s;
   const interval = rules.schedule.intervalHours * H;
-  const lateWindow = rules.schedule.lateWindowHours * H;
 
   const expire = (a: Assignment, reason: 'deadline' | 'limit') => {
     a.status = 'expired';
@@ -66,25 +106,17 @@ export function tick(
       const oldest = open.reduce((m, a) => (a.issuedAt < m.issuedAt ? a : m));
       expire(oldest, 'limit');
     }
-    const rawDeadline = roundUpTo18(issuedAt + interval, rules.schedule.deadlineHour);
-    const deadline = roundUpTo18(
-      rawDeadline + overlapWithVacations(issuedAt, rawDeadline, s.vacations),
-      rules.schedule.deadlineHour,
-    );
-    const rawExpiry = addWallClock(deadline, lateWindow);
-    const expiresAt = roundUpTo18(
-      rawExpiry + overlapWithVacations(deadline, rawExpiry, s.vacations),
-      rules.schedule.deadlineHour,
-    );
+    const baseDeadline = baseDeadlineFor(issuedAt, rules);
     const a = issue(nextNumber, issuedAt);
-    list.push({ ...a, deadline, expiresAt, status: 'open' });
+    list.push({ ...a, baseDeadline, ...assignmentTimes(issuedAt, baseDeadline, s.vacations, rules), status: 'open' });
     events.push({ kind: 'issued', assignmentId: a.id });
     nextNumber += 1;
     nextIssueAt = issuedAt + interval;
   }
   sweep(now);
+  if (events.length > 0 || nextIssueAt !== s.nextIssueAt || nextNumber !== s.nextNumber) changed = true;
 
-  return { schedule: { nextIssueAt, nextNumber, vacations: s.vacations }, assignments: list, events };
+  return { schedule: { nextIssueAt, nextNumber, vacations: s.vacations }, assignments: list, events, changed };
 }
 
 /** Lokale Kalendertage, die [start, end) berührt, je Jahr (jedes Datum einmal). */
