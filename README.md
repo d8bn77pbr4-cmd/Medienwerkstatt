@@ -10,8 +10,9 @@ Eine Mac-App zum Üben des Videohandwerks: Du bekommst Aufträge von fiktiven Ku
 ## Installation
 
 1. `.dmg` öffnen und **Medienwerkstatt** in den Ordner **Programme** ziehen.
-2. **Erster Start:** Rechtsklick auf die App → **„Öffnen“** → im Dialog nochmals **„Öffnen“**.
-   Alternativ: Doppelklick (die Meldung erscheint), dann **Systemeinstellungen → Datenschutz & Sicherheit** → ganz unten **„Trotzdem öffnen“**.
+2. **Erster Start**, je nach macOS-Version:
+   - **macOS 12–14:** Rechtsklick auf die App → **„Öffnen“** → im Dialog nochmals **„Öffnen“**.
+   - **macOS 15 (Sequoia) und neuer:** Der Rechtsklick-Weg umgeht Gatekeeper bei unsignierten Apps nicht mehr. Die App einmal normal öffnen (die Meldung erscheint, **„Fertig“** wählen), dann **Systemeinstellungen → Datenschutz & Sicherheit** → ganz unten **„Trotzdem öffnen“** → mit Passwort/Touch ID bestätigen.
 3. Das ist nur beim ersten Start nötig.
 
 **Warum diese Meldung?** Die App ist nicht signiert und nicht von Apple beglaubigt – das setzt ein bezahltes Apple-Entwicklerkonto voraus, das für dieses Projekt nicht existiert. macOS warnt deshalb bei jeder unsignierten App. Der Quelltext liegt offen in diesem Repository.

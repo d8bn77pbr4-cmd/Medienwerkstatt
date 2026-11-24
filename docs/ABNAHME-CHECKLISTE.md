@@ -56,7 +56,8 @@ Kriterium: Verspätung, Verfall, Bonus, Korrekturschleife, Urlaub und Punktekont
 - [ ] Abgabe mehr als 24 h vor der Frist: Bonus +3; alle Technikwerte perfekt: +2.
 - [ ] Nicht abgegebener Auftrag 3 Tage nach der Frist: verfällt, Konto −20.
 - [ ] Korrekturschleife: „Nachbessern“ innerhalb von 24 h, Ergebnis höchstens 90; nach 24 h nicht mehr möglich; die bessere Bewertung zählt.
-- [ ] Urlaub (Einstellungen) ab heute: in der Zeit kommen keine neuen Aufträge, Fristen verschieben sich laut §8.
+- [ ] Urlaub (Einstellungen): höchstens 14 Tage pro Kalenderjahr, nur im Voraus eintragbar (rückwirkend nicht möglich, Eingabe wird abgelehnt).
+- [ ] Während des Urlaubs kommen keine neuen Aufträge, und es laufen keine Fristen (laufende Fristen verlängern sich um die Überschneidung mit dem Urlaub).
 - [ ] Punktekonto und Stufe ändern sich mit der Summe (Aufstieg und Abstieg).
 
 ## 8. Recherche-Aufträge
