@@ -361,6 +361,8 @@ fn measures_first_audio_track_only() {
             "aevalsrc=sin(2*PI*440*t)|sin(2*PI*440*t)|sin(2*PI*440*t)|sin(2*PI*440*t)|sin(2*PI*440*t)|sin(2*PI*440*t):c=5.1:s=48000:d=2",
             "-map", "0:v", "-map", "1:a", "-map", "2:a",
             "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "pcm_s16le",
+            // Spur 1 ist als Standard markiert: ohne `-map` wählt ffmpeg sie, nicht Spur 0.
+            "-disposition:a:0", "0", "-disposition:a:1", "default",
         ],
     );
     let m = analyze(&Tools::from_env(), &f, &[]).unwrap();
