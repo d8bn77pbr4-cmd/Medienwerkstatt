@@ -370,3 +370,81 @@ fn measures_first_audio_track_only() {
     assert!(m.audio.true_peak_dbtp.unwrap() < -35.0, "{:?}", m.audio);
     assert!(m.audio.integrated_lufs.unwrap() < -35.0, "{:?}", m.audio);
 }
+
+#[test]
+fn pillarbox_bars_are_not_counted_as_shadows() {
+    // 9:16-Material mittelgrau, wie der Export es in 16:9 einpasst (schwarze Seitenbalken).
+    let f = make(
+        "pillarbox.mp4",
+        &[
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc2=s=608x1080:r=25:d=2,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,format=yuv420p",
+            "-c:v",
+            "libx264",
+        ],
+    );
+    let m = analyze(
+        &Tools::from_env(),
+        &f,
+        &[Segment {
+            start: 0.0,
+            end: 2.0,
+        }],
+    )
+    .unwrap();
+    let s = &m.video.segments[0];
+    assert!(s.shadows_pct < 5.0, "{s:?}");
+    assert!(s.mean_luma > 0.2, "{s:?}");
+}
+
+#[test]
+fn letterbox_bars_are_not_counted_and_black_frames_still_are() {
+    let f = make(
+        "letterbox.mp4",
+        &[
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=0x808080:s=1920x800:r=25:d=2,pad=1920:1080:0:(oh-ih)/2,format=yuv420p",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=black:s=1920x1080:r=25:d=1,format=yuv420p",
+            "-filter_complex",
+            "[0:v][1:v]concat=n=2:v=1:a=0[v]",
+            "-map",
+            "[v]",
+            "-c:v",
+            "libx264",
+        ],
+    );
+    let m = analyze(
+        &Tools::from_env(),
+        &f,
+        &[
+            Segment {
+                start: 0.0,
+                end: 2.0,
+            },
+            Segment {
+                start: 2.0,
+                end: 3.0,
+            },
+        ],
+    )
+    .unwrap();
+    let grey = &m.video.segments[0];
+    assert!(grey.shadows_pct < 1.0, "{grey:?}");
+    assert!(
+        (grey.mean_luma - (128.0 - 16.0) / 219.0).abs() < 0.03,
+        "{grey:?}"
+    );
+    // ganz schwarz bleibt ganz schwarz (kein Balken, sondern das Bild)
+    assert!(
+        m.video.segments[1].shadows_pct > 95.0,
+        "{:?}",
+        m.video.segments[1]
+    );
+}

@@ -28,6 +28,10 @@ const CUT_DIFF: f64 = 0.25;
 /// Pixel mit Y ≥ 235 zählen als Lichter, Y ≤ 16 als Tiefen.
 const HIGHLIGHT_Y: u8 = 235;
 const SHADOW_Y: u8 = 16;
+/// Balken (Letterbox/Pillarbox aus dem Einpassen im Export): Randzeilen/-spalten, in denen jedes Pixel
+/// Y ≤ 18 hat – und das in mindestens 98 % der Bilder eines Abschnitts. Sie zählen nicht zur Belichtung.
+const BAR_Y: u8 = 18;
+const BAR_SHARE: f64 = 0.98;
 /// Ton-PCM: 48 kHz, Clipping ab |x| ≥ 0,999.
 const PCM_RATE: usize = 48_000;
 const CLIP_LEVEL: f32 = 0.999;
@@ -144,15 +148,21 @@ pub fn analyze(t: &Tools, file: &Path, segments: &[Segment]) -> Result<Measureme
         }
     };
 
-    let frames = if info.video_codec.is_some() && info.width > 0 && info.height > 0 {
-        scan_video(t, file, &info)?
+    let (frames, segment_stats) = if info.video_codec.is_some() && info.width > 0 && info.height > 0
+    {
+        let (f, s) = scan_video(t, file, &info, segs)?;
+        (f, Some(s))
     } else {
-        Vec::new()
+        (Vec::new(), None)
     };
+    let mut video = video_stats(&frames, segs);
+    if let Some(s) = segment_stats {
+        video.segments = s;
+    }
     Ok(Measurements {
         format,
         audio,
-        video: video_stats(&frames, segs),
+        video,
     })
 }
 
@@ -388,10 +398,132 @@ fn analysis_height(info: &MediaInfo) -> u32 {
     (((h / 2.0).round() as u32) * 2).max(2)
 }
 
-fn scan_video(t: &Tools, file: &Path, info: &MediaInfo) -> Result<Vec<FrameStat>> {
+/// Bildebenen eines Analysebilds (Y, U, V je `w × h`).
+pub(crate) struct Planes {
+    w: usize,
+    h: usize,
+    y: Vec<u8>,
+    u: Vec<u8>,
+    v: Vec<u8>,
+}
+
+/// Bildbereich ohne Balken als `(zeile_von, zeile_bis, spalte_von, spalte_bis)`: von den Rändern her die
+/// Zeilen und Spalten weglassen, die in ≥ 98 % der Bilder ganz schwarz sind. Bleibt nichts übrig, ist das
+/// Schwarz das Bild selbst – dann zählt das ganze Bild.
+pub(crate) fn content_rect(frames: &[&Planes]) -> (usize, usize, usize, usize) {
+    let Some(first) = frames.first() else {
+        return (0, 0, 0, 0);
+    };
+    let (w, h) = (first.w, first.h);
+    let need = ((BAR_SHARE * frames.len() as f64).ceil() as usize).max(1);
+    let row_bar = |r: usize| {
+        frames
+            .iter()
+            .filter(|p| p.y[r * w..(r + 1) * w].iter().all(|&y| y <= BAR_Y))
+            .count()
+            >= need
+    };
+    let (mut r0, mut r1) = (0, h);
+    while r0 < r1 && row_bar(r0) {
+        r0 += 1;
+    }
+    while r1 > r0 && row_bar(r1 - 1) {
+        r1 -= 1;
+    }
+    if r0 >= r1 {
+        return (0, h, 0, w);
+    }
+    let col_bar = |c: usize| {
+        frames
+            .iter()
+            .filter(|p| (r0..r1).all(|r| p.y[r * w + c] <= BAR_Y))
+            .count()
+            >= need
+    };
+    let (mut c0, mut c1) = (0, w);
+    while c0 < c1 && col_bar(c0) {
+        c0 += 1;
+    }
+    while c1 > c0 && col_bar(c1 - 1) {
+        c1 -= 1;
+    }
+    if c0 >= c1 {
+        return (0, h, 0, w);
+    }
+    (r0, r1, c0, c1)
+}
+
+/// Abschnittswerte aus den Bildebenen, ohne Balken.
+fn segment_stats_planes(seg: &Segment, frames: &[&Planes], table: &[f64]) -> SegmentStats {
+    let (r0, r1, c0, c1) = content_rect(frames);
+    let n_px = ((r1 - r0) * (c1 - c0)).max(1) as f64;
+    let mut acc = [0.0f64; 5];
+    for p in frames {
+        let (mut l, mut hl, mut sh, mut u, mut v) = (0.0, 0usize, 0usize, 0.0, 0.0);
+        for r in r0..r1 {
+            for c in c0..c1 {
+                let i = r * p.w + c;
+                let y = p.y[i];
+                l += table[y as usize];
+                hl += usize::from(y >= HIGHLIGHT_Y);
+                sh += usize::from(y <= SHADOW_Y);
+                u += (f64::from(p.u[i]) - 128.0) / 224.0;
+                v += (f64::from(p.v[i]) - 128.0) / 224.0;
+            }
+        }
+        acc[0] += l / n_px;
+        acc[1] += 100.0 * hl as f64 / n_px;
+        acc[2] += 100.0 * sh as f64 / n_px;
+        acc[3] += u / n_px;
+        acc[4] += v / n_px;
+    }
+    let n = frames.len().max(1) as f64;
+    SegmentStats {
+        start: seg.start,
+        end: seg.end,
+        mean_luma: acc[0] / n,
+        highlights_pct: acc[1] / n,
+        shadows_pct: acc[2] / n,
+        mean_u: acc[3] / n,
+        mean_v: acc[4] / n,
+    }
+}
+
+/// Bilder eines Abschnitts aus dem Fenster: Zeitstempel in `[start, end)`, sonst das Bild bei `start`
+/// (bzw. das letzte vorhandene) – wie `segment_stats`.
+fn frames_of<'a>(window: &'a [(usize, Planes)], seg: &Segment, dt: f64) -> Vec<&'a Planes> {
+    let sel: Vec<&Planes> = window
+        .iter()
+        .filter(|(i, _)| {
+            let ts = *i as f64 * dt;
+            ts >= seg.start - 1e-9 && ts < seg.end - 1e-9
+        })
+        .map(|(_, p)| p)
+        .collect();
+    if !sel.is_empty() || window.is_empty() {
+        return sel;
+    }
+    let last = window[window.len() - 1].0;
+    let want = ((seg.start / dt).floor().max(0.0) as usize).min(last);
+    window
+        .iter()
+        .find(|(i, _)| *i == want)
+        .map(|(_, p)| vec![p])
+        .unwrap_or_default()
+}
+
+/// Liest die Analysebilder: Bildwerte für Schwarz/Standbild/Schnitte und – mit einem gleitenden Fenster, das
+/// nur die Bilder noch offener Abschnitte hält – die Abschnittswerte ohne Balken.
+fn scan_video(
+    t: &Tools,
+    file: &Path,
+    info: &MediaInfo,
+    segs: &[Segment],
+) -> Result<(Vec<FrameStat>, Vec<SegmentStats>)> {
     let h = analysis_height(info) as usize;
     let w = ANALYSIS_WIDTH as usize;
     let plane = w * h;
+    let dt = 1.0 / ANALYSIS_FPS;
     let mut args = base_args(file);
     args.extend(["-an", "-vf"].map(OsString::from));
     args.push(format!("fps=5,scale={ANALYSIS_WIDTH}:{h},format=yuv444p").into());
@@ -402,6 +534,8 @@ fn scan_video(t: &Tools, file: &Path, info: &MediaInfo) -> Result<Vec<FrameStat>
         let mut buf = vec![0u8; plane * 3];
         let mut prev_y: Option<Vec<u8>> = None;
         let mut stats = Vec::new();
+        let mut window: Vec<(usize, Planes)> = Vec::new();
+        let mut seg_out: Vec<Option<SegmentStats>> = vec![None; segs.len()];
         loop {
             let n = read_full(out, &mut buf)?;
             if n < buf.len() {
@@ -437,8 +571,46 @@ fn scan_video(t: &Tools, file: &Path, info: &MediaInfo) -> Result<Vec<FrameStat>
                 Some(p) => p.copy_from_slice(y),
                 None => prev_y = Some(y.to_vec()),
             }
+            let idx = stats.len() - 1;
+            window.push((
+                idx,
+                Planes {
+                    w,
+                    h,
+                    y: y.to_vec(),
+                    u: u.to_vec(),
+                    v: v.to_vec(),
+                },
+            ));
+            // Abschnitte, deren Ende dieses Bild erreicht hat, sind vollständig.
+            let ts = idx as f64 * dt;
+            for (k, seg) in segs.iter().enumerate() {
+                if seg_out[k].is_none() && ts >= seg.end - 1e-9 {
+                    seg_out[k] = Some(segment_stats_planes(
+                        seg,
+                        &frames_of(&window, seg, dt),
+                        &table,
+                    ));
+                }
+            }
+            // Nur Bilder behalten, die ein offener Abschnitt noch braucht (und das letzte).
+            let keep = segs
+                .iter()
+                .zip(&seg_out)
+                .filter(|(_, o)| o.is_none())
+                .map(|(s, _)| (s.start / dt).floor().max(0.0) as usize)
+                .min()
+                .unwrap_or(idx);
+            window.retain(|(i, _)| *i >= keep.min(idx));
         }
-        Ok(stats)
+        let segments = segs
+            .iter()
+            .zip(seg_out)
+            .map(|(seg, o)| {
+                o.unwrap_or_else(|| segment_stats_planes(seg, &frames_of(&window, seg, dt), &table))
+            })
+            .collect();
+        Ok((stats, segments))
     })
 }
 

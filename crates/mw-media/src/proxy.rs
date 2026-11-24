@@ -102,10 +102,16 @@ mod tests {
     #[test]
     fn hdr_scales_down_before_the_float_tonemap_chain() {
         let land = vf(&info(3840, 2160, true));
-        assert!(land.starts_with("scale=-2:720:flags=bicubic,zscale=t=linear"), "{land}");
+        assert!(
+            land.starts_with("scale=-2:720:flags=bicubic,zscale=t=linear"),
+            "{land}"
+        );
         assert!(land.ends_with("format=yuv420p"), "{land}");
         let port = vf(&info(2160, 3840, true));
-        assert!(port.starts_with("scale=720:-2:flags=bicubic,zscale="), "{port}");
+        assert!(
+            port.starts_with("scale=720:-2:flags=bicubic,zscale="),
+            "{port}"
+        );
     }
 
     #[test]
