@@ -1,8 +1,9 @@
 import { CircleCheck, TriangleAlert } from 'lucide-react';
 import { useRef, type KeyboardEvent } from 'react';
 import type { VideoSpec } from '../../domain/assignments/types';
+import { removeTransition, setTransitionDuration } from '../../domain/timeline/ops';
 import { withFormat } from '../../domain/timeline/sequence';
-import type { Clip, Sequence } from '../../domain/timeline/types';
+import type { Clip, Sequence, Transition } from '../../domain/timeline/types';
 import { useProject } from '../../state/projectStore';
 import { IntField, Slider } from './controls';
 import { ColorPanel, TitlePanel, onKind, patchClip, primaryClip } from './inspectorParts';
@@ -31,10 +32,12 @@ type Props = { spec: VideoSpec | null; playhead: () => number };
 export function Inspector({ spec, playhead }: Props) {
   const seq = useProject((s) => s.seq)!;
   const selection = useWerkstatt((s) => s.selection);
+  const transitionSel = useWerkstatt((s) => s.transitionSel);
   const tab = useWerkstatt((s) => s.inspectorTab);
   const setTab = useWerkstatt((s) => s.setInspectorTab);
   const tabRefs = useRef(new Map<InspectorTab, HTMLButtonElement>());
   const primary = primaryClip(seq, selection);
+  const transition = transitionSel ? seq.transitions.find((t) => t.id === transitionSel) : undefined;
 
   const onTabKey = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
@@ -70,7 +73,7 @@ export function Inspector({ spec, playhead }: Props) {
         ))}
       </div>
       <div className="insp-panel" role="tabpanel" id={`insp-panel-${tab}`} aria-labelledby={`insp-tab-${tab}`}>
-        {tab === 'clip' && <ClipPanel seq={seq} clip={primary} />}
+        {tab === 'clip' && (transition ? <TransitionPanel seq={seq} t={transition} /> : <ClipPanel seq={seq} clip={primary} />)}
         {tab === 'farbe' && <ColorPanel clip={onKind(seq, primary, 'video')} />}
         {tab === 'titel' && <TitlePanel clip={primary} playhead={playhead} />}
         {tab === 'sequenz' && <SequencePanel seq={seq} spec={spec} />}
@@ -122,6 +125,35 @@ function ClipPanel({ seq, clip }: { seq: Sequence; clip: Clip | null }) {
           <p className="insp-hint">Kurze Blenden an Tonschnitten verhindern Klicks.</p>
         </>
       )}
+    </>
+  );
+}
+
+/** Überblendung/Ton-Blende: Dauer in Bildern (über die Schnitt-Operation, also auf die Überhänge gekürzt), entfernen. */
+function TransitionPanel({ seq, t }: { seq: Sequence; t: Transition }) {
+  const name = t.kind === 'dissolve' ? 'Überblendung' : 'Ton-Blende';
+  const track = seq.tracks.find((x) => x.id === t.trackId)?.name ?? t.trackId;
+  const remove = () => {
+    if (useProject.getState().apply((s) => removeTransition(s, t.id))) useWerkstatt.getState().selectTransition(null);
+  };
+  return (
+    <>
+      <p className="insp-name">
+        {name} ({t.kind === 'dissolve' ? 'Cross Dissolve' : 'Crossfade'}) · {track}
+      </p>
+      <IntField
+        label="Dauer (Bilder)"
+        value={t.duration}
+        min={1}
+        max={Math.round(10 * seq.fps)}
+        onChange={(v) => useProject.getState().apply((s, media) => setTransitionDuration(s, media, t.id, v), { coalesce: `transition:${t.id}` })}
+      />
+      <p className="insp-hint">Mehr als das Material vor und nach dem Schnitt hergibt, geht nicht: Die Dauer wird dann gekürzt.</p>
+      <div className="insp-row">
+        <button type="button" className="btn btn-small" onClick={remove}>
+          {name} entfernen
+        </button>
+      </div>
     </>
   );
 }

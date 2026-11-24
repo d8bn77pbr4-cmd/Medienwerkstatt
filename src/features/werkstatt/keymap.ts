@@ -95,11 +95,34 @@ export function matchKey(e: KeyLike): KeyBinding | null {
   return null;
 }
 
-/** Fokus in einem Eingabefeld, Textbereich, einer Auswahlliste oder einem editierbaren Bereich. */
+/** Eingabe-Typen, in denen getippt wird (ohne Typ = text). */
+const TEXT_INPUTS = new Set(['text', 'search', 'number', 'url', 'email', 'password', 'tel']);
+
+const asElement = (t: EventTarget | null): HTMLElement | null =>
+  t && typeof (t as HTMLElement).tagName === 'string' ? (t as HTMLElement) : null;
+
+/**
+ * Fokus in einer Texteingabe (Textfeld, Zahl, Textbereich, Auswahlliste, editierbarer Bereich): dort gibt es
+ * keine Kürzel. Regler, Farbwähler, Häkchen, Optionsfelder und Knöpfe sperren Kürzel nicht.
+ */
 export function isTypingTarget(t: EventTarget | null): boolean {
-  if (!t || typeof (t as HTMLElement).tagName !== 'string') return false;
-  const el = t as HTMLElement;
-  return el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable === true;
+  const el = asElement(t);
+  if (!el) return false;
+  if (el.tagName === 'INPUT') return TEXT_INPUTS.has((el as HTMLInputElement).type || 'text');
+  return el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable === true;
+}
+
+const ARROWS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+
+/** Tasten, die ein fokussiertes Bedienelement selbst braucht (Regler: Pfeile/Pos1/Ende/Bild; Knöpfe: Leertaste/Eingabe). */
+export function ownsKey(t: EventTarget | null, key: string): boolean {
+  const el = asElement(t);
+  if (!el) return false;
+  const type = el.tagName === 'INPUT' ? (el as HTMLInputElement).type : el.tagName === 'BUTTON' ? 'button' : '';
+  if (type === 'range') return [...ARROWS, 'Home', 'End', 'PageUp', 'PageDown'].includes(key);
+  if (type === 'radio') return ARROWS.includes(key) || key === ' ';
+  if (['checkbox', 'color', 'button', 'submit', 'reset', 'file'].includes(type)) return key === ' ' || key === 'Enter';
+  return false;
 }
 
 export const bindingFor = (command: CommandId): KeyBinding | undefined => KEYMAP.find((b) => b.command === command);

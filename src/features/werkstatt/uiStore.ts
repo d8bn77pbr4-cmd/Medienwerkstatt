@@ -16,6 +16,8 @@ export interface WerkstattUi {
   tool: Tool;
   snapping: boolean;
   selection: string[];
+  /** Gewählte Überblendung (schließt eine Clip-Auswahl aus). */
+  transitionSel: string | null;
   targets: { video: TrackId; audio: TrackId };
   /** Zoom in Pixeln je Sekunde, Verschiebung in Bildern. */
   pxPerSec: number;
@@ -35,6 +37,7 @@ export interface WerkstattUi {
   toggleSnapping(): void;
   select(ids: string[], mode?: 'replace' | 'add'): void;
   clearSelection(): void;
+  selectTransition(id: string | null): void;
   setTarget(kind: 'video' | 'audio', id: TrackId): void;
   setZoom(pxPerSec: number, scroll?: number): void;
   setScroll(scroll: number): void;
@@ -58,6 +61,7 @@ const initial = () => ({
   tool: 'select' as Tool,
   snapping: true,
   selection: [] as string[],
+  transitionSel: null as string | null,
   targets: { video: 'V1', audio: 'A1' },
   pxPerSec: DEFAULT_PX_PER_SEC,
   scroll: 0,
@@ -76,14 +80,15 @@ export const useWerkstatt = create<WerkstattUi>()((set, get) => ({
   setTool: (tool) => set({ tool }),
   toggleSnapping: () => set({ snapping: !get().snapping }),
   select: (ids, mode = 'replace') => {
-    if (mode === 'replace') return set({ selection: [...new Set(ids)] });
+    if (mode === 'replace') return set({ selection: [...new Set(ids)], transitionSel: null });
     const cur = new Set(get().selection);
     // ⇧: hinzufügen; sind alle schon gewählt, abwählen
     if (ids.length && ids.every((id) => cur.has(id))) for (const id of ids) cur.delete(id);
     else for (const id of ids) cur.add(id);
-    set({ selection: [...cur] });
+    set({ selection: [...cur], transitionSel: null });
   },
-  clearSelection: () => (get().selection.length ? set({ selection: [] }) : undefined),
+  clearSelection: () => (get().selection.length || get().transitionSel ? set({ selection: [], transitionSel: null }) : undefined),
+  selectTransition: (id) => set({ transitionSel: id, selection: [], ...(id ? { inspectorTab: 'clip' as InspectorTab } : {}) }),
   setTarget: (kind, id) => set({ targets: { ...get().targets, [kind]: id } }),
   setZoom: (pxPerSec, scroll) =>
     set({ pxPerSec: Math.min(MAX_PX_PER_SEC, Math.max(MIN_PX_PER_SEC, pxPerSec)), ...(scroll !== undefined ? { scroll: Math.max(0, scroll) } : {}) }),

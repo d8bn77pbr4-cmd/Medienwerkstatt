@@ -18,7 +18,9 @@ export function Werkstatt() {
   );
   const status = useProject((s) => s.status);
   const loadError = useProject((s) => s.loadError);
-  const openedId = useProject((s) => s.assignment?.id);
+  const opened = useProject((s) => s.assignment);
+  const openedId = opened?.id;
+  const switchError = useProject((s) => s.switchError);
   const open = useProject((s) => s.open);
 
   const id = assignment?.id;
@@ -41,6 +43,22 @@ export function Werkstatt() {
     );
   }
   const heading = `Auftrag #${assignment.number}: ${assignment.title}`;
+  if (switchError && opened && openedId !== assignment.id) {
+    // Der offene Stand ließ sich nicht sichern: Er bleibt offen (Wiederholung läuft), kein Wechsel.
+    return (
+      <Empty title={heading} text={`Auftrag #${opened.number} hat noch ungesicherte Änderungen.`}>
+        <p className="ws-warn" role="alert">
+          {switchError}
+        </p>
+        <button type="button" className="btn btn-primary" onClick={() => void open(assignment)}>
+          Erneut versuchen
+        </button>
+        <button type="button" className="btn" onClick={() => navigate('/', { state: { assignmentId: opened.id } })}>
+          Zurück zu Auftrag #{opened.number}
+        </button>
+      </Empty>
+    );
+  }
   if (openedId !== assignment.id || status === 'loading' || status === 'idle') return <Empty title={heading} text="Projekt wird geöffnet …" />;
   if (status === 'noVideo') {
     const research = assignment.deliverables.find((d) => d.kind === 'research');

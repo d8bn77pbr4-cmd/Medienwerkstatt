@@ -76,7 +76,7 @@ export function MediaBin({ seqFps, loadedId, onLoad }: Props) {
       {media.length === 0 ? (
         <p className="bin-empty">Noch keine Medien. Importiere Clips von der Platte{over ? '' : ' oder ziehe sie hierher'}.</p>
       ) : (
-        <ul className="bin-list">
+        <ul className="bin-list" role="list">
           {media.map((m) => {
             const warnings = mediaWarnings(m, seqFps);
             const p = progress[m.id];

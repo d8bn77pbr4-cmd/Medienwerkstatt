@@ -58,6 +58,9 @@ test('Auftrag öffnen → Import → Einstellungsgröße → Einfügen → Rasie
   await expect(page.getByRole('region', { name: 'Quelle-Monitor' })).toContainText('e2e-clip.webm');
   await page.keyboard.press(',');
   await expect(clipList(page)).toHaveCount(2);
+  // explizite Listen-Rolle (WebKit verwirft sie bei list-style: none)
+  await expect(page.getByRole('list', { name: 'Clips in der Timeline' })).toHaveAttribute('role', 'list');
+  await expect(bin.getByRole('list')).toHaveAttribute('role', 'list');
   await expect(page.getByRole('button', { name: 'V1 · e2e-clip.webm · 00:00:00:00 bis 00:00:05:00' })).toBeAttached();
   await expect(page.getByRole('button', { name: 'A1 · e2e-clip.webm · 00:00:00:00 bis 00:00:05:00' })).toBeAttached();
   await expect(seqLength(page)).toHaveText('00:00:05:00');
@@ -175,6 +178,64 @@ test('Kürzel greifen nicht, solange ein Eingabefeld Fokus hat', async ({ page }
   await line1.press('c');
   await expect(page.getByRole('button', { name: /^Rasierklinge/ })).toHaveAttribute('aria-pressed', 'false');
   await expect(line1).toHaveValue('Annac');
+
+  // Schriftfamilie (Spec §7.1) ändert den Titel-Clip – ein Verlaufsschritt
+  const font = page.getByLabel('Schrift', { exact: true });
+  await expect(font).toHaveValue('Helvetica Neue');
+  await font.selectOption('Georgia');
+  await expect(font).toHaveValue('Georgia');
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await page.keyboard.press('Meta+z');
+  await expect(font).toHaveValue('Helvetica Neue');
+
+  // Regler (range) sperren keine Kürzel; Pfeile bleiben beim Regler
+  const posX = page.getByLabel('Position waagerecht');
+  const before = await posX.inputValue();
+  await posX.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(posX).not.toHaveValue(before);
+  await expect(programTimecode(page)).toHaveText('00:00:05:00');
+  await page.keyboard.press('c');
+  await expect(page.getByRole('button', { name: /^Rasierklinge/ })).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('Überblendung: per Klick oder Liste wählen, Dauer im Inspektor (auf Überhang gekürzt), entfernen', async ({ page }) => {
+  await openFromAuftraege(page);
+  const bin = page.getByRole('region', { name: 'Medienbibliothek' });
+  await bin.getByRole('button', { name: 'Importieren' }).click();
+  // Clip 1: 0–2 s (3 s Überhang hinten), Clip 2 ab 1 s (25 Bilder Überhang vorn)
+  await bin.getByRole('button', { name: 'e2e-clip.webm', exact: true }).dblclick();
+  await page.keyboard.press('i');
+  for (let i = 0; i < 10; i++) await page.keyboard.press('Shift+ArrowRight');
+  await page.keyboard.press('o');
+  await page.keyboard.press(',');
+  await bin.getByRole('button', { name: 'e2e-clip2.webm', exact: true }).dblclick();
+  for (let i = 0; i < 5; i++) await page.keyboard.press('Shift+ArrowRight');
+  await page.keyboard.press('i');
+  await page.keyboard.press(',');
+  await expect(seqLength(page)).toHaveText('00:00:06:00');
+
+  await page.keyboard.press('Meta+d');
+  const entry = page.getByRole('button', { name: /^Überblendung V1 · \d+ Bilder$/ });
+  await expect(entry).toHaveAccessibleName('Überblendung V1 · 25 Bilder');
+
+  // Klick auf die Überblendung in der Zeichenfläche (neben dem Schnitt) wählt sie
+  await clickTimeline(page, 42, Y_V1);
+  await expect(entry).toHaveAttribute('aria-pressed', 'true');
+  const dur = page.getByLabel('Dauer (Bilder)');
+  await expect(dur).toHaveValue('25');
+
+  // zu lang → auf den verfügbaren Überhang (2 × 25 Bilder) gekürzt
+  await dur.fill('1000');
+  await expect(entry).toHaveAccessibleName('Überblendung V1 · 50 Bilder');
+  await expect(dur).toHaveValue('50');
+  await dur.fill('12');
+  await expect(entry).toHaveAccessibleName('Überblendung V1 · 12 Bilder');
+
+  await page.getByRole('button', { name: 'Überblendung entfernen' }).click();
+  await expect(entry).toHaveCount(0);
+  await page.keyboard.press('Meta+z');
+  await expect(entry).toHaveAccessibleName('Überblendung V1 · 12 Bilder');
 });
 
 test('Tastenkürzel-Übersicht (⌘/): Tabelle, Fokus bleibt im Dialog, Esc schließt', async ({ page }) => {

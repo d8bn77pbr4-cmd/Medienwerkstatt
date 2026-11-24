@@ -7,6 +7,7 @@ import { newSequence } from '../domain/timeline/sequence';
 import type { MediaItem, Project, Sequence } from '../domain/timeline/types';
 
 export const PROJECT_SAVE_DEBOUNCE_MS = 2000;
+export const SWITCH_ERROR = 'Wechsel nicht möglich – Projekt konnte nicht gespeichert werden';
 
 export type ProjectStatus = 'idle' | 'loading' | 'ready' | 'noVideo' | 'error';
 export type SeqOp = (seq: Sequence, media: MediaItem[]) => Sequence;
@@ -27,8 +28,14 @@ export interface ProjectStore {
   /** Proxy-Fortschritt 0–1 je Medium, solange er läuft. */
   proxyProgress: Record<string, number>;
   importError: string | null;
-  /** Öffnet das Projekt des Auftrags (legt es bei Bedarf an). */
-  open(a: Assignment, backend?: Backend): Promise<void>;
+  /** Wechsel zu einem anderen Auftrag abgelehnt, weil der offene Stand nicht gesichert werden konnte. */
+  switchError: string | null;
+  /**
+   * Öffnet das Projekt des Auftrags (legt es bei Bedarf an). Ungesicherte Änderungen eines anderen
+   * offenen Projekts werden vorher gesichert; schlägt das fehl, bleibt das alte Projekt offen,
+   * `switchError` ist gesetzt und das Ergebnis ist `false`.
+   */
+  open(a: Assignment, backend?: Backend): Promise<boolean>;
   import(paths: string[]): Promise<MediaItem[]>;
   setShotSize(mediaId: string, s: ShotSize | null): void;
   /** Bearbeitung der aktiven Sequenz als Verlaufsschritt; `coalesce` fasst eine Geste (Regler) zu einem Schritt zusammen. */
@@ -47,7 +54,7 @@ let history: History<Sequence> | null = null;
 let timer: ReturnType<typeof setTimeout> | null = null;
 let dirty = false;
 let gesture: string | null = null;
-let inFlight: { id: string; promise: Promise<void> } | null = null;
+let inFlight: { id: string; promise: Promise<boolean> } | null = null;
 /** Zählt Öffnungen hoch: verspätete Ergebnisse eines älteren `open` werden verworfen. */
 let openToken = 0;
 
@@ -84,6 +91,7 @@ const EMPTY = {
   restoredFromBackup: false,
   proxyProgress: {},
   importError: null,
+  switchError: null,
 };
 
 export const useProject = create<ProjectStore>()((set, get) => {
@@ -178,12 +186,26 @@ export const useProject = create<ProjectStore>()((set, get) => {
 
     open(a, b = getBackend()) {
       const cur = get();
-      if (cur.assignment?.id === a.id && cur.status === 'ready' && backend === b) return Promise.resolve();
+      if (cur.assignment?.id === a.id && cur.status === 'ready' && backend === b) {
+        if (cur.switchError) set({ switchError: null });
+        return Promise.resolve(true);
+      }
       if (inFlight && inFlight.id === a.id) return inFlight.promise;
-      // Wechsel des Auftrags: offenen Stand vorher sichern.
-      const before = dirty ? flush() : Promise.resolve();
       const token = ++openToken;
-      const promise = before.then(() => doOpen(a, b, token)).finally(() => {
+      const run = async (): Promise<boolean> => {
+        // Wechsel des Auftrags: offenen Stand vorher sichern. Gelingt das nicht, nicht wechseln –
+        // sonst gingen die Änderungen verloren (Zeitgeber, „dirty“ und Hinweis bleiben).
+        if (dirty) {
+          await flush();
+          if (dirty) {
+            if (token === openToken) set({ switchError: SWITCH_ERROR });
+            return false;
+          }
+        }
+        await doOpen(a, b, token);
+        return token === openToken;
+      };
+      const promise = run().finally(() => {
         if (inFlight?.promise === promise) inFlight = null;
       });
       inFlight = { id: a.id, promise };

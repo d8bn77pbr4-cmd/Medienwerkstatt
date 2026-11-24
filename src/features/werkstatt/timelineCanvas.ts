@@ -23,6 +23,7 @@ export type Row = { trackId: TrackId; name: Track['name']; kind: Track['kind']; 
 export type Hit =
   | { area: 'ruler'; frame: Frames }
   | { area: 'clip'; clipId: string; trackId: TrackId; zone: 'body' | 'in' | 'out'; frame: number }
+  | { area: 'transition'; transitionId: string; trackId: TrackId }
   | { area: 'track'; trackId: TrackId; frame: number }
   | { area: 'none' };
 
@@ -62,6 +63,8 @@ export function hitTest(seq: Sequence, rows: Row[], view: View, x: number, y: nu
   const row = rowAtY(rows, y);
   if (!row) return { area: 'none' };
   const frame = xToFrame(x, view);
+  const tr = transitionAt(seq, row.trackId, x, view);
+  if (tr) return { area: 'transition', transitionId: tr, trackId: row.trackId };
   const clips = clipsOn(seq, row.trackId);
   const edgeOf = (c: Clip) => Math.min(EDGE_PX, (c.duration * view.pxPerFrame) / 3);
   const inside = clips.find((c) => c.start <= frame && frame < clipEnd(c));
@@ -80,6 +83,24 @@ export function hitTest(seq: Sequence, rows: Row[], view: View, x: number, y: nu
     if (dIn > 0 && dIn <= EDGE_PX) return { area: 'clip', clipId: c.id, trackId: row.trackId, zone: 'in', frame };
   }
   return { area: 'track', trackId: row.trackId, frame };
+}
+
+/** Lage einer Überblendung in Bildern: mittig auf dem Schnitt (wie im Export). */
+export function transitionSpan(seq: Sequence, t: Sequence['transitions'][number]): { from: number; to: number; cut: Frames } | null {
+  const r = seq.clips.find((c) => c.id === t.rightClipId);
+  return r ? { from: r.start - t.duration / 2, to: r.start + t.duration / 2, cut: r.start } : null;
+}
+
+/** Überblendung unter x auf der Spur; direkt am Schnitt (Greifbreite) gewinnt der Trimm-Griff. */
+function transitionAt(seq: Sequence, trackId: TrackId, x: number, view: View): string | null {
+  for (const t of seq.transitions) {
+    if (t.trackId !== trackId) continue;
+    const span = transitionSpan(seq, t);
+    if (!span) continue;
+    const [a, b] = [frameToX(span.from, view), frameToX(span.to, view)];
+    if (x >= a && x <= b && Math.abs(x - frameToX(span.cut, view)) > EDGE_PX) return t.id;
+  }
+  return null;
 }
 
 /** Nächster Schnitt zwischen zwei aneinanderstoßenden Clips der Spur innerhalb der Greifbreite (Rollen). */
@@ -145,6 +166,8 @@ export type DrawInput = {
   height: number;
   playhead: Frames;
   selection: ReadonlySet<string>;
+  /** Gewählte Überblendung (Akzent-Rahmen). */
+  selectedTransition: string | null;
   names: ReadonlyMap<string, string>;
   /** Senkrechte Einrast-Linie (Bild) während eines Zuges. */
   snapAt: Frames | null;
@@ -274,10 +297,10 @@ function drawRows(ctx: CanvasRenderingContext2D, d: DrawInput): void {
     for (const c of d.seq.clips) if (c.trackId === row.trackId) drawClip(ctx, d, row, c);
     for (const t of d.seq.transitions) {
       if (t.trackId !== row.trackId) continue;
-      const r = d.seq.clips.find((c) => c.id === t.rightClipId);
-      if (!r) continue;
-      const a = frameToX(r.start - t.duration / 2, d.view);
-      const b = frameToX(r.start + t.duration / 2, d.view);
+      const span = transitionSpan(d.seq, t);
+      if (!span) continue;
+      const a = frameToX(span.from, d.view);
+      const b = frameToX(span.to, d.view);
       ctx.fillStyle = C.transition;
       ctx.fillRect(a, row.y + 3, b - a, row.h - 6);
       ctx.strokeStyle = C.clipText;
@@ -286,6 +309,11 @@ function drawRows(ctx: CanvasRenderingContext2D, d: DrawInput): void {
       ctx.moveTo(a, row.y + row.h - 4);
       ctx.lineTo(b, row.y + 4);
       ctx.stroke();
+      if (t.id === d.selectedTransition) {
+        ctx.strokeStyle = C.accent;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(a + 1, row.y + 4, Math.max(0, b - a - 2), row.h - 8);
+      }
     }
     if (row.locked) {
       ctx.strokeStyle = C.hatch;

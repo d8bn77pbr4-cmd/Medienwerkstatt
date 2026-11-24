@@ -1,6 +1,6 @@
 import { Eye, EyeOff, Lock, LockOpen, Maximize2, Volume2, VolumeX, ZoomIn, ZoomOut } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { Clip, Sequence, Track } from '../../domain/timeline/types';
+import type { Clip, Sequence, Track, Transition } from '../../domain/timeline/types';
 import { useProject } from '../../state/projectStore';
 import { COMMANDS, type CommandCtx } from './commands';
 import { tooltipFor } from './keymap';
@@ -19,6 +19,10 @@ export function clipLabel(c: Clip, track: string, names: ReadonlyMap<string, str
   return `${track} · ${name} · ${formatTimecode(c.start, fps)} bis ${formatTimecode(c.start + c.duration, fps)}`;
 }
 
+/** „Überblendung V1 · 25 Bilder“ / „Ton-Blende A1 · 10 Bilder“. */
+export const transitionLabel = (t: Transition, track: string): string =>
+  `${t.kind === 'dissolve' ? 'Überblendung' : 'Ton-Blende'} ${track} · ${t.duration} Bilder`;
+
 type Props = { engine: PlaybackEngine; ctx: CommandCtx };
 
 /** Timeline: Spurköpfe (DOM), Canvas-Zeichnung, zugängliche Clip-Liste. Abspielkopf und Schnitte springen (keine Animation). */
@@ -27,6 +31,7 @@ export function Timeline({ engine, ctx }: Props) {
   const media = useProject((s) => s.project?.media);
   const apply = useProject((s) => s.apply);
   const selection = useWerkstatt((s) => s.selection);
+  const transitionSel = useWerkstatt((s) => s.transitionSel);
   const targets = useWerkstatt((s) => s.targets);
   const pxPerSec = useWerkstatt((s) => s.pxPerSec);
   const scroll = useWerkstatt((s) => s.scroll);
@@ -44,8 +49,8 @@ export function Timeline({ engine, ctx }: Props) {
   const rows = useMemo(() => layoutRows(shown.tracks), [shown.tracks]);
   const view = useMemo(() => viewOf(pxPerSec, seq.fps, scroll), [pxPerSec, seq.fps, scroll]);
   const height = rowsHeight(rows);
-  const latest = useRef({ shown, rows, view, width, height, selection, snapAt: preview?.snapAt ?? null, names, seq });
-  latest.current = { shown, rows, view, width, height, selection, snapAt: preview?.snapAt ?? null, names, seq };
+  const latest = useRef({ shown, rows, view, width, height, selection, transitionSel, snapAt: preview?.snapAt ?? null, names, seq });
+  latest.current = { shown, rows, view, width, height, selection, transitionSel, snapAt: preview?.snapAt ?? null, names, seq };
 
   const draw = useCallback(() => {
     raf.current = 0;
@@ -61,7 +66,7 @@ export function Timeline({ engine, ctx }: Props) {
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     drawTimeline(g, {
       seq: l.shown, rows: l.rows, view: l.view, width: l.width, height: l.height, playhead: playhead.current,
-      selection: new Set(l.selection), names: l.names, snapAt: l.snapAt, fontFamily: getComputedStyle(c).fontFamily,
+      selection: new Set(l.selection), selectedTransition: l.transitionSel, names: l.names, snapAt: l.snapAt, fontFamily: getComputedStyle(c).fontFamily,
     });
   }, []);
   const requestDraw = useCallback(() => {
@@ -75,7 +80,7 @@ export function Timeline({ engine, ctx }: Props) {
     [],
   );
 
-  useEffect(requestDraw, [requestDraw, shown, rows, view, width, selection, preview, names]);
+  useEffect(requestDraw, [requestDraw, shown, rows, view, width, selection, transitionSel, preview, names]);
 
   useLayoutEffect(() => {
     const el = wrap.current;
@@ -196,7 +201,7 @@ export function Timeline({ engine, ctx }: Props) {
           />
         </div>
       </div>
-      <ul className="tl-clips" aria-label="Clips in der Timeline">
+      <ul className="tl-clips" role="list" aria-label="Clips in der Timeline">
         {listed.map((c) => (
           <li key={c.id}>
             <button
@@ -208,6 +213,13 @@ export function Timeline({ engine, ctx }: Props) {
               }}
             >
               {clipLabel(c, trackName(c.trackId), names, seq.fps)}
+            </button>
+          </li>
+        ))}
+        {seq.transitions.map((t) => (
+          <li key={t.id}>
+            <button type="button" aria-pressed={transitionSel === t.id} onClick={() => useWerkstatt.getState().selectTransition(t.id)}>
+              {transitionLabel(t, trackName(t.trackId))}
             </button>
           </li>
         ))}

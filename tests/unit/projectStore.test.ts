@@ -238,3 +238,30 @@ describe('Medien', () => {
     expect(await store().import(['/fixtures/e2e-clip.webm'])).toEqual([]);
   });
 });
+
+describe('Auftragswechsel', () => {
+  it('scheitert das Sichern vor dem Wechsel, bleibt das alte Projekt offen und nichts geht verloren', async () => {
+    vi.useFakeTimers();
+    const b = new MockBackend();
+    await store().open(assignment([film()], 'A03'), b);
+    const save = vi.spyOn(b, 'saveProject').mockRejectedValue(new Error('voll'));
+    store().apply((s) => ({ ...s, inPoint: 7 }));
+    expect(await store().open(assignment([film()], 'A04'), b)).toBe(false);
+    expect(store().assignment!.id).toBe('A03');
+    expect(store().status).toBe('ready');
+    expect(store().seq!.inPoint).toBe(7);
+    expect(store().saveError).toBe(true);
+    expect(store().switchError).toBe('Wechsel nicht möglich – Projekt konnte nicht gespeichert werden');
+    // die Wiederholung läuft weiter
+    const calls = save.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(PROJECT_SAVE_DEBOUNCE_MS);
+    expect(save.mock.calls.length).toBe(calls + 1);
+    expect(store().saveError).toBe(true);
+    // Platte wieder frei: Wechsel gelingt, der alte Stand ist gesichert
+    save.mockRestore();
+    expect(await store().open(assignment([film()], 'A04'), b)).toBe(true);
+    expect(store().assignment!.id).toBe('A04');
+    expect(store().switchError).toBeNull();
+    expect((await b.loadProject('/mock/Medienwerkstatt/A03')).value!.sequences[0].inPoint).toBe(7);
+  });
+});

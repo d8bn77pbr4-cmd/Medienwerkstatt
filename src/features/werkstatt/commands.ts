@@ -3,6 +3,7 @@ import {
   addTransition,
   insertEdit,
   liftDelete,
+  removeTransition,
   rippleDelete,
   rippleTrimToPlayhead,
   toggleLink,
@@ -137,6 +138,14 @@ function withSelection(fn: (seq: Sequence, ids: string[], media: MediaItem[]) =>
   if (project().apply((s, media) => fn(s, ids, media)) && clear) ui().clearSelection();
 }
 
+/** ⌫/⇧⌫ mit gewählter Überblendung: nur sie entfernen. */
+function deleteTransition(): boolean {
+  const id = ui().transitionSel;
+  if (!id) return false;
+  if (project().apply((s) => removeTransition(s, id))) ui().selectTransition(null);
+  return true;
+}
+
 function zoom(factor: number): void {
   const { pxPerSec, setZoom } = ui();
   setZoom(pxPerSec * factor);
@@ -180,8 +189,8 @@ export const COMMANDS: Record<CommandId, (ctx: CommandCtx) => void> = {
     const at = ctx.program?.frame;
     if (at !== undefined) project().apply((s, media) => rippleTrimToPlayhead(s, media, at, 'next'));
   },
-  'edit.rippleDelete': () => withSelection((s, ids) => rippleDelete(s, ids), true),
-  'edit.lift': () => withSelection((s, ids) => liftDelete(s, ids), true),
+  'edit.rippleDelete': () => deleteTransition() || withSelection((s, ids) => rippleDelete(s, ids), true),
+  'edit.lift': () => deleteTransition() || withSelection((s, ids) => liftDelete(s, ids), true),
   'edit.link': () => withSelection((s, ids) => toggleLink(s, ids)),
   'edit.dissolve': (ctx) => transition(ctx, 'video'),
   'edit.audioFade': (ctx) => transition(ctx, 'audio'),

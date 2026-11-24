@@ -100,6 +100,14 @@ describe('hitTest', () => {
     expect(h).toMatchObject({ clipId: 't', zone: 'body' });
     expect(EDGE_PX).toBeGreaterThan(3);
   });
+  it('Überblendung ist anklickbar; direkt am Schnitt bleibt der Trimm-Griff', () => {
+    const t = { ...s, transitions: [{ id: 'tr', trackId: 'V1', leftClipId: 'a', rightClipId: 'b', duration: 20, kind: 'dissolve' as const }] };
+    // Überblendung 40–60 → x 128–192, Schnitt bei x 160
+    expect(hitTest(t, rows, v, 140, yV1)).toEqual({ area: 'transition', transitionId: 'tr', trackId: 'V1' });
+    expect(hitTest(t, rows, v, 185, yV1)).toEqual({ area: 'transition', transitionId: 'tr', trackId: 'V1' });
+    expect(hitTest(t, rows, v, 158, yV1)).toMatchObject({ area: 'clip', clipId: 'a', zone: 'out' });
+    expect(hitTest(t, rows, v, 120, yV1)).toMatchObject({ area: 'clip', clipId: 'a', zone: 'body' });
+  });
   it('editPointNear findet den Schnitt zwischen zwei Clips (Rollen)', () => {
     expect(editPointNear(s, 'V1', 158, v)).toEqual({ leftId: 'a', rightId: 'b', frame: 50 });
     expect(editPointNear(s, 'V1', 100, v)).toBeNull();

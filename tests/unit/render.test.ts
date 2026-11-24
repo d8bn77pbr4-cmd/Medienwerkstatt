@@ -4,7 +4,7 @@ import { newSequence } from '../../src/domain/timeline/sequence';
 import type { Clip, ColorParams, ExportPresetId, MediaItem, Sequence, TitleParams } from '../../src/domain/timeline/types';
 import { applyColor } from '../../src/domain/render/color';
 import { buildCubeLut } from '../../src/domain/render/lut';
-import { renderTitle, type TitleCtx } from '../../src/domain/render/titles';
+import { TITLE_FONTS, renderTitle, type TitleCtx } from '../../src/domain/render/titles';
 import { buildExport, escapeFilterPath } from '../../src/domain/render/filtergraph';
 import { EXPORT_PRESETS, getPreset } from '../../src/domain/render/presets';
 
@@ -135,6 +135,16 @@ describe('renderTitle', () => {
     }
     expect(texts[0].font).toContain('Helvetica Neue');
     expect(texts[0].fillStyle).toBe('#ffffff');
+  });
+  it('Schriftfamilie aus TitleParams.font mit serifenloser Ausweichschrift; SF Pro als Systemschrift', () => {
+    expect(TITLE_FONTS).toEqual(['SF Pro', 'Helvetica Neue', 'Avenir Next', 'Georgia', 'Menlo']);
+    const g = fakeCtx();
+    renderTitle(tp({ font: 'Georgia' }), W, H, g.ctx);
+    const font = g.calls.find((c) => c.op === 'fillText')!.font;
+    expect(font).toMatch(/^600 [\d.]+px "Georgia", .*sans-serif$/);
+    const sf = fakeCtx();
+    renderTitle(tp({ font: 'SF Pro' }), W, H, sf.ctx);
+    expect(sf.calls.find((c) => c.op === 'fillText')!.font).toMatch(/"SF Pro Display".*-apple-system.*sans-serif$/);
   });
   it('Schriftgröße relativ zur Höhe', () => {
     const a = fakeCtx(), b = fakeCtx();

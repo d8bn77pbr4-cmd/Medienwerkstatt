@@ -1,4 +1,5 @@
 import { RotateCcw } from 'lucide-react';
+import { TITLE_FONTS } from '../../domain/render/titles';
 import { addTitle, setClipProps } from '../../domain/timeline/ops';
 import type { Clip, ColorParams, Sequence, TitleParams, TitleStyle } from '../../domain/timeline/types';
 import { useProject } from '../../state/projectStore';
@@ -100,6 +101,8 @@ export function TitlePanel({ clip, playhead }: { clip: Clip | null; playhead: ()
     if (created) useWerkstatt.getState().select([created.id]);
   };
   const set = (p: Partial<TitleParams>, key: string) => clip && title && patch(clip.id, { title: { ...title, ...p } }, `title-${key}`);
+  // Auswahllisten: jede Wahl ein eigener Verlaufsschritt.
+  const choose = (p: Partial<TitleParams>) => clip && title && useProject.getState().apply((s) => setClipProps(s, clip.id, { title: { ...title, ...p } }));
   return (
     <>
       <div className="insp-row" role="group" aria-label="Neuer Titel am Abspielkopf">
@@ -115,10 +118,21 @@ export function TitlePanel({ clip, playhead }: { clip: Clip | null; playhead: ()
         <>
           <div className="field">
             <label htmlFor="title-style">Vorlage</label>
-            <select id="title-style" value={title.style} onChange={(e) => set({ style: e.target.value as TitleStyle }, 'style')}>
+            <select id="title-style" value={title.style} onChange={(e) => choose({ style: e.target.value as TitleStyle })}>
               {STYLES.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="title-font">Schrift</label>
+            <select id="title-font" value={title.font} onChange={(e) => choose({ font: e.target.value })}>
+              {!(TITLE_FONTS as readonly string[]).includes(title.font) && <option value={title.font}>{title.font}</option>}
+              {TITLE_FONTS.map((f) => (
+                <option key={f} value={f}>
+                  {f}
                 </option>
               ))}
             </select>

@@ -17,7 +17,15 @@ export type TitleCtx = {
 /** Titel-sicherer Bereich: 90 % der Bildfläche. */
 const SAFE = 0.05;
 
-const fontOf = (family: string, px: number): string => `600 ${Math.round(px * 100) / 100}px "${family}", "Helvetica Neue", Helvetica, Arial, sans-serif`;
+/** Schriften des Titel-Editors (Systemschriften auf dem Mac). */
+export const TITLE_FONTS = ['SF Pro', 'Helvetica Neue', 'Avenir Next', 'Georgia', 'Menlo'] as const;
+
+/** „SF Pro“ ist die Systemschrift: im Web nur über ihre Teilnamen bzw. `-apple-system` erreichbar. */
+const familyOf = (family: string): string =>
+  family === 'SF Pro' ? '"SF Pro Display", "SF Pro Text", -apple-system, system-ui' : `"${family.replace(/["\\]/g, '')}"`;
+
+const fontOf = (family: string, px: number): string =>
+  `600 ${Math.round(px * 100) / 100}px ${familyOf(family)}, "Helvetica Neue", Helvetica, Arial, sans-serif`;
 
 /**
  * Zeichnet einen Titel transparent auf die Fläche (width × height). Schriftgröße `t.size` gilt

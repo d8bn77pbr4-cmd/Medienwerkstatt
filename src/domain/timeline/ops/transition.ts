@@ -27,3 +27,24 @@ export function addTransition(
   }, media);
   return dur < frames ? { seq: next, shortenedTo: dur } : { seq: next };
 }
+
+/**
+ * Dauer einer vorhandenen Überblendung ändern (Id bleibt). Läuft über `addTransition`, wird also auf die
+ * verfügbaren Überhänge gekürzt (`maxTransition`); gesperrte Spur oder unbekannte Id: unverändert.
+ */
+export function setTransitionDuration(seq: Sequence, media: MediaItem[], id: string, frames: Frames): Sequence {
+  const t = seq.transitions.find((x) => x.id === id);
+  if (!t || frames < 1 || isLocked(seq, t.trackId)) return seq;
+  const next = addTransition(seq, media, t.leftClipId, t.rightClipId, Math.round(frames), { idGen: () => id }).seq;
+  const after = next.transitions.find((x) => x.id === id);
+  return after && after.duration === t.duration ? seq : next;
+}
+
+/** Überblendung entfernen (nicht auf gesperrten Spuren). */
+export function removeTransition(seq: Sequence, id: string): Sequence {
+  const t = seq.transitions.find((x) => x.id === id);
+  if (!t || isLocked(seq, t.trackId)) return seq;
+  return edit(seq, (d) => {
+    d.transitions = d.transitions.filter((x) => x.id !== id);
+  });
+}

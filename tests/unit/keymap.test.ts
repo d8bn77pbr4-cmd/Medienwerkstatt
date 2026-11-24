@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { COMMANDS, type CommandCtx } from '../../src/features/werkstatt/commands';
-import { COMMAND_IDS, KEYMAP, bindingFor, comboIds, isTypingTarget, matchKey, tooltipFor } from '../../src/features/werkstatt/keymap';
+import { COMMAND_IDS, KEYMAP, bindingFor, comboIds, isTypingTarget, matchKey, ownsKey, tooltipFor } from '../../src/features/werkstatt/keymap';
 import { resetWerkstattForTests, useWerkstatt } from '../../src/features/werkstatt/uiStore';
 import { resetProjectForTests } from '../../src/state/projectStore';
 
@@ -108,6 +108,30 @@ describe('isTypingTarget', () => {
     for (const el of [input, area, select, div]) expect(isTypingTarget(el)).toBe(true);
     expect(isTypingTarget(document.createElement('button'))).toBe(false);
     expect(isTypingTarget(null)).toBe(false);
+  });
+
+  const input = (type: string | null) => {
+    const el = document.createElement('input');
+    if (type !== null) el.setAttribute('type', type);
+    return el;
+  };
+  it('nur Texteingaben sperren Kürzel; Regler, Farbe, Häkchen, Optionen und Knöpfe nicht', () => {
+    for (const t of [null, 'text', 'search', 'number', 'url', 'email', 'password', 'tel']) expect(isTypingTarget(input(t)), String(t)).toBe(true);
+    for (const t of ['range', 'color', 'checkbox', 'radio', 'button', 'submit', 'reset', 'file']) expect(isTypingTarget(input(t)), t).toBe(false);
+  });
+
+  it('Tasten, die ein Bedienelement selbst braucht, bleiben beim Element', () => {
+    const range = input('range');
+    for (const k of ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown']) expect(ownsKey(range, k), k).toBe(true);
+    for (const k of [' ', 'k', 'l', 'z', 'Backspace']) expect(ownsKey(range, k), k).toBe(false);
+    expect(ownsKey(input('checkbox'), ' ')).toBe(true);
+    expect(ownsKey(input('radio'), 'ArrowDown')).toBe(true);
+    expect(ownsKey(input('color'), ' ')).toBe(true);
+    expect(ownsKey(document.createElement('button'), ' ')).toBe(true);
+    expect(ownsKey(document.createElement('button'), 'Enter')).toBe(true);
+    expect(ownsKey(document.createElement('button'), 'c')).toBe(false);
+    expect(ownsKey(document.body, ' ')).toBe(false);
+    expect(ownsKey(null, ' ')).toBe(false);
   });
 });
 

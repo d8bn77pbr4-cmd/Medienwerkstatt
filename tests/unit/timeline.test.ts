@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { newSequence, withFormat } from '../../src/domain/timeline/sequence';
 import type { Clip, MediaItem, Sequence } from '../../src/domain/timeline/types';
 import {
-  addEditAll, addTitle, addTransition, insertEdit, liftDelete, moveClips, razor, rippleDelete,
-  rippleTrimToPlayhead, roll, setClipProps, toggleLink, trim,
+  addEditAll, addTitle, addTransition, insertEdit, liftDelete, moveClips, razor, removeTransition, rippleDelete,
+  rippleTrimToPlayhead, roll, setClipProps, setTransitionDuration, toggleLink, trim,
 } from '../../src/domain/timeline/ops';
 import { History } from '../../src/domain/timeline/history';
 import { snap, snapTargets } from '../../src/domain/timeline/snap';
@@ -267,6 +267,25 @@ describe('moveClips', () => {
     const r2 = moveClips(s, ['a'], 10, 0, { ignoreLinks: true });
     expect(r2.clips.find((c) => c.id === 'x')!.start).toBe(0);
     expect(moveClips(s, ['a'], 0, 1 + 5)).toBe(s);
+  });
+});
+
+describe('Überblendung bearbeiten', () => {
+  // a: Quelle 10 s, endet bei 2 s → 8 s Überhang; b startet bei 1 s → 1 s (25 Bilder) Überhang → höchstens 50 Bilder
+  const s0 = base([mkClip('a', 'V1', 0, 50), mkClip('b', 'V1', 50, 100, { sourceIn: 1 })]);
+  const withT = addTransition(s0, M, 'a', 'b', 10, { idGen: () => 't1' }).seq;
+  it('setTransitionDuration ändert die Dauer, behält die Id und kürzt auf den Überhang', () => {
+    const r = setTransitionDuration(withT, M, 't1', 30);
+    expect(r.transitions).toEqual([expect.objectContaining({ id: 't1', duration: 30, kind: 'dissolve' })]);
+    expect(setTransitionDuration(withT, M, 't1', 1000).transitions[0]).toMatchObject({ id: 't1', duration: 50 });
+    expect(setTransitionDuration(withT, M, 'fehlt', 30)).toBe(withT);
+    expect(setTransitionDuration(withT, M, 't1', 0)).toBe(withT);
+  });
+  it('removeTransition entfernt sie; gesperrte Spur bleibt unverändert', () => {
+    expect(removeTransition(withT, 't1').transitions).toEqual([]);
+    const locked = { ...withT, tracks: withT.tracks.map((t) => (t.id === 'V1' ? { ...t, locked: true } : t)) };
+    expect(removeTransition(locked, 't1')).toBe(locked);
+    expect(setTransitionDuration(locked, M, 't1', 30)).toBe(locked);
   });
 });
 

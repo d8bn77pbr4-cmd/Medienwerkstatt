@@ -3,7 +3,8 @@ import { moveClips, razor, roll, trim } from '../../domain/timeline/ops';
 import { snap, snapTargets } from '../../domain/timeline/snap';
 import type { Clip, Frames, Sequence } from '../../domain/timeline/types';
 import { useProject } from '../../state/projectStore';
-import { editPointNear, hitTest, rowAtY, snapDelta, snapThreshold, xToFrame, type Row, type View } from './timelineCanvas';
+import { editPointNear, hitTest, rowAtY, snapThreshold, xToFrame, type Row, type View } from './timelineCanvas';
+import { moveSnap, rollSnap, trimSnap } from './timelineDrag';
 import { useWerkstatt } from './uiStore';
 
 /** Ab dieser Zeigerbewegung wird aus einem Klick ein Zug (kein versehentliches Verschieben). */
@@ -20,8 +21,6 @@ type Drag =
 export type Preview = { seq: Sequence; snapAt: Frames | null } | null;
 export type Geometry = { seq: Sequence; rows: Row[]; view: View; playhead: Frames };
 
-const end = (c: Clip) => c.start + c.duration;
-
 /** Gewählter Clip samt verknüpften Partnern (außer mit ⌥). */
 export function withPartners(seq: Sequence, id: string, ignoreLinks: boolean): string[] {
   const c = seq.clips.find((x) => x.id === id);
@@ -29,11 +28,6 @@ export function withPartners(seq: Sequence, id: string, ignoreLinks: boolean): s
   if (ignoreLinks || !c.linkId) return [c.id];
   // Der angeklickte Clip zuerst: er ist der „primäre“ für den Inspektor.
   return [c.id, ...seq.clips.filter((x) => x.linkId === c.linkId && x.id !== c.id).map((x) => x.id)];
-}
-
-/** Ziele ohne die Kanten der bewegten Clips. */
-function targetsWithout(seq: Sequence, ids: Set<string>, playhead: Frames): Frames[] {
-  return snapTargets({ ...seq, clips: seq.clips.filter((c) => !ids.has(c.id)) }, playhead);
 }
 
 /**
@@ -76,6 +70,11 @@ export function useTimelinePointer(
     if (hit.area === 'ruler') {
       drag.current = { kind: 'scrub' };
       seekProgram(hit.frame);
+      return;
+    }
+    if (hit.area === 'transition') {
+      if (ui.tool !== 'razor') ui.selectTransition(hit.transitionId);
+      drag.current = null;
       return;
     }
     if (hit.area !== 'clip') {
@@ -134,8 +133,7 @@ export function useTimelinePointer(
       case 'move': {
         if (!d.started && Math.abs(x - d.x0) < DRAG_START_PX && rowAtY(rows, y)?.trackId === d.primary.trackId) return;
         d.started = true;
-        const moving = new Set(d.ids);
-        const s = snapDelta([d.primary.start, end(d.primary)], Math.round(frame - d.f0), targetsWithout(seq, moving, playhead), thr);
+        const s = moveSnap(seq, { ids: d.ids, primaryId: d.primary.id, ignoreLinks }, Math.round(frame - d.f0), playhead, thr);
         const row = rowAtY(rows, y);
         const same = seq.tracks.filter((t) => t.kind === rows.find((r) => r.trackId === d.primary.trackId)?.kind);
         const from = same.findIndex((t) => t.id === d.primary.trackId);
@@ -147,15 +145,14 @@ export function useTimelinePointer(
         return;
       }
       case 'trim': {
-        const edgeAt = d.edge === 'in' ? d.clip.start : end(d.clip);
-        const s = snapDelta([edgeAt], Math.round(frame - d.f0), targetsWithout(seq, new Set([d.clip.id]), playhead), thr);
         const { clip, edge, mode } = d;
+        const s = trimSnap(seq, { clipId: clip.id, edge, mode, ignoreLinks }, Math.round(frame - d.f0), playhead, thr);
         preview((q) => trim(q, media, clip.id, edge, s.delta, mode, { ignoreLinks }), seq, s.at);
         return;
       }
       case 'roll': {
-        const s = snapDelta([d.cut], Math.round(frame - d.f0), targetsWithout(seq, new Set([d.leftId, d.rightId]), playhead), thr);
         const { leftId, rightId } = d;
+        const s = rollSnap(seq, { leftId, rightId, cut: d.cut, ignoreLinks }, Math.round(frame - d.f0), playhead, thr);
         preview((q) => roll(q, media, leftId, rightId, s.delta, { ignoreLinks }), seq, s.at);
         return;
       }
