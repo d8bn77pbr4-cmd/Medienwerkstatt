@@ -10,12 +10,15 @@ import type { Evaluation } from '../domain/chef/types';
 import type { ResearchDoc } from '../domain/chef/research';
 import { loadRules } from '../domain/chef/rules';
 import type { Clock } from '../domain/time';
+import { prepareFrames, type GeminiPreparation } from './geminiFrames';
+import type { GeminiChoice } from './gemini';
 import { loadProjectFor } from './projectAccess';
 import { runSubmission } from './submission';
 
 export const SAVE_DEBOUNCE_MS = 2000;
 
 export type SelfChecks = { hookDone: boolean };
+export type { GeminiChoice };
 export type CorrectionResult = { ok: true; evaluation: Evaluation } | { ok: false; reason: CorrectionRefusal | 'busy' };
 
 export type InitOptions = {
@@ -37,12 +40,22 @@ export interface AppStore {
   tickNow(): void;
   saveResearch(assignmentId: string, deliverableId: string, doc: ResearchDoc): void;
   /** Abgabe prüfen, messen und bewerten (Spec §9.1); nur für offene Aufträge. */
-  submit(assignmentId: string, selfChecks: SelfChecks, onProgress?: (message: string) => void): Promise<Evaluation>;
+  submit(assignmentId: string, selfChecks: SelfChecks, onProgress?: (message: string) => void, gemini?: GeminiChoice): Promise<Evaluation>;
+  /**
+   * Standbilder für die Gemini-Vorschau. `null`, wenn Gemini nicht aktiv ist (aus, kein Schlüssel oder kein Modell):
+   * dann gibt es keine Einwilligungsfrage und keine Anfrage.
+   */
+  prepareGemini(assignmentId: string): Promise<GeminiPreparation | null>;
   /** Nachbessern (Spec §9.3): einmal, innerhalb von 24 h nach der ersten Bewertung, gedeckelt. */
-  correction(assignmentId: string, selfChecks: SelfChecks, onProgress?: (message: string) => void): Promise<CorrectionResult>;
+  correction(assignmentId: string, selfChecks: SelfChecks, onProgress?: (message: string) => void, gemini?: GeminiChoice): Promise<CorrectionResult>;
   /** Bewertung ab `showreelMinScore` in die Showreel-Merkliste legen oder wieder herausnehmen. */
   toggleShowreel(evaluationId: string): void;
   addVacation(v: Vacation): ReturnType<typeof canAddVacation>;
+  /** Urlaub mit diesem Beginn entfernen – nur künftige (bereits begonnene bleiben). */
+  removeVacation(start: number): void;
+  setTheme(theme: AppState['settings']['theme']): void;
+  setGeminiEnabled(enabled: boolean): void;
+  setGeminiModel(model: string | null): void;
   toggleChecklist(assignmentId: string, itemId: string): void;
   setDevTimeOffset(ms: number): void;
   dismissRestoredBanner(): void;
@@ -147,7 +160,7 @@ export const useApp = create<AppStore>()((set, get) => {
   };
 
   /** Messen, bewerten, Bewertung + Abgabe speichern, Status „bewertet“. */
-  const evaluateAndStore = async (assignmentId: string, selfChecks: SelfChecks, isCorrection: boolean, onProgress?: (m: string) => void): Promise<Evaluation> => {
+  const evaluateAndStore = async (assignmentId: string, selfChecks: SelfChecks, isCorrection: boolean, onProgress?: (m: string) => void, choice?: GeminiChoice): Promise<Evaluation> => {
     const clock = get().clock;
     const s = get().state;
     const a = s?.assignments.find((x) => x.id === assignmentId);
@@ -156,7 +169,10 @@ export const useApp = create<AppStore>()((set, get) => {
     const research: Record<string, ResearchDoc | null> = {};
     for (const d of a.deliverables) if (d.kind === 'research') research[d.id] = s.research[researchKey(a.id, d.id)] ?? null;
     const submittedAt = clock.now();
-    const evaluation = await runSubmission({ backend, rules: loadRules(), assignment: a, project, research, selfChecks, isCorrection, submittedAt, onProgress });
+    // Gemini läuft nur, wenn es in den Einstellungen eingeschaltet ist; ohne Entscheidung gibt es keine Anfrage.
+    const g = s.settings.gemini;
+    const gemini = g.enabled && choice && (g.model || !choice.consent) ? { model: g.model ?? '', choice } : undefined;
+    const evaluation = await runSubmission({ backend, rules: loadRules(), assignment: a, project, research, selfChecks, isCorrection, submittedAt, gemini, onProgress });
     commit((cur) => ({
       ...cur,
       evaluations: [...cur.evaluations, evaluation],
@@ -246,17 +262,30 @@ export const useApp = create<AppStore>()((set, get) => {
       commit((s) => ({ ...s, research: { ...s.research, [researchKey(assignmentId, deliverableId)]: doc } }));
     },
 
-    submit(assignmentId, selfChecks, onProgress) {
+    async prepareGemini(assignmentId) {
+      const s = get().state;
+      const a = s?.assignments.find((x) => x.id === assignmentId);
+      if (!s || !a || !backend || !s.settings.gemini.enabled || !s.settings.gemini.model) return null;
+      try {
+        if (!(await backend.gemini.hasKey())) return null;
+      } catch {
+        return null;
+      }
+      const { project } = await loadProjectFor(a, backend);
+      return prepareFrames(backend, a, project);
+    },
+
+    submit(assignmentId, selfChecks, onProgress, gemini) {
       // Läuft für diesen Auftrag schon eine Abgabe, bekommt ein zweiter Aufruf dasselbe Ergebnis (nie zwei Bewertungen).
       const running = inFlight.get(assignmentId);
       if (running) return running.kind === 'submit' ? (running.promise as Promise<Evaluation>) : Promise.reject(new Error('Für diesen Auftrag läuft gerade eine Korrektur.'));
       const a = get().state?.assignments.find((x) => x.id === assignmentId);
       if (!a) return Promise.reject(new Error('Auftrag nicht gefunden.'));
       if (a.status !== 'open') return Promise.reject(new Error('Dieser Auftrag ist nicht mehr offen. Zum Verbessern nutze „Nachbessern“.'));
-      return track(assignmentId, 'submit', evaluateAndStore(a.id, selfChecks, false, onProgress));
+      return track(assignmentId, 'submit', evaluateAndStore(a.id, selfChecks, false, onProgress, gemini));
     },
 
-    correction(assignmentId, selfChecks, onProgress) {
+    correction(assignmentId, selfChecks, onProgress, gemini) {
       const running = inFlight.get(assignmentId);
       if (running) return running.kind === 'correction' ? (running.promise as Promise<CorrectionResult>) : Promise.resolve<CorrectionResult>({ ok: false, reason: 'busy' });
       const s = get().state;
@@ -268,7 +297,7 @@ export const useApp = create<AppStore>()((set, get) => {
       return track(
         assignmentId,
         'correction',
-        evaluateAndStore(a.id, selfChecks, true, onProgress).then((evaluation): CorrectionResult => ({ ok: true, evaluation })),
+        evaluateAndStore(a.id, selfChecks, true, onProgress, gemini).then((evaluation): CorrectionResult => ({ ok: true, evaluation })),
       );
     },
 
@@ -290,6 +319,26 @@ export const useApp = create<AppStore>()((set, get) => {
       if (!check.ok) return check;
       commit((cur) => ({ ...cur, schedule: { ...cur.schedule, vacations: [...cur.schedule.vacations, v] } as ScheduleState }));
       return check;
+    },
+
+    removeVacation(start) {
+      const now = get().clock?.now() ?? 0;
+      commit((s) => {
+        const vs = s.schedule.vacations.filter((v) => v.start !== start || v.start <= now);
+        return vs.length === s.schedule.vacations.length ? s : { ...s, schedule: { ...s.schedule, vacations: vs } };
+      });
+    },
+
+    setTheme(theme) {
+      commit((s) => (s.settings.theme === theme ? s : { ...s, settings: { ...s.settings, theme } }));
+    },
+
+    setGeminiEnabled(enabled) {
+      commit((s) => (s.settings.gemini.enabled === enabled ? s : { ...s, settings: { ...s.settings, gemini: { ...s.settings.gemini, enabled } } }));
+    },
+
+    setGeminiModel(model) {
+      commit((s) => (s.settings.gemini.model === model ? s : { ...s, settings: { ...s.settings, gemini: { ...s.settings.gemini, model } } }));
     },
 
     toggleChecklist(assignmentId, itemId) {

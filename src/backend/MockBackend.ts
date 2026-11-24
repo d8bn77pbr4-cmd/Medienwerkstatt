@@ -11,6 +11,24 @@ const BAK1 = 'mw-state.bak1';
 const PROJECT_KEY = (dir: string) => `mw-project:${dir}`;
 /** Testmedien des Vite-Dev-Servers (`tests/fixtures/media/` unter `/fixtures/`). */
 const FIXTURES = ['/fixtures/e2e-clip.webm', '/fixtures/e2e-clip2.webm'];
+const FRAME_FIXTURE = '/fixtures/frame.png';
+/** Modellliste und Antwort im Mock-Modus (kein Netzwerk, kein echter Schlüssel). */
+const MOCK_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.5-pro'];
+const MOCK_GEMINI_RESULT = {
+  criteria: [
+    { key: 'bildaufbau', verdict: 'Solide Bildgestaltung', reason: 'Die Einstellungen sind ruhig und klar aufgebaut.', shift: 2 },
+    { key: 'licht', verdict: 'Ordentlich ausgeleuchtet', reason: 'Lichter und Tiefen bleiben zeichnend.', shift: 1 },
+    { key: 'briefing', verdict: 'Briefing getroffen', reason: 'Der Film erfüllt den Auftrag des Kunden.', shift: 3 },
+  ],
+  summary: 'Sauber gearbeitet; Bildaufbau und Briefing passen.',
+};
+function limitFromUrl(): boolean {
+  try {
+    return new URLSearchParams(window.location.search).get('gemini') === 'limit';
+  } catch {
+    return false;
+  }
+}
 const PROXY_STEPS = [0.25, 0.5, 0.75, 1];
 const PROXY_STEP_MS = 40;
 /** Export im Mock-Modus: Fortschritt über etwa 1 s. */
@@ -60,6 +78,8 @@ export class MockBackend implements Backend {
   private geminiKey: string | null = null;
   /** Einmal beim Start gelesen: Navigation in der App verliert den Suchparameter. */
   private messung: MockMeasurement = measurementFromUrl();
+  /** `?gemini=limit`: Gemini antwortet mit „Limit erreicht“. */
+  private geminiLimit = limitFromUrl();
 
   setMeasurement(m: MockMeasurement): void {
     this.messung = m;
@@ -160,16 +180,20 @@ export class MockBackend implements Backend {
       },
     };
   }
-  async extractFrames(): Promise<string[]> {
-    return [];
+  /** Platzhalterbilder aus den Testdateien (`/fixtures/…`), eins je Zeit. */
+  async extractFrames(_path: string, times: number[] = []): Promise<string[]> {
+    return times.map(() => FRAME_FIXTURE);
   }
   gemini = {
     hasKey: async (): Promise<boolean> => this.geminiKey !== null,
     setKey: async (k: string | null): Promise<void> => {
       this.geminiKey = k;
     },
-    listModels: async (): Promise<string[]> => [],
-    generate: async (): Promise<string> => '{}',
+    listModels: async (): Promise<string[]> => [...MOCK_MODELS],
+    generate: async (): Promise<string> => {
+      if (this.geminiLimit) throw { code: 'rate_limited', message: 'Limit erreicht' };
+      return JSON.stringify(MOCK_GEMINI_RESULT);
+    },
   };
   async revealInFinder(): Promise<void> {}
   onFileDrop(): () => void {

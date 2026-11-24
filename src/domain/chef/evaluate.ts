@@ -21,6 +21,14 @@ export function applyLate(assignment: Assignment, submittedAt: number, rules: Ru
     'Plane die Abgabe früher: Lege dir einen Puffer vor der Frist, damit der Export nicht in die Verspätung rutscht.');
 }
 
+/** Gesamtpunkte aus Kategorien, Bonus und Verspätung (Spec §9.2/§9.3): Deckel, Verspätung, Korrekturgrenze. */
+export function totalOf(categories: Evaluation['categories'], bonus: Deduction[], late: Deduction | null, rules: Rules, isCorrection: boolean): number {
+  const bonusSum = Math.min(rules.bonus.max, bonus.reduce((s, b) => s + b.points, 0));
+  const sum = categories.technik.points + categories.gestaltung.points + categories.auftrag.points + bonusSum;
+  const total = Math.max(0, Math.min(rules.maxScore, sum) + (late?.points ?? 0));
+  return isCorrection ? Math.min(total, rules.correction.maxScore) : total;
+}
+
 function category(max: number, deductions: Deduction[]): CategoryResult {
   return { max, points: Math.max(0, max + deductions.reduce((s, d) => s + d.points, 0)), deductions };
 }
@@ -74,10 +82,7 @@ export function evaluate(input: EvaluationInput, rules: Rules): Evaluation {
     ? { technik: category(0, []), gestaltung: category(0, []), auftrag: category(ro.max, auftrag) }
     : { technik: category(d.technik.max, technik), gestaltung: category(d.gestaltung.max, gestaltung), auftrag: category(d.auftrag.max, auftrag) };
   const late = applyLate(a, input.submittedAt, rules);
-  const bonusSum = Math.min(rules.bonus.max, bonus.reduce((s, b) => s + b.points, 0));
-  const sum = categories.technik.points + categories.gestaltung.points + categories.auftrag.points + bonusSum;
-  let total = Math.max(0, Math.min(rules.maxScore, sum) + (late?.points ?? 0));
-  if (input.isCorrection) total = Math.min(total, rules.correction.maxScore);
+  const total = totalOf(categories, bonus, late, rules, input.isCorrection);
 
   const e: Evaluation = { id: `${a.id}:${input.submittedAt}`, assignmentId: a.id, at: input.submittedAt, categories, bonus, late, total, phrase: '' };
   e.phrase = phraseFor(e, rules);

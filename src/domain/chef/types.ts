@@ -51,6 +51,10 @@ export type Evaluation = {
   total: number;
   phrase: string;
   gemini?: GeminiResult;
+  /** Um wie viele Punkte Gemini die Kategorien tatsächlich verschoben hat (nach Klemmung). */
+  geminiShift?: { gestaltung: number; auftrag: number };
+  /** Hinweis im Protokoll, wenn Gemini nicht mitgewirkt hat (abgelehnt, Fehler, Limit, offline). */
+  geminiNote?: string;
   /** Die abgegebenen Dateien (für Showreel-Merkliste und „Im Finder zeigen“). */
   exports?: { deliverableId: string; fileName: string; path: string }[];
 };

@@ -8,6 +8,7 @@ import type { Evaluation, ProjectFacts, VideoInput } from '../domain/chef/types'
 import { exportRange } from '../domain/render/filtergraph';
 import { projectFacts } from '../domain/timeline/facts';
 import { sequenceHash } from './hash';
+import { geminiReview, type GeminiRun } from './gemini';
 import type { ExportRecord, MediaItem, Project, Sequence } from '../domain/timeline/types';
 
 export type TimeRange = { start: number; end: number };
@@ -56,6 +57,14 @@ export function exportSegments(seq: Sequence, media: MediaItem[], range?: TimeRa
   return factsForExport(seq, media, range).shots.map((s) => ({ start: s.start, end: s.end }));
 }
 
+/** Momentaufnahme des Exports; ältere Einträge: aus dem Stand der Sequenz berechnet. */
+export function exportSnapshot(project: Project, rec: ExportRecord): { facts: ProjectFacts; segments: Segment[] } {
+  if (rec.facts && rec.segments) return { facts: rec.facts, segments: rec.segments };
+  const seq = sequenceOfExport(project, rec);
+  const facts = factsForExport(seq, project.media, rec.rangeSec ?? rangeOfSequence(seq));
+  return { facts, segments: facts.shots.map((s) => ({ start: s.start, end: s.end })) };
+}
+
 export type SubmissionRequest = {
   backend: Backend;
   rules: Rules;
@@ -67,6 +76,8 @@ export type SubmissionRequest = {
   selfChecks: { hookDone: boolean };
   isCorrection: boolean;
   submittedAt: number;
+  /** Nur gesetzt, wenn Gemini eingeschaltet ist und der Nutzer sich entschieden hat. */
+  gemini?: GeminiRun;
   onProgress?: (message: string) => void;
 };
 
@@ -86,14 +97,7 @@ export async function runSubmission(r: SubmissionRequest): Promise<Evaluation> {
       videos[d.id] = null;
       continue;
     }
-    // Momentaufnahme des Exports; ältere Einträge: aus dem Stand der Sequenz berechnen.
-    let facts = rec.facts;
-    let segments = rec.segments;
-    if (!facts || !segments) {
-      const seq = sequenceOfExport(project, rec);
-      facts = factsForExport(seq, project.media, rec.rangeSec ?? rangeOfSequence(seq));
-      segments = facts.shots.map((s) => ({ start: s.start, end: s.end }));
-    }
+    const { facts, segments } = exportSnapshot(project, rec);
     r.onProgress?.('Messe Ton …');
     const measurements = await r.backend.analyze(rec.path, segments);
     r.onProgress?.('Prüfe Belichtung …');
@@ -103,6 +107,11 @@ export async function runSubmission(r: SubmissionRequest): Promise<Evaluation> {
   }
   if (measured === 0) r.onProgress?.('Prüfe Abgaben …');
   r.onProgress?.('Bewerte …');
-  const e = evaluate({ assignment: a, submittedAt: r.submittedAt, videos, research: r.research, selfChecks: r.selfChecks, isCorrection: r.isCorrection }, r.rules);
+  const input = { assignment: a, submittedAt: r.submittedAt, videos, research: r.research, selfChecks: r.selfChecks, isCorrection: r.isCorrection };
+  let e = evaluate(input, r.rules);
+  if (r.gemini) {
+    r.onProgress?.(r.gemini.choice.consent ? 'Frage Gemini …' : 'Bewerte …');
+    e = await geminiReview({ backend: r.backend, rules: r.rules, assignment: a, input, evaluation: e, run: r.gemini });
+  }
   return files.length > 0 ? { ...e, exports: files } : e;
 }
