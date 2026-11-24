@@ -1,14 +1,20 @@
 //! Medien-Bibliothek der Medienwerkstatt: Probe, Dateien, ffmpeg-Läufe und Proxies.
-//! Spätere Tasks ergänzen Analyse und Standbilder.
+//! Außerdem Analyse (Lautheit, Belichtung, Schnitte) und Standbilder.
 
+pub mod analyze;
 pub mod error;
+pub mod frames;
 pub mod fsx;
 pub mod probe;
 pub mod proxy;
 pub mod run;
 pub mod tools;
 
+pub use analyze::{
+    analyze, AudioStats, Format, Interval, Measurements, Segment, SegmentStats, VideoStats,
+};
 pub use error::{Error, Result};
+pub use frames::extract_frames;
 pub use fsx::{read_with_backup, write_atomic};
 pub use probe::{probe, MediaInfo, MediaKind};
 pub use proxy::{default_h264_encoder, proxy_args};

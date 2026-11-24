@@ -3,9 +3,9 @@
 use crate::error::{Error, Result};
 use crate::tools::{spawn_error, Tools};
 use std::collections::VecDeque;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Read};
 use std::process::{Command, Stdio};
-use std::thread;
+use std::thread::{self, JoinHandle};
 
 const STDERR_LINES: usize = 20;
 
@@ -16,6 +16,21 @@ fn progress_seconds(line: &str) -> Option<f64> {
         .or_else(|| line.strip_prefix("out_time_ms="))?;
     let us: i64 = v.trim().parse().ok()?;
     Some((us.max(0) as f64) / 1_000_000.0)
+}
+
+/// Liest stderr in einem eigenen Thread leer (Pipe läuft nie voll) und liefert die letzten
+/// 20 Zeilen. Bytes werden verlustbehaftet als UTF-8 gelesen, nie als Fehler abgebrochen.
+pub(crate) fn drain_tail(stderr: impl Read + Send + 'static) -> JoinHandle<String> {
+    thread::spawn(move || {
+        let mut tail: VecDeque<String> = VecDeque::with_capacity(STDERR_LINES + 1);
+        for line in BufReader::new(stderr).split(b'\n').map_while(|l| l.ok()) {
+            if tail.len() == STDERR_LINES {
+                tail.pop_front();
+            }
+            tail.push_back(String::from_utf8_lossy(&line).trim_end().to_string());
+        }
+        tail.into_iter().collect::<Vec<_>>().join("\n")
+    })
 }
 
 /// Führt ffmpeg mit `args` aus (Argument-Array, keine Shell). `on_progress` bekommt
@@ -42,17 +57,7 @@ pub fn run_ffmpeg(
         .spawn()
         .map_err(|e| spawn_error(&t.ffmpeg, e))?;
 
-    let stderr = child.stderr.take().expect("stderr piped");
-    let err_thread = thread::spawn(move || {
-        let mut tail: VecDeque<String> = VecDeque::with_capacity(STDERR_LINES + 1);
-        for line in BufReader::new(stderr).lines().map_while(|l| l.ok()) {
-            if tail.len() == STDERR_LINES {
-                tail.pop_front();
-            }
-            tail.push_back(line);
-        }
-        tail.into_iter().collect::<Vec<_>>().join("\n")
-    });
+    let err_thread = drain_tail(child.stderr.take().expect("stderr piped"));
 
     let stdout = child.stdout.take().expect("stdout piped");
     let mut last = 0.0f64;
