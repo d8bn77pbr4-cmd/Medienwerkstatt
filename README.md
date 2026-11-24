@@ -6,6 +6,7 @@ Eine Mac-App zum Üben des Videohandwerks: Du bekommst Aufträge von fiktiven Ku
 
 - **Aktueller Stand:** Auf GitHub im Reiter **Actions** den neuesten Lauf „build-mac“ öffnen → unten bei **Artefakte** „Medienwerkstatt-…“ herunterladen → die Zip-Datei entpacken → darin liegt die `.dmg`.
 - **Releases:** Sobald ein Tag `v…` gesetzt ist, hängt die `.dmg` zusätzlich unter **Releases**.
+- Zeigt der Actions-Lauf „abgebrochen“ ohne Protokoll, hat GitHub keinen Mac-Rechner zugewiesen – dann den Abschnitt „Selbst bauen auf dem Mac“ nutzen.
 
 ## Installation
 
@@ -16,6 +17,22 @@ Eine Mac-App zum Üben des Videohandwerks: Du bekommst Aufträge von fiktiven Ku
 3. Das ist nur beim ersten Start nötig.
 
 **Warum diese Meldung?** Die App ist nicht signiert und nicht von Apple beglaubigt – das setzt ein bezahltes Apple-Entwicklerkonto voraus, das für dieses Projekt nicht existiert. macOS warnt deshalb bei jeder unsignierten App. Der Quelltext liegt offen in diesem Repository.
+
+## Selbst bauen auf dem Mac (falls der GitHub-Build nicht läuft)
+
+1. **Terminal** öffnen (Programme → Dienstprogramme → Terminal).
+2. Quelltext holen:
+   ```sh
+   git clone https://github.com/d8bn77pbr4-cmd/Medienwerkstatt.git
+   cd Medienwerkstatt
+   git checkout claude/adobe-cloud-replica-go3c54   # nur nötig, bis der Stand in main ist
+   ```
+3. Bauen:
+   ```sh
+   bash scripts/build-mac-local.sh
+   ```
+   Das Skript prüft Xcode-Befehlszeilentools, Node (ab 20) und Rust und nennt Installationshinweise, falls etwas fehlt. Beim ersten Mal fragt es nach der Prüfsumme für ffmpeg („Prüfsummen übernehmen? (j/n)“). Dauer beim ersten Mal ca. 10–20 Minuten.
+4. Am Ende öffnet sich der Ordner mit der `.dmg`; weiter wie unter „Installation“.
 
 ## Systemvoraussetzungen
 

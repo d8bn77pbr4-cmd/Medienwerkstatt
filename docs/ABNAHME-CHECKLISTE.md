@@ -4,6 +4,7 @@ Prüfung der Phase 1 auf dem Zielgerät (MacBook Pro 2019, Intel) mit der `.dmg`
 
 ## 1. Installieren und starten
 Kriterium: Die `.dmg` aus GitHub Actions lässt sich auf dem MacBook Pro 2019 installieren und starten.
+- [ ] App gebaut (GitHub-Artefakt oder `scripts/build-mac-local.sh`) und installiert
 - [ ] Actions → Lauf „build-mac“ → Artefakt „Medienwerkstatt-…“ laden, entpacken: `.dmg` ist größer als 60 MB (ffmpeg enthalten).
 - [ ] `.dmg` öffnen, App nach „Programme“ ziehen: kopiert ohne Fehler.
 - [ ] Erster Start per Rechtsklick → „Öffnen“ (bzw. „Trotzdem öffnen“): Fenster erscheint, Menüleiste „Medienwerkstatt“, kein Absturz.
