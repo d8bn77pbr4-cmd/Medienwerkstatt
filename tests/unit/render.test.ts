@@ -339,6 +339,45 @@ describe('buildExport', () => {
     expect(gg).toContain('afade=t=in:st=0:d=0.4');
     expect(gg).toContain('adelay=delays=1800:all=1');
   });
+  it('Überblendung ohne Vorlauf in der Quelle: kein Vorverschieben, Fade nur über den linken Überstand', () => {
+    const s = seqOf(
+      [mkClip('a', 'V1', 0, 50), mkClip('b', 'V1', 50, 50, { sourceIn: 0 })],
+      { transitions: [{ id: 'x', trackId: 'V1', leftClipId: 'a', rightClipId: 'b', duration: 10, kind: 'dissolve' }] },
+    );
+    const v = build(s);
+    const gg = graphOf(v.args);
+    expect(gg).toContain('fade=t=in:st=0:d=0.2:alpha=1');
+    expect(gg).toContain('setpts=PTS-STARTPTS+2/TB');
+    expect(gg).not.toContain('+1.8/TB');
+    const hits = v.args.flatMap((a, i) => (a.endsWith('/m.mov') ? [i] : []));
+    expect(v.args.slice(hits[1] - 5, hits[1])).toEqual(['-ss', '0', '-t', '2', '-i']);
+  });
+  it('linker Überstand wird durch das Quellenende begrenzt', () => {
+    const s = seqOf(
+      [mkClip('a', 'V1', 0, 50, { sourceIn: 8 }), mkClip('b', 'V1', 50, 50)],
+      { transitions: [{ id: 'x', trackId: 'V1', leftClipId: 'a', rightClipId: 'b', duration: 10, kind: 'dissolve' }] },
+    );
+    const gg = graphOf(build(s).args);
+    expect(gg).toContain('fade=t=in:st=0:d=0.2:alpha=1');
+    expect(gg).toContain('setpts=PTS-STARTPTS+1.8/TB');
+  });
+  it('audioFade ohne Vorlauf: Start unverändert, Fades über den linken Überstand', () => {
+    const s = seqOf(
+      [mkClip('v', 'V1', 0, 100), mkClip('l', 'A1', 0, 50), mkClip('r', 'A1', 50, 50, { sourceIn: 0 })],
+      { transitions: [{ id: 'x', trackId: 'A1', leftClipId: 'l', rightClipId: 'r', duration: 10, kind: 'audioFade' }] },
+    );
+    const gg = graphOf(build(s).args);
+    expect(gg).toContain('afade=t=in:st=0:d=0.2');
+    expect(gg).toContain('afade=t=out:st=2:d=0.2');
+    expect(gg).toContain('adelay=delays=2000:all=1');
+  });
+  it('lut3d läuft vor scale/pad (Balken bleiben ungegradet)', () => {
+    const gg = graphOf(build(fixtureSeq(), [mkMedia('m')], 'social916', { h264Encoder: 'libx264' }).args);
+    const chain = gg.split(';').find((c) => c.includes('lut3d'))!;
+    expect(chain.indexOf('fps=')).toBeLessThan(chain.indexOf('lut3d'));
+    expect(chain.indexOf('lut3d')).toBeLessThan(chain.indexOf('scale='));
+    expect(chain.indexOf('scale=')).toBeLessThan(chain.indexOf('pad='));
+  });
   it('leere Sequenz wird abgelehnt', () => {
     expect(() => build(seqOf([]))).toThrow();
   });

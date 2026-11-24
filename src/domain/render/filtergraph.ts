@@ -33,20 +33,38 @@ export function exportSize(seq: Sequence, preset: ExportPreset): { width: number
   return preset.size ?? { width: seq.width, height: seq.height };
 }
 
-/** Wie weit Clips über ihren Schnitt hinausragen: Überblendungen liegen mittig auf dem Schnitt. */
-type Extension = { head: number; tail: number };
+/**
+ * Wie weit Clips über ihren Schnitt hinausragen: Überblendungen liegen mittig auf dem Schnitt.
+ * `head`/`tail` sind auf die vorhandene Quelle begrenzt (vor `sourceIn`, nach dem Clip-Ende);
+ * `fadeIn`/`fadeOut` sind die tatsächlichen Überblendungslängen (Überstand rechts + links).
+ */
+type Extension = { head: number; tail: number; fadeIn: number; fadeOut: number };
+const NO_EXT: Extension = { head: 0, tail: 0, fadeIn: 0, fadeOut: 0 };
 
-function extensions(seq: Sequence, kind: 'dissolve' | 'audioFade'): Map<string, Extension> {
+function extensions(seq: Sequence, kind: 'dissolve' | 'audioFade', media: Map<string, MediaItem>): Map<string, Extension> {
   const ext = new Map<string, Extension>();
   const get = (id: string): Extension => {
     let e = ext.get(id);
-    if (!e) ext.set(id, (e = { head: 0, tail: 0 }));
+    if (!e) ext.set(id, (e = { ...NO_EXT }));
     return e;
+  };
+  const clip = (id: string) => seq.clips.find((c) => c.id === id);
+  const room = (c: Clip | undefined): { head: number; tail: number } => {
+    const m = c?.mediaId ? media.get(c.mediaId) : undefined;
+    if (!c || !m || m.kind === 'image') return { head: Infinity, tail: Infinity };
+    return { head: Math.max(0, c.sourceIn), tail: Math.max(0, m.durationSec - c.sourceIn - c.duration / seq.fps) };
   };
   for (const t of seq.transitions) {
     if (t.kind !== kind) continue;
-    get(t.leftClipId).tail = t.duration / seq.fps / 2;
-    get(t.rightClipId).head = t.duration / seq.fps / 2;
+    const [l, r] = [clip(t.leftClipId), clip(t.rightClipId)];
+    if (!l || !r) continue;
+    const half = t.duration / seq.fps / 2;
+    const tail = Math.min(half, room(l).tail);
+    const head = Math.min(half, room(r).head);
+    get(l.id).tail = tail;
+    get(r.id).head = head;
+    get(l.id).fadeOut = head + tail;
+    get(r.id).fadeIn = head + tail;
   }
   return ext;
 }
@@ -124,10 +142,10 @@ export function buildExport(
     g.chains.push(`${cur}[p${n}]overlay=eof_action=pass${next}`);
     cur = next;
   };
-  const vext = extensions(seq, 'dissolve');
+  const vext = extensions(seq, 'dissolve', byId);
   const fit = `scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2,setsar=1`;
   for (const { clip: c, media: m } of videoClips(seq, byId)) {
-    const e = vext.get(c.id) ?? { head: 0, tail: 0 };
+    const e = vext.get(c.id) ?? NO_EXT;
     const start = c.start / fps - e.head;
     const len = c.duration / fps + e.head + e.tail;
     const path = m.path;
@@ -137,10 +155,10 @@ export function buildExport(
         ? ['-loop', '1', '-framerate', num(fps), '-t', num(len), '-i', path]
         : ['-ss', num(Math.max(0, c.sourceIn - e.head)), '-t', num(len), '-i', path],
     );
-    const parts = [...(m.hdr ? [HDR_TO_SDR] : []), `fps=${num(fps)}`, fit];
     const lut = c.color ? assets.lutPathByClipId[c.id] : undefined;
-    if (lut) parts.push(`lut3d=file=${escapeFilterPath(lut)}`);
-    if (e.head > 0) parts.push('format=yuva420p', `fade=t=in:st=0:d=${num(e.head * 2)}:alpha=1`);
+    // lut3d vor scale/pad, damit die Letterbox-Balken nicht mitgegradet werden.
+    const parts = [...(m.hdr ? [HDR_TO_SDR] : []), `fps=${num(fps)}`, ...(lut ? [`lut3d=file=${escapeFilterPath(lut)}`] : []), fit];
+    if (e.fadeIn > 0) parts.push('format=yuva420p', `fade=t=in:st=0:d=${num(e.fadeIn)}:alpha=1`);
     overlay(`[${k}:v]`, start, parts.join(','));
   }
   for (const t of seq.tracks.filter((x) => x.kind === 'video')) {
@@ -160,13 +178,13 @@ export function buildExport(
   g.chains.push(ranged ? `${cur}trim=start=${num(inSec)}:end=${num(outSec)},setpts=PTS-STARTPTS[vout]` : `${cur}null[vout]`);
 
   // ---- Ton ----
-  const aext = extensions(seq, 'audioFade');
+  const aext = extensions(seq, 'audioFade', byId);
   const mixed: string[] = [];
   for (const t of seq.tracks.filter((x) => x.kind === 'audio' && !x.muted)) {
     for (const c of seq.clips.filter((x) => x.trackId === t.id && x.kind === 'media').sort((a, b) => a.start - b.start)) {
       const m = c.mediaId ? byId.get(c.mediaId) : undefined;
       if (!m || !m.hasAudio || m.kind === 'image') continue;
-      const e = aext.get(c.id) ?? { head: 0, tail: 0 };
+      const e = aext.get(c.id) ?? NO_EXT;
       const start = c.start / fps - e.head;
       const len = c.duration / fps + e.head + e.tail;
       const k = addInput(g, ['-ss', num(Math.max(0, c.sourceIn - e.head)), '-t', num(len), '-i', m.path]);
@@ -175,8 +193,8 @@ export function buildExport(
       const own = { in: c.fadeIn / fps, out: c.fadeOut / fps };
       if (own.in > 0) parts.push(`afade=t=in:st=${num(e.head)}:d=${num(own.in)}`);
       if (own.out > 0) parts.push(`afade=t=out:st=${num(len - e.tail - own.out)}:d=${num(own.out)}`);
-      if (e.head > 0) parts.push(`afade=t=in:st=0:d=${num(e.head * 2)}`);
-      if (e.tail > 0) parts.push(`afade=t=out:st=${num(len - e.tail * 2)}:d=${num(e.tail * 2)}`);
+      if (e.fadeIn > 0) parts.push(`afade=t=in:st=0:d=${num(e.fadeIn)}`);
+      if (e.fadeOut > 0) parts.push(`afade=t=out:st=${num(len - e.fadeOut)}:d=${num(e.fadeOut)}`);
       const ms = Math.round(start * 1000);
       if (ms > 0) parts.push(`adelay=delays=${ms}:all=1`);
       g.chains.push(`[${k}:a]${parts.join(',')}[a${mixed.length}]`);
