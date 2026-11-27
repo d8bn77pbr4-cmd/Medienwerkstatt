@@ -1,0 +1,36 @@
+/* Werkstatt: immer dunkel, unabhängig vom Modus (Spec §10.2). Auf der Werkstatt-Route tragen auch
+   Seitenleiste und Kopfleiste die dunklen Werte (.shell.is-werkstatt), damit nichts Helles über
+   der Arbeitsfläche liegt. */
+.werkstatt,
+.shell.is-werkstatt {
+  --bg: #1c1c1e;
+  --surface: #2c2c2e;
+  --surface-2: #3a3a3c;
+  --surface-3: #3a3a3c;
+  --monitor: #1e1e1e;
+  --ink: #f5f5f7;
+  --ink-2: #d1d1d6;
+  --muted: #98989d;
+  --line: #38383a;
+  --line-strong: #48484a;
+  --accent: #7aa2ff;
+  --on-accent: #0a1a45;
+  --good: #30d158;
+  --bad: #ff453a;
+  --sig-warn: #ff453a;
+  --sig-care: #ffd60a;
+  --sig-tip: #30d158;
+  --sig-info: #7aa2ff;
+  --sig-date: #bf9bff;
+  --glass: rgba(28, 28, 30, 0.72);
+  --fs-body: 13px;
+  --fs-sub: 13px;
+  --fs-caption: 12px;
+  color-scheme: dark;
+  color: var(--ink);
+}
+.shell.is-werkstatt { background-color: #1c1c1e; }
+.werkstatt {
+  font-size: var(--fs-body);
+  background-color: #1c1c1e;
+}

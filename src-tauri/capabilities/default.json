@@ -1,0 +1,20 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Grundrechte des Hauptfensters",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-start-dragging",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        { "url": "https://aistudio.google.com/*" },
+        { "url": "https://ffmpeg.org/*" },
+        { "url": "https://evermeet.cx/*" },
+        { "url": "https://www.gnu.org/licenses/*" },
+        { "url": "https://github.com/lucide-icons/lucide/*" }
+      ]
+    }
+  ]
+}

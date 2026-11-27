@@ -1,0 +1,71 @@
+/* Gemeinsame Bedienelemente (Sparplan-Look v4/v5): Knöpfe, Karten, Felder, Hinweis-Banner.
+   In der Werkstatt (immer dunkel) gelten die macOS-Größen: regulär 28 px, klein 22 px. */
+.muted { color: var(--muted); }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 26px 28px; margin-top: 20px;
+}
+.card > h2 { font-size: var(--fs-title3); font-weight: 650; margin-bottom: 12px; }
+.card h3 { font-size: var(--fs-body); font-weight: 650; margin: 16px 0 6px; letter-spacing: 0; }
+
+/* Knöpfe */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 18px; border-radius: var(--r-pill);
+  border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); font: inherit; font-size: var(--fs-sub); font-weight: 600; cursor: pointer;
+}
+.btn svg { width: 16px; height: 16px; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.icon-btn {
+  display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: var(--r-sm);
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); cursor: pointer; flex: none;
+}
+.icon-btn svg { width: 16px; height: 16px; }
+
+/* Formular */
+.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
+.field label { font-size: var(--fs-sub); font-weight: 600; }
+.req { color: var(--muted); font-weight: 400; }
+input[type='text'], input[type='url'], input[type='number'], textarea {
+  font: inherit; font-size: var(--fs-body); color: var(--ink); background: var(--surface-2);
+  border: 1px solid var(--line); border-radius: var(--r-sm); padding: 10px 12px; width: 100%;
+}
+textarea { resize: vertical; line-height: var(--lh-body); }
+input[aria-invalid='true'] { border-color: var(--sig-warn); }
+
+/* Hinweis-Banner (Sicherung, Speicherfehler) */
+.banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: none;
+  padding: 8px 24px; background: var(--surface-2); border-bottom: 1px solid var(--line); font-size: var(--fs-sub); color: var(--ink);
+}
+
+/* ---------- Werkstatt-Variante (dunkel, macOS-Dichte) ---------- */
+.werkstatt .btn { height: 28px; padding: 0 12px; border-radius: 6px; font-size: 13px; gap: 6px; }
+.werkstatt .btn svg { width: 14px; height: 14px; }
+.werkstatt .btn-small { height: 22px; padding: 0 8px; font-size: 12px; }
+.werkstatt .icon-btn { width: 28px; height: 28px; border-radius: 6px; border-color: var(--line-strong); background: var(--surface-2); }
+.werkstatt .icon-btn svg { width: 14px; height: 14px; }
+.werkstatt .field { gap: 4px; margin-bottom: 10px; }
+.werkstatt .field label, .werkstatt .field > span { font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.werkstatt input[type='text'], .werkstatt input[type='number'], .werkstatt select, .werkstatt textarea {
+  font: inherit; font-size: 13px; color: var(--ink); background: var(--surface-2);
+  border: 1px solid var(--line-strong); border-radius: 6px; padding: 3px 8px; min-height: 28px; width: 100%;
+}
+.werkstatt input[type='color'] { width: 44px; height: 28px; padding: 2px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--surface-2); }
+.werkstatt input[type='range'] { accent-color: var(--accent); width: 100%; margin: 0; }
+.werkstatt .banner { padding: 6px 16px; font-size: 13px; }
+
+/* Blatt (Export, Abgabe, Tastenkürzel): Federn/200–350 ms, nur transform/opacity; Bewegung reduzieren = 150-ms-Überblendung */
+.sheet-backdrop { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: rgba(0, 0, 0, 0.5); }
+.sheet {
+  display: flex; flex-direction: column; width: min(760px, 92vw); max-height: 82vh; padding: 16px 18px;
+  background: var(--surface); border: 1px solid var(--line-strong); border-radius: 12px; color: var(--ink);
+  animation: mw-sheet-in var(--dur-2) var(--ease-out-smooth);
+}
+.sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.sheet-head h2 { font-size: 17px; font-weight: 650; }
+.sheet-body { overflow: auto; min-height: 0; }
+.sheet-foot { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+@keyframes mw-sheet-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .sheet { animation: mw-fade 150ms linear; }
+}

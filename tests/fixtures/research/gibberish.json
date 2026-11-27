@@ -1,0 +1,9 @@
+{
+  "tastatursalatLang": "asdf jklö qwertz fdsa hjkl ölkj sdfg ghjk dfgh vbnm yxcv uiop",
+  "zufallsbuchstaben": "jfkdlsa fjdkslö ghfjdk asdkfj qweoiru hdjskal djfkls ruiewo fjdksa kdlsöa",
+  "wiederholt": "test test test",
+  "wiederholtLang": "test test test test test test test test test test test test",
+  "loremIpsum": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+  "loremIpsumKurz": "Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.",
+  "kurzSalat": ["asdf", "jklö", "qwertz", "xxx", "aaaa", "hgfd", "jfkd", "x", "?", "test", "bla bla bla"]
+}

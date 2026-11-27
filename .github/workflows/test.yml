@@ -1,0 +1,33 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Systempakete
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg libwebkit2gtk-4.1-dev librsvg2-dev libayatana-appindicator3-dev
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - name: Testmedien erzeugen
+        run: bash scripts/make-fixtures.sh
+      - run: npm test
+      - name: Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - run: npx playwright test --trace off
+      - run: cargo test -p mw-media
+      - run: bash scripts/link-dev-ffmpeg.sh
+      - run: cargo check -p medienwerkstatt

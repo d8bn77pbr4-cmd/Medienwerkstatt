@@ -1,0 +1,97 @@
+/* Design-Tokens nach Spec §10.1. Hell ist Standard, Dunkel folgt dem System
+   oder [data-theme="dark"]. .werkstatt setzt die dunklen Werte immer. */
+:root {
+  color-scheme: light dark;
+
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f2f2f7;
+  --surface-3: #e5e5ea;
+  --ink: #1d1d1f;
+  --ink-2: #424245;
+  --muted: #66666b;
+  --line: #e5e5ea;
+  --line-strong: #d2d2d7;
+  --accent: #1a4fd0;
+  --on-accent: #ffffff;
+  --good: #248a3d;
+  --bad: #d70015;
+  --sig-warn: #d70015;
+  --sig-care: #8a5a00;
+  --sig-tip: #248a3d;
+  --sig-info: #1a4fd0;
+  --sig-date: #7a3fd0;
+  --glass: rgba(255, 255, 255, 0.72);
+
+  --radius: 20px;
+  --r-sm: 12px;
+  --r-lg: 24px;
+  --r-pill: 999px;
+
+  --dur-1: 0.12s;
+  --dur-2: 0.24s;
+  --dur-3: 0.42s;
+  --ease-out-fast: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-out-smooth: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', system-ui, 'Helvetica Neue', Arial, sans-serif;
+  --fs-body: 16px;
+  --fs-sub: 14px;
+  --fs-caption: 13px;
+  --fs-title3: 20px;
+  --fs-title2: 22px;
+  --fs-title1: 28px;
+  --fs-large: 34px;
+  --track-title: -0.02em;
+  --lh-body: 1.47;
+
+  --sidebar-w: 232px;
+  --sidebar-w-collapsed: 72px;
+  --topbar-h: 52px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #000000;
+    --surface: #1c1c1e;
+    --surface-2: #2c2c2e;
+    --surface-3: #3a3a3c;
+    --ink: #f5f5f7;
+    --ink-2: #d1d1d6;
+    --muted: #98989d;
+    --line: #38383a;
+    --line-strong: #48484a;
+    --accent: #7aa2ff;
+    --on-accent: #0a1a45;
+    --good: #30d158;
+    --bad: #ff453a;
+    --sig-warn: #ff453a;
+    --sig-care: #ffd60a;
+    --sig-tip: #30d158;
+    --sig-info: #7aa2ff;
+    --sig-date: #bf9bff;
+    --glass: rgba(28, 28, 30, 0.72);
+  }
+}
+
+:root[data-theme='dark'] {
+  --bg: #000000;
+  --surface: #1c1c1e;
+  --surface-2: #2c2c2e;
+  --surface-3: #3a3a3c;
+  --ink: #f5f5f7;
+  --ink-2: #d1d1d6;
+  --muted: #98989d;
+  --line: #38383a;
+  --line-strong: #48484a;
+  --accent: #7aa2ff;
+  --on-accent: #0a1a45;
+  --good: #30d158;
+  --bad: #ff453a;
+  --sig-warn: #ff453a;
+  --sig-care: #ffd60a;
+  --sig-tip: #30d158;
+  --sig-info: #7aa2ff;
+  --sig-date: #bf9bff;
+  --glass: rgba(28, 28, 30, 0.72);
+}

@@ -1,0 +1,76 @@
+{
+  "schedule": { "intervalHours": 72, "deadlineHour": 18, "lateWindowHours": 72, "maxOpen": 3, "vacationDaysPerYear": 14 },
+  "typeWeights": { "video": 40, "ton": 15, "bild": 15, "motion": 10, "research": 20 },
+  "lengthTolerancePct": [10, 7.5, 5, 3, 2],
+  "kombiShareFromLevel2": 0.3,
+  "worldWeights": { "betrieb": 40, "gesellschaft": 20, "geschichte": 15, "wissen": 15, "medien": 5, "nischen": 5 },
+  "levels": [
+    { "min": 0, "name": "Probetag" },
+    { "min": 300, "name": "Praktikum" },
+    { "min": 800, "name": "1. Lehrjahr" },
+    { "min": 1500, "name": "2. Lehrjahr" },
+    { "min": 2500, "name": "3. Lehrjahr" }
+  ],
+  "maxScore": 100,
+  "deductions": {
+    "technik": {
+      "max": 40,
+      "resolutionOrAspect": -10,
+      "fps": -8,
+      "mixedFps": -4,
+      "lengthPerSecond": -2,
+      "lengthMax": -10,
+      "loudnessToleranceLU": 1,
+      "loudnessPerLU": -2,
+      "loudnessMax": -10,
+      "truePeakLimitDbtp": -1,
+      "truePeak": -5,
+      "clipping": -5,
+      "blackOrFreeze": -3,
+      "codecOrFileName": -2
+    },
+    "gestaltung": {
+      "max": 35,
+      "overexposedThresholdPct": 5,
+      "overexposed": -3,
+      "overexposedMax": -9,
+      "underexposed": -3,
+      "underexposedMax": -9,
+      "shotLengthMinSec": 0.5,
+      "shotLengthMaxSec": 10,
+      "shotLengthOutOfRange": -2,
+    "shotLengthOutOfRangeMax": -8,
+      "missingShotSize": -4,
+      "colorJump": -2,
+    "colorJumpMax": -6,
+    "colorJumpLumaThreshold": 0.12,
+    "colorJumpChromaThreshold": 0.05,
+      "audioCutNoFade": -1,
+      "audioCutNoFadeMax": -5
+    },
+    "auftrag": {
+      "max": 25,
+      "missingDeliverable": -15,
+      "missingElement": -5,
+      "hookNotMet": -8,
+      "longShotMinSec": 8,
+      "researchEmptyField": -3,
+      "researchMinSources": 2,
+      "researchTooFewSources": -5,
+      "researchLengthOutOfRange": -3
+    },
+    "researchOnly": { "max": 100, "missingDeliverable": -100, "emptyField": -12, "tooFewSources": -20, "lengthOutOfRange": -10, "hookNotMet": -15 }
+  },
+  "researchQuality": {
+    "gibberishCapTotal": 15,
+    "gibberishCapShare": 0.5,
+    "kombi": { "copiedField": -2, "offTopic": -3, "implausibleField": -1, "placeholderSource": -1, "sourceNotFound": -2, "sourceUnreachable": -1 },
+    "researchOnly": { "copiedField": -8, "offTopic": -12, "implausibleField": -4, "placeholderSource": -5, "sourceNotFound": -6, "sourceUnreachable": -3 }
+  },
+  "frist": { "perDay": -10, "maxDays": 3, "expiredAccount": -20 },
+  "bonus": { "max": 5, "early24h": 3, "earlyHours": 24, "allTechPerfect": 2 },
+  "correction": { "windowHours": 24, "maxScore": 90, "loops": 1 },
+  "showreelMinScore": 80,
+  "tone": { "badBelow": 50, "okBelow": 80 },
+  "gemini": { "maxShift": 10 }
+}

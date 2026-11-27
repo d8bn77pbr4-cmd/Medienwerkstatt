@@ -1,0 +1,14 @@
+[
+  { "id": "instagram-reel", "name": "Instagram-Reel", "ort": "auf Instagram", "aspects": ["9:16"], "loudnessLufs": -14, "uhd": false,
+    "zielgruppen": ["junge Leute aus der Stadt", "Stammkundschaft unter 35", "Eltern aus dem Stadtteil", "Studierende der Hochschule", "Neugierige aus der Nachbarschaft"] },
+  { "id": "tiktok", "name": "TikTok-Video", "ort": "auf TikTok", "aspects": ["9:16"], "loudnessLufs": -14, "uhd": false,
+    "zielgruppen": ["Jugendliche zwischen 14 und 20", "Azubis und Berufseinsteiger", "Trendbewusste Studierende", "junge Familien", "Menschen, die gern kurze Clips schauen"] },
+  { "id": "youtube", "name": "YouTube-Video", "ort": "auf YouTube", "aspects": ["16:9"], "loudnessLufs": -14, "uhd": true,
+    "zielgruppen": ["Interessierte aus der Region", "Hobby-Fans und Einsteiger", "Kundschaft, die sich vorab informiert", "Bewerberinnen und Bewerber", "Fachpublikum und Neugierige"] },
+  { "id": "website", "name": "Website-Header", "ort": "auf der Website", "aspects": ["16:9"], "loudnessLufs": -14, "uhd": false,
+    "zielgruppen": ["Erstbesucher der Website", "Neukundschaft aus dem Umland", "Geschäftspartner und Lieferanten", "Eltern auf der Suche nach einem Angebot", "Menschen, die schnell einen ersten Eindruck wollen"] },
+  { "id": "lokal-tv", "name": "Lokal-TV-Beitrag", "ort": "im Lokalfernsehen", "aspects": ["16:9"], "loudnessLufs": -23, "uhd": false,
+    "zielgruppen": ["Zuschauer des Regionalprogramms", "ältere Stammzuschauer", "Familien aus dem Sendegebiet", "Vereine und Ehrenamtliche", "die gesamte Stadtgesellschaft"] },
+  { "id": "messe-loop", "name": "Messe-Loop", "ort": "auf dem Messestand", "aspects": ["16:9", "1:1"], "loudnessLufs": -14, "uhd": true,
+    "zielgruppen": ["Messebesucher im Vorbeigehen", "Fachbesucher mit wenig Zeit", "potenzielle Geschäftskunden", "Einkäufer und Händler", "Familien beim Messebummel"] }
+]

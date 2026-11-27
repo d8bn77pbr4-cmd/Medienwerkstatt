@@ -1,0 +1,9 @@
+.superpowers/
+node_modules/
+dist/
+target/
+src-tauri/binaries/
+test-results/
+playwright-report/
+tests/fixtures/media/
+src-tauri/gen/
