@@ -26,19 +26,23 @@ function topicOf(briefing: string): string {
  * Schlagwörter für den Themenbezug einer Recherche: Wörter des Kundennamens und der Branche, die Nomen aus Anlass,
  * Titel und dem Thema des Briefings („Es geht um …“). Ohne Stoppwörter (Grundwortliste, allgemeine Auftragswörter wie
  * „Recherche“, „Exposé“, „Film“) und ohne Wörter unter vier Buchstaben. Als Stämme, ohne Dubletten, in fester Reihenfolge.
+ * Dazu kommen die von Hand gepflegten Wörter des Steckbriefs (`client.profile.synonyme`) und des Themas
+ * (`topic.schlagwoerter`); sie gelten auch dann, wenn sie in der Grundwortliste stehen (Holz, Schlaf, Wetter).
  */
-export function assignmentKeywords(a: Pick<Assignment, 'client' | 'occasion' | 'title' | 'briefing'>): string[] {
+export function assignmentKeywords(a: Pick<Assignment, 'client' | 'occasion' | 'title' | 'briefing' | 'topic'>): string[] {
   const out: string[] = [];
-  const add = (word: string) => {
+  const add = (word: string, curated = false) => {
     const lower = word.toLowerCase();
-    if (lower.length < MIN_LETTERS || COMMON_WORDS.has(lower) || KEYWORD_STOP.has(lower)) return;
+    if (lower.length < MIN_LETTERS || KEYWORD_STOP.has(lower) || (!curated && COMMON_WORDS.has(lower))) return;
     const stem = keywordStem(lower);
     if (!out.includes(stem)) out.push(stem);
   };
-  wordsOf(a.client.name).forEach(add);
-  wordsOf(a.client.branche).forEach(add);
-  nounsOf(a.occasion).forEach(add);
-  nounsOf(a.title).forEach(add);
-  nounsOf(topicOf(a.briefing)).forEach(add);
+  wordsOf(a.client.name).forEach(w => add(w));
+  wordsOf(a.client.branche).forEach(w => add(w));
+  (a.client.profile?.synonyme ?? []).flatMap(wordsOf).forEach(w => add(w, true));
+  nounsOf(a.occasion).forEach(w => add(w));
+  nounsOf(a.title).forEach(w => add(w));
+  nounsOf(topicOf(a.briefing)).forEach(w => add(w));
+  (a.topic?.schlagwoerter ?? []).flatMap(wordsOf).forEach(w => add(w, true));
   return out;
 }

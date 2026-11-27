@@ -1,0 +1,1651 @@
+[
+  {
+    "id": "ges-ki-kennzeichnung",
+    "kategorie": "gesellschaft",
+    "titel": "KI-Kennzeichnung bei Bildern und Videos",
+    "hintergrund": "Mit künstlicher Intelligenz lassen sich Bilder, Stimmen und Videos erzeugen, die kaum von echten Aufnahmen zu unterscheiden sind. Die einen fordern eine deutliche Kennzeichnung, damit niemand getäuscht wird; andere halten sie für schwer umsetzbar oder für einen Eingriff in kreative Arbeit. Recherchiere den aktuellen Stand.",
+    "leitfragen": [
+      "Wem nützt eine Kennzeichnung, und wem könnte sie schaden?",
+      "Wie ließe sich eine Kennzeichnung überprüfen?",
+      "Wo beginnt „KI-erzeugt“: bei einem Filter, einer Retusche oder erst bei einem ganz neuen Video?"
+    ],
+    "schlagwoerter": [
+      "KI",
+      "Kennzeichnung",
+      "Deepfake",
+      "Täuschung",
+      "Transparenz",
+      "Plattformen",
+      "Urheberrecht"
+    ],
+    "einstieg": [
+      "Verbraucherzentrale",
+      "bpb.de (Bundeszentrale für politische Bildung)",
+      "Landesmedienanstalten"
+    ]
+  },
+  {
+    "id": "ges-handyverbot",
+    "kategorie": "gesellschaft",
+    "titel": "Handyverbot an Schulen",
+    "hintergrund": "Smartphones gehören für viele Jugendliche zum Alltag, auch in der Schule, und die Regeln legen die Länder und die einzelnen Schulen fest. Befürworter eines Verbots erhoffen sich mehr Konzentration, Kritiker verweisen auf Lernmöglichkeiten mit dem Gerät und auf Eigenverantwortung. Recherchiere den aktuellen Stand.",
+    "leitfragen": [
+      "Was spricht für ein Verbot, was für einen geregelten Gebrauch?",
+      "Wie gehen andere Schulen und Länder mit dem Thema um?",
+      "Wer sollte entscheiden: Politik, Schulleitung oder die Schülerschaft selbst?"
+    ],
+    "schlagwoerter": [
+      "Handy",
+      "Smartphone",
+      "Schule",
+      "Verbot",
+      "Unterricht",
+      "Konzentration",
+      "Hausordnung"
+    ],
+    "einstieg": [
+      "Kultusministerien der Länder",
+      "Landesschülervertretungen",
+      "bpb.de (Bundeszentrale für politische Bildung)"
+    ]
+  },
+  {
+    "id": "ges-vier-tage-woche",
+    "kategorie": "gesellschaft",
+    "titel": "Vier-Tage-Woche",
+    "hintergrund": "Bei der Vier-Tage-Woche wird die Arbeit auf weniger Tage verteilt, teils mit weniger Wochenstunden, teils mit denselben Stunden an vier Tagen. Befürworter erwarten mehr Erholung und Zufriedenheit; Kritiker fürchten Mehrbelastung an den Arbeitstagen und Probleme in Berufen mit festen Besetzungen. Recherchiere den aktuellen Stand.",
+    "leitfragen": [
+      "Für welche Berufe könnte das Modell passen, für welche eher nicht?",
+      "Wie fallen Erfahrungen aus Betrieben und Modellprojekten aus?",
+      "Wer trägt die Kosten und wer hat den Nutzen?"
+    ],
+    "schlagwoerter": [
+      "Arbeitszeit",
+      "Vier-Tage-Woche",
+      "Arbeitsalltag",
+      "Lohn",
+      "Erholung",
+      "Gewerkschaft",
+      "Arbeitgeber"
+    ],
+    "einstieg": [
+      "Hans-Böckler-Stiftung",
+      "Destatis (Statistisches Bundesamt)",
+      "Arbeitgeberverbände und Gewerkschaften"
+    ]
+  },
+  {
+    "id": "ges-wehrdienst",
+    "kategorie": "gesellschaft",
+    "titel": "Wehrdienst-Debatte",
+    "hintergrund": "Die Wehrpflicht in Deutschland ist seit 2011 ausgesetzt. Seitdem wird diskutiert, ob es einen Wehrdienst oder einen allgemeinen Pflichtdienst geben soll, wobei Befürworter auf Landesverteidigung und Zusammenhalt verweisen und Gegner auf Freiheitsrechte. Recherchiere den aktuellen Stand.",
+    "leitfragen": [
+      "Welche Argumente nennen Befürworter und Gegner?",
+      "Wer wäre von einer Pflicht betroffen, und wer nicht?",
+      "Welche Alternativen zum Wehrdienst gibt es, etwa freiwillige Dienste?"
+    ],
+    "schlagwoerter": [
+      "Wehrdienst",
+      "Wehrpflicht",
+      "Bundeswehr",
+      "Pflichtdienst",
+      "Freiwilligendienst",
+      "Verteidigung",
+      "Zivildienst"
+    ],
+    "einstieg": [
+      "Bundesministerium der Verteidigung",
+      "bpb.de (Bundeszentrale für politische Bildung)",
+      "Bundestag (Debatten und Gesetzentwürfe)"
+    ]
+  },
+  {
+    "id": "ges-mieten",
+    "kategorie": "gesellschaft",
+    "titel": "Mieten in Großstädten",
+    "hintergrund": "In vielen Großstädten ist es schwer, bezahlbaren Wohnraum zu finden. Mieterverbände fordern strengere Grenzen für Mieterhöhungen, Eigentümer- und Bauverbände sehen mehr Neubau als Lösung, und Instrumente wie die Mietpreisbremse sind umstritten. Recherchiere den aktuellen Stand.",
+    "leitfragen": [
+      "Warum ist Wohnraum in manchen Städten knapp?",
+      "Welche Maßnahmen gibt es, und wie wirken sie?",
+      "Wen trifft die Lage besonders, etwa Studierende, Familien oder Ältere?"
+    ],
+    "schlagwoerter": [
+      "Miete",
+      "Wohnraum",
+      "Großstadt",
+      "Mietpreisbremse",
+      "Neubau",
+      "Mieterbund",
+      "Wohnungsmarkt"
+    ],
+    "einstieg": [
+      "Destatis (Statistisches Bundesamt)",
+      "Deutscher Mieterbund",
+      "Mietspiegel der eigenen Stadt"
+    ]
+  },
+  {
+    "id": "ges-tempolimit",
+    "kategorie": "gesellschaft",
+    "titel": "Tempolimit auf Autobahnen",
+    "hintergrund": "Auf vielen deutschen Autobahnabschnitten gibt es keine allgemeine Höchstgeschwindigkeit, anders als in vielen anderen Ländern. Befürworter eines Tempolimits nennen Sicherheit und Klimaschutz, Gegner verweisen auf Freiheit und auf den Wert zügigen Vorankommens. Recherchiere den aktuellen Stand.",
+    "leitfragen": [
+      "Welche Argumente stützen sich auf Unfall- und Umweltdaten, und welche auf Werte?",
+      "Wie ist die Lage in anderen Ländern?",
+      "Wie ließe sich ein Kompromiss gestalten, etwa auf einzelnen Strecken?"
+    ],
+    "schlagwoerter": [
+      "Tempolimit",
+      "Autobahn",
+      "Geschwindigkeit",
+      "Verkehrssicherheit",
+      "Klimaschutz",
+      "Unfälle",
+      "Verkehr"
+    ],
+    "einstieg": [
+      "Umweltbundesamt",
+      "Bundesanstalt für Straßenwesen",
+      "ADAC und Verkehrsclubs"
+    ]
+  },
+  {
+    "id": "ges-organspende",
+    "kategorie": "gesellschaft",
+    "titel": "Organspende",
+    "hintergrund": "In Deutschland gilt bisher die Entscheidungslösung: Organe dürfen nur entnommen werden, wenn die Person oder ihre Angehörigen zugestimmt haben. Manche fordern eine Widerspruchslösung, andere sehen darin einen Eingriff in die Selbstbestimmung. Recherchiere den aktuellen Stand.",
+    "leitfragen": [
+      "Wie funktioniert die Entscheidungslösung, und wie funktioniert die Widerspruchslösung?",
+      "Wie gehen andere Länder damit um?",
+      "Wie lässt sich Aufklärung gestalten, ohne Druck auszuüben?"
+    ],
+    "schlagwoerter": [
+      "Organspende",
+      "Spendeausweis",
+      "Widerspruchslösung",
+      "Entscheidungslösung",
+      "Transplantation",
+      "Selbstbestimmung"
+    ],
+    "einstieg": [
+      "Bundeszentrale für gesundheitliche Aufklärung (BZgA)",
+      "Deutsche Stiftung Organtransplantation",
+      "Bundestag (Debatten und Gesetze)"
+    ]
+  },
+  {
+    "id": "ges-wahlalter",
+    "kategorie": "gesellschaft",
+    "titel": "Wahlalter 16",
+    "hintergrund": "Bei der Bundestagswahl dürfen bisher nur Menschen ab 18 Jahren wählen. Bei Europawahlen und in einigen Ländern bei Landtags- und Kommunalwahlen liegt die Grenze niedriger, und die Meinungen darüber gehen auseinander. Recherchiere den aktuellen Stand.",
+    "leitfragen": [
+      "Was spricht für, was gegen ein niedrigeres Wahlalter?",
+      "Wie ist es bei Wahlen, bei denen schon ab 16 gewählt werden darf?",
+      "Welche Rolle spielt politische Bildung in der Schule?"
+    ],
+    "schlagwoerter": [
+      "Wahlalter",
+      "Wahlrecht",
+      "Jugendliche",
+      "Wahl",
+      "Beteiligung",
+      "Politische Bildung",
+      "Demokratie"
+    ],
+    "einstieg": [
+      "bpb.de (Bundeszentrale für politische Bildung)",
+      "Bundeswahlleiterin bzw. Bundeswahlleiter",
+      "Landeszentralen für politische Bildung"
+    ]
+  },
+  {
+    "id": "ges-social-media-alter",
+    "kategorie": "gesellschaft",
+    "titel": "Altersgrenze für soziale Netzwerke",
+    "hintergrund": "Soziale Netzwerke nennen in ihren Nutzungsbedingungen ein Mindestalter, das sich in der Praxis kaum durchsetzen lässt. Befürworter strengerer Grenzen wollen Kinder schützen, Kritiker fürchten Datenerhebung und den Ausschluss von Teilhabe. Recherchiere den aktuellen Stand.",
+    "leitfragen": [
+      "Wie ließe sich ein Mindestalter überprüfen, ohne zu viele Daten zu sammeln?",
+      "Welche Risiken und welche Chancen sehen Eltern, Schulen und Jugendliche?",
+      "Welche Rolle sollten Plattformen und welche der Staat spielen?"
+    ],
+    "schlagwoerter": [
+      "Soziale Medien",
+      "Altersgrenze",
+      "Jugendschutz",
+      "Plattform",
+      "Eltern",
+      "Datenschutz",
+      "Altersprüfung"
+    ],
+    "einstieg": [
+      "Kommission für Jugendmedienschutz",
+      "klicksafe.de",
+      "Landesmedienanstalten"
+    ]
+  },
+  {
+    "id": "ges-bargeld",
+    "kategorie": "gesellschaft",
+    "titel": "Bargeld oder digital bezahlen",
+    "hintergrund": "Immer mehr Menschen zahlen mit Karte oder Smartphone, andere bestehen auf Scheinen und Münzen. Befürworter des Bargelds nennen Anonymität und Unabhängigkeit, Befürworter digitaler Zahlungen Komfort und Schnelligkeit. Recherchiere den aktuellen Stand.",
+    "leitfragen": [
+      "Welche Vorteile und Nachteile haben beide Wege im Alltag?",
+      "Wen würde eine Abschaffung von Bargeld besonders treffen?",
+      "Wie steht es um Datenschutz und Sicherheit?"
+    ],
+    "schlagwoerter": [
+      "Bargeld",
+      "Kartenzahlung",
+      "Bezahlen",
+      "Datenschutz",
+      "Bank",
+      "Zahlungsverkehr",
+      "Digital"
+    ],
+    "einstieg": [
+      "Deutsche Bundesbank",
+      "Verbraucherzentrale",
+      "Destatis (Statistisches Bundesamt)"
+    ]
+  },
+  {
+    "id": "ges-homeoffice",
+    "kategorie": "gesellschaft",
+    "titel": "Homeoffice-Anspruch",
+    "hintergrund": "Seit der Corona-Pandemie arbeiten viele Menschen zumindest zeitweise von zu Hause. Beschäftigte wünschen sich häufig einen Anspruch darauf, Arbeitgeber wollen oft selbst entscheiden und verweisen auf Zusammenarbeit im Büro. Recherchiere den aktuellen Stand.",
+    "leitfragen": [
+      "Für welche Tätigkeiten ist Homeoffice überhaupt möglich?",
+      "Was verändert sich für Familie, Erreichbarkeit und Teamgeist?",
+      "Soll der Gesetzgeber das regeln oder die Betriebe?"
+    ],
+    "schlagwoerter": [
+      "Homeoffice",
+      "Arbeit",
+      "Büro",
+      "Pandemie",
+      "Arbeitgeber",
+      "Beschäftigte",
+      "Anspruch"
+    ],
+    "einstieg": [
+      "Bundesministerium für Arbeit und Soziales",
+      "Hans-Böckler-Stiftung",
+      "Institut für Arbeitsmarkt- und Berufsforschung"
+    ]
+  },
+  {
+    "id": "ges-fleischkonsum",
+    "kategorie": "gesellschaft",
+    "titel": "Fleischkonsum und Tierwohl",
+    "hintergrund": "Fleisch ist für viele ein fester Teil der Ernährung, gleichzeitig wird über Tierhaltung, Klima und Gesundheit gestritten. Manche wünschen sich staatliche Vorgaben wie Haltungskennzeichnung, andere setzen auf freie Entscheidung beim Einkauf. Recherchiere den aktuellen Stand.",
+    "leitfragen": [
+      "Welche Argumente nennen Tierschutz, Landwirtschaft und Verbraucher?",
+      "Wie funktionieren Haltungsstufen und Labels?",
+      "Welche Rolle spielen Preis und Einkommen?"
+    ],
+    "schlagwoerter": [
+      "Fleisch",
+      "Tierwohl",
+      "Tierhaltung",
+      "Landwirtschaft",
+      "Ernährung",
+      "Haltungskennzeichnung",
+      "Klima"
+    ],
+    "einstieg": [
+      "Bundesministerium für Ernährung und Landwirtschaft",
+      "Deutsche Gesellschaft für Ernährung",
+      "Verbraucherzentrale"
+    ]
+  },
+  {
+    "id": "ges-cannabis",
+    "kategorie": "gesellschaft",
+    "titel": "Cannabis-Legalisierung",
+    "hintergrund": "Seit dem 1. April 2024 ist der Besitz kleiner Mengen Cannabis für Erwachsene in Deutschland unter Auflagen erlaubt. Befürworter verweisen auf Entkriminalisierung und Jugendschutz, Kritiker auf gesundheitliche Risiken und Schwierigkeiten bei Kontrollen. Recherchiere den aktuellen Stand.",
+    "leitfragen": [
+      "Was ist erlaubt und was weiterhin verboten?",
+      "Welche Argumente nennen Medizin, Polizei und Suchtberatung?",
+      "Wie fallen Erfahrungen anderer Länder aus?"
+    ],
+    "schlagwoerter": [
+      "Cannabis",
+      "Legalisierung",
+      "Jugendschutz",
+      "Gesetz",
+      "Sucht",
+      "Konsum",
+      "Prävention"
+    ],
+    "einstieg": [
+      "Bundesministerium für Gesundheit",
+      "Bundeszentrale für gesundheitliche Aufklärung (BZgA)",
+      "Suchtberatungsstellen"
+    ]
+  },
+  {
+    "id": "ges-deutschlandticket",
+    "kategorie": "gesellschaft",
+    "titel": "Deutschlandticket",
+    "hintergrund": "Das Deutschlandticket gibt es seit Mai 2023 als bundesweites Abo für den Nahverkehr. Befürworter loben die einfache Nutzung und die Entlastung vieler Pendlerinnen und Pendler, Kritiker verweisen auf Kosten und die Finanzierung durch Bund und Länder. Recherchiere den aktuellen Stand.",
+    "leitfragen": [
+      "Wer profitiert besonders, wer weniger, zum Beispiel auf dem Land?",
+      "Wer bezahlt das Ticket, und wie lässt sich das gerecht lösen?",
+      "Wie hat sich die Nutzung des Nahverkehrs entwickelt?"
+    ],
+    "schlagwoerter": [
+      "Deutschlandticket",
+      "Nahverkehr",
+      "Bahn",
+      "Pendler",
+      "Finanzierung",
+      "Verkehrsverbund",
+      "Tarif"
+    ],
+    "einstieg": [
+      "Verkehrsverbünde der Region",
+      "Verband Deutscher Verkehrsunternehmen",
+      "Umweltbundesamt"
+    ]
+  },
+  {
+    "id": "ges-gendern",
+    "kategorie": "gesellschaft",
+    "titel": "Gendern in Schule und Medien",
+    "hintergrund": "Ob und wie in Texten und Sendungen gegendert wird, sorgt seit Jahren für Streit. Die einen wollen alle Geschlechter sichtbar machen, die anderen betonen Lesbarkeit und die Regeln des Rats für deutsche Rechtschreibung. Recherchiere den aktuellen Stand.",
+    "leitfragen": [
+      "Welche Formen des Genderns gibt es, und wie unterscheiden sie sich?",
+      "Was sagen Sprachwissenschaft, Schulen und Redaktionen?",
+      "Wie kann ein Film oder Beitrag damit umgehen, ohne zu belehren?"
+    ],
+    "schlagwoerter": [
+      "Gendern",
+      "Sprache",
+      "Rechtschreibung",
+      "Genderstern",
+      "Lesbarkeit",
+      "Schule",
+      "Gleichstellung"
+    ],
+    "einstieg": [
+      "Rat für deutsche Rechtschreibung",
+      "Duden-Redaktion",
+      "Redaktionsleitfäden von Sendern und Zeitungen"
+    ]
+  },
+  {
+    "id": "ge-mauerfall",
+    "kategorie": "geschichte",
+    "titel": "Mauerfall 1989",
+    "hintergrund": "Am 9. November 1989 öffnete die DDR ihre Grenzen nach West-Berlin, nachdem die Berliner Mauer die Stadt jahrzehntelang geteilt hatte. Der Mauerfall war Teil einer friedlichen Revolution und führte zur Wiedervereinigung am 3. Oktober 1990.",
+    "leitfragen": [
+      "Wie kam es am Abend des 9. November 1989 zur Grenzöffnung?",
+      "Welche Rolle spielten die Demonstrationen in der DDR?",
+      "Wie haben Menschen in Ost und West diesen Tag erlebt?"
+    ],
+    "schlagwoerter": [
+      "Mauerfall",
+      "Berliner Mauer",
+      "DDR",
+      "Wiedervereinigung",
+      "Grenzöffnung",
+      "friedliche Revolution",
+      "1989"
+    ],
+    "einstieg": [
+      "Bundesstiftung zur Aufarbeitung der SED-Diktatur",
+      "Deutsches Historisches Museum (LeMO)",
+      "Zeitzeugenberichte"
+    ]
+  },
+  {
+    "id": "ge-wirtschaftswunder",
+    "kategorie": "geschichte",
+    "titel": "Wirtschaftswunder",
+    "hintergrund": "Nach der Währungsreform 1948 erholte sich die Wirtschaft in Westdeutschland schnell, und viele Menschen erlebten steigenden Wohlstand. Diese Zeit wird als Wirtschaftswunder bezeichnet; Ludwig Erhard gilt als einer ihrer bekanntesten Politiker.",
+    "leitfragen": [
+      "Welche Ursachen hatte der schnelle Aufschwung?",
+      "Wie veränderte sich der Alltag, etwa durch Auto, Kühlschrank und Fernseher?",
+      "Wer profitierte weniger vom Aufschwung?"
+    ],
+    "schlagwoerter": [
+      "Wirtschaftswunder",
+      "Währungsreform",
+      "Nachkriegszeit",
+      "Wohlstand",
+      "Ludwig Erhard",
+      "D-Mark",
+      "Wiederaufbau"
+    ],
+    "einstieg": [
+      "Deutsches Historisches Museum (LeMO)",
+      "Haus der Geschichte",
+      "Bundesarchiv"
+    ]
+  },
+  {
+    "id": "ge-anwerbeabkommen",
+    "kategorie": "geschichte",
+    "titel": "Anwerbeabkommen und Gastarbeiter",
+    "hintergrund": "Ab den 1950er-Jahren warb die Bundesrepublik Arbeitskräfte aus dem Ausland an, zum Beispiel mit Italien und 1961 mit der Türkei. Viele Menschen kamen zunächst für kurze Zeit und blieben dann dauerhaft; 1973 wurde die Anwerbung gestoppt.",
+    "leitfragen": [
+      "Warum wurden damals Arbeitskräfte gesucht?",
+      "Wie lebten und arbeiteten die Menschen, die kamen?",
+      "Was bedeutet diese Geschichte für das Zusammenleben heute?"
+    ],
+    "schlagwoerter": [
+      "Anwerbeabkommen",
+      "Gastarbeiter",
+      "Türkei",
+      "Arbeitsmigration",
+      "Anwerbestopp",
+      "Integration",
+      "1961"
+    ],
+    "einstieg": [
+      "Dokumentationszentrum und Museum über die Migration in Deutschland (DOMiD)",
+      "bpb.de (Bundeszentrale für politische Bildung)",
+      "Zeitzeugengespräche"
+    ]
+  },
+  {
+    "id": "ge-buchdruck",
+    "kategorie": "geschichte",
+    "titel": "Buchdruck mit beweglichen Lettern",
+    "hintergrund": "Mitte des 15. Jahrhunderts entwickelte Johannes Gutenberg in Mainz ein Verfahren zum Drucken mit beweglichen Metalllettern. Bücher wurden dadurch günstiger und verbreiteten sich schneller; auch die Reformation ab 1517 profitierte davon.",
+    "leitfragen": [
+      "Wie funktionierte der Druck mit beweglichen Lettern?",
+      "Wie veränderte der Buchdruck Bildung und Politik?",
+      "Welche Parallelen gibt es zum Internet?"
+    ],
+    "schlagwoerter": [
+      "Buchdruck",
+      "Gutenberg",
+      "Mainz",
+      "Lettern",
+      "Reformation",
+      "Druckerpresse",
+      "Flugschrift"
+    ],
+    "einstieg": [
+      "Gutenberg-Museum Mainz",
+      "Deutsche Digitale Bibliothek",
+      "Bibliotheken und Archive"
+    ]
+  },
+  {
+    "id": "ge-frauenwahlrecht",
+    "kategorie": "geschichte",
+    "titel": "Frauenwahlrecht 1918",
+    "hintergrund": "Im November 1918 wurde in Deutschland das Wahlrecht für Frauen beschlossen, und im Januar 1919 durften sie erstmals bei einer reichsweiten Wahl abstimmen. Vorausgegangen waren Jahrzehnte der Kämpfe der Frauenbewegung.",
+    "leitfragen": [
+      "Wer kämpfte für das Frauenwahlrecht, und wie?",
+      "Was änderte sich 1918 und 1919 konkret?",
+      "Wie ging es danach mit der Gleichberechtigung weiter?"
+    ],
+    "schlagwoerter": [
+      "Frauenwahlrecht",
+      "Frauenbewegung",
+      "Wahlrecht",
+      "1918",
+      "Weimarer Republik",
+      "Gleichberechtigung",
+      "Suffragetten"
+    ],
+    "einstieg": [
+      "bpb.de (Bundeszentrale für politische Bildung)",
+      "Deutscher Frauenrat",
+      "Stadtarchiv"
+    ]
+  },
+  {
+    "id": "ge-mondlandung",
+    "kategorie": "geschichte",
+    "titel": "Mondlandung 1969",
+    "hintergrund": "Am 20. Juli 1969 landeten mit Apollo 11 erstmals Menschen auf dem Mond: Neil Armstrong und Buzz Aldrin betraten die Oberfläche, Michael Collins blieb im Orbit. Weltweit verfolgten viele Menschen die Landung im Fernsehen.",
+    "leitfragen": [
+      "Wie war das Wettrennen zwischen den USA und der Sowjetunion damals?",
+      "Wie berichteten Fernsehen und Radio über die Landung?",
+      "Welche Rolle spielt die Raumfahrt heute?"
+    ],
+    "schlagwoerter": [
+      "Mondlandung",
+      "Apollo 11",
+      "Raumfahrt",
+      "NASA",
+      "Armstrong",
+      "1969",
+      "Weltraum"
+    ],
+    "einstieg": [
+      "NASA-Archive",
+      "Deutsches Zentrum für Luft- und Raumfahrt",
+      "Tagesschau-Archiv"
+    ]
+  },
+  {
+    "id": "ge-fernsehen",
+    "kategorie": "geschichte",
+    "titel": "Geschichte des Fernsehens",
+    "hintergrund": "Schon 1884 patentierte Paul Nipkow ein Verfahren, Bilder mit einer rotierenden Scheibe zu zerlegen. In Westdeutschland begann das Programm nach dem Krieg Anfang der 1950er-Jahre, 1963 kam das ZDF dazu; später folgten Farbfernsehen, Kabel und Streaming.",
+    "leitfragen": [
+      "Wie entwickelte sich die Technik vom Versuch zum Massenmedium?",
+      "Wie veränderte das Fernsehen den Alltag?",
+      "Welche Rolle spielt es im Vergleich zum Streaming heute?"
+    ],
+    "schlagwoerter": [
+      "Fernsehen",
+      "Nipkow",
+      "Rundfunk",
+      "Fernsehgerät",
+      "Programm",
+      "Farbfernsehen",
+      "Streaming"
+    ],
+    "einstieg": [
+      "Deutsches Rundfunkarchiv",
+      "Deutsches Museum",
+      "Tagesschau-Archiv"
+    ]
+  },
+  {
+    "id": "ge-industrialisierung",
+    "kategorie": "geschichte",
+    "titel": "Industrialisierung",
+    "hintergrund": "Mit der Dampfmaschine und neuen Fabriken begann im 18. Jahrhundert in England die Industrialisierung, die sich im 19. Jahrhundert auch in Deutschland ausbreitete. Die erste deutsche Eisenbahn fuhr 1835 zwischen Nürnberg und Fürth.",
+    "leitfragen": [
+      "Wie veränderten Maschinen Arbeit und Leben?",
+      "Warum zogen viele Menschen in die Städte?",
+      "Welche sozialen Probleme und Reformen folgten daraus?"
+    ],
+    "schlagwoerter": [
+      "Industrialisierung",
+      "Dampfmaschine",
+      "Fabrik",
+      "Eisenbahn",
+      "Arbeiterbewegung",
+      "Stadt",
+      "19. Jahrhundert"
+    ],
+    "einstieg": [
+      "Deutsches Museum",
+      "Industriemuseen der Region",
+      "Stadtarchiv"
+    ]
+  },
+  {
+    "id": "ge-weimarer-republik",
+    "kategorie": "geschichte",
+    "titel": "Weimarer Republik",
+    "hintergrund": "Nach dem Ersten Weltkrieg wurde Deutschland 1919 eine Republik mit einer demokratischen Verfassung. Die Weimarer Republik erlebte wirtschaftliche Krisen und politische Gewalt und endete 1933 mit der Machtübernahme der Nationalsozialisten.",
+    "leitfragen": [
+      "Was war neu an der Verfassung von 1919?",
+      "Welche Krisen belasteten die junge Demokratie?",
+      "Was lässt sich aus ihrem Scheitern für heute lernen?"
+    ],
+    "schlagwoerter": [
+      "Weimarer Republik",
+      "Verfassung",
+      "Demokratie",
+      "Weimar",
+      "Reichstag",
+      "Krise",
+      "1919"
+    ],
+    "einstieg": [
+      "bpb.de (Bundeszentrale für politische Bildung)",
+      "Deutsches Historisches Museum (LeMO)",
+      "Bundesarchiv"
+    ]
+  },
+  {
+    "id": "ge-grundgesetz",
+    "kategorie": "geschichte",
+    "titel": "Das Grundgesetz von 1949",
+    "hintergrund": "Am 23. Mai 1949 wurde das Grundgesetz verkündet, die Verfassung der Bundesrepublik Deutschland. Erarbeitet hatte es der Parlamentarische Rat; der erste Artikel schützt die Würde des Menschen.",
+    "leitfragen": [
+      "Wie entstand das Grundgesetz, und wer arbeitete daran mit?",
+      "Welche Lehren aus der Vergangenheit stecken darin?",
+      "Welche Grundrechte spielen im Alltag junger Menschen eine Rolle?"
+    ],
+    "schlagwoerter": [
+      "Grundgesetz",
+      "Verfassung",
+      "Grundrechte",
+      "Parlamentarischer Rat",
+      "Menschenwürde",
+      "1949",
+      "Bundesrepublik"
+    ],
+    "einstieg": [
+      "bpb.de (Bundeszentrale für politische Bildung)",
+      "Bundestag (Informationen zum Grundgesetz)",
+      "Haus der Geschichte"
+    ]
+  },
+  {
+    "id": "ge-luftbruecke",
+    "kategorie": "geschichte",
+    "titel": "Berliner Luftbrücke",
+    "hintergrund": "Von Juni 1948 bis Mai 1949 blockierte die Sowjetunion die Zufahrtswege in die Westsektoren Berlins. Die Westmächte versorgten die Stadt über eine Luftbrücke mit Lebensmitteln, Kohle und anderen Gütern.",
+    "leitfragen": [
+      "Warum kam es zur Blockade?",
+      "Wie funktionierte die Versorgung aus der Luft?",
+      "Wie veränderte die Luftbrücke das Verhältnis zu den Westmächten?"
+    ],
+    "schlagwoerter": [
+      "Luftbrücke",
+      "Berlin",
+      "Blockade",
+      "Rosinenbomber",
+      "Kalter Krieg",
+      "Westmächte",
+      "1948"
+    ],
+    "einstieg": [
+      "Deutsches Historisches Museum (LeMO)",
+      "Alliierten-Museum Berlin",
+      "Bundesarchiv"
+    ]
+  },
+  {
+    "id": "ge-tschernobyl",
+    "kategorie": "geschichte",
+    "titel": "Reaktorunglück von Tschernobyl 1986",
+    "hintergrund": "Am 26. April 1986 kam es im Kernkraftwerk Tschernobyl in der heutigen Ukraine zu einem schweren Unfall. Radioaktive Stoffe wurden auch über Teile Europas verteilt; das Ereignis prägte die Debatte über Atomkraft in Deutschland nachhaltig.",
+    "leitfragen": [
+      "Was geschah an diesem Tag, und wie wurde darüber informiert?",
+      "Wie reagierten Bevölkerung und Politik in Deutschland?",
+      "Wie wirkte das Ereignis auf die Energiepolitik?"
+    ],
+    "schlagwoerter": [
+      "Tschernobyl",
+      "Reaktor",
+      "Atomkraft",
+      "Radioaktivität",
+      "Energiepolitik",
+      "Umweltbewegung",
+      "1986"
+    ],
+    "einstieg": [
+      "Bundesamt für Strahlenschutz",
+      "bpb.de (Bundeszentrale für politische Bildung)",
+      "Tagesschau-Archiv"
+    ]
+  },
+  {
+    "id": "ge-internet",
+    "kategorie": "geschichte",
+    "titel": "Anfänge des Internets und des World Wide Web",
+    "hintergrund": "Ende der 1960er-Jahre entstand mit dem ARPANET ein erstes Netz, das Computer miteinander verband. Das World Wide Web entwickelte Tim Berners-Lee ab 1989 am CERN, und Anfang der 1990er-Jahre wurde es öffentlich nutzbar.",
+    "leitfragen": [
+      "Wie unterscheiden sich Internet und World Wide Web?",
+      "Wie veränderte sich der Alltag mit dem Netz?",
+      "Welche Chancen und Probleme zeigten sich früh?"
+    ],
+    "schlagwoerter": [
+      "Internet",
+      "World Wide Web",
+      "ARPANET",
+      "CERN",
+      "Browser",
+      "E-Mail",
+      "Berners-Lee"
+    ],
+    "einstieg": [
+      "CERN (Geschichte des Web)",
+      "Deutsches Museum",
+      "Heinz Nixdorf MuseumsForum"
+    ]
+  },
+  {
+    "id": "ge-euro",
+    "kategorie": "geschichte",
+    "titel": "Einführung des Euro",
+    "hintergrund": "Der Euro wurde 1999 als Buchgeld eingeführt, und seit dem 1. Januar 2002 gibt es Euro-Münzen und -Scheine. Er löste in Deutschland die D-Mark ab und wird heute in vielen Ländern Europas genutzt.",
+    "leitfragen": [
+      "Warum wurde eine gemeinsame Währung eingeführt?",
+      "Wie erlebten Menschen die Umstellung 2002?",
+      "Welche Vorteile und Streitpunkte gibt es bis heute?"
+    ],
+    "schlagwoerter": [
+      "Euro",
+      "D-Mark",
+      "Währung",
+      "Europäische Union",
+      "Bargeld",
+      "Währungsunion",
+      "2002"
+    ],
+    "einstieg": [
+      "Deutsche Bundesbank",
+      "Europäische Zentralbank",
+      "Tagesschau-Archiv"
+    ]
+  },
+  {
+    "id": "wi-waermepumpe",
+    "kategorie": "wissen",
+    "titel": "Wärmepumpe",
+    "hintergrund": "Eine Wärmepumpe entzieht Luft, Erdreich oder Grundwasser Wärme und bringt sie mit Hilfe von Strom auf ein höheres Temperaturniveau zum Heizen. Wie gut sie arbeitet, hängt vom Gebäude, von der Wärmequelle und von der Heizungsanlage ab.",
+    "leitfragen": [
+      "Wie funktioniert eine Wärmepumpe Schritt für Schritt?",
+      "Welche Arten gibt es, und wofür eignen sie sich?",
+      "Was muss im Haus passen, damit sich der Einbau lohnt?"
+    ],
+    "schlagwoerter": [
+      "Wärmepumpe",
+      "Heizung",
+      "Wärme",
+      "Strom",
+      "Erdwärme",
+      "Luft",
+      "Kältemittel"
+    ],
+    "einstieg": [
+      "Verbraucherzentrale (Energieberatung)",
+      "Fraunhofer-Institut für Solare Energiesysteme",
+      "Bundesverband Wärmepumpe"
+    ]
+  },
+  {
+    "id": "wi-mikroplastik",
+    "kategorie": "wissen",
+    "titel": "Mikroplastik",
+    "hintergrund": "Mikroplastik bezeichnet winzige Kunststoffteilchen, die in Gewässern, Böden und in der Luft gefunden werden. Sie entstehen zum Beispiel durch den Zerfall größerer Plastikteile oder durch Abrieb, etwa von Reifen und Textilien. Wie sich Mikroplastik auf Lebewesen auswirkt, wird noch erforscht.",
+    "leitfragen": [
+      "Woher kommt Mikroplastik, und wie gelangt es in die Umwelt?",
+      "Was ist über mögliche Folgen für Tiere und Menschen bekannt?",
+      "Was lässt sich im Alltag tun, und was muss die Politik regeln?"
+    ],
+    "schlagwoerter": [
+      "Mikroplastik",
+      "Kunststoff",
+      "Plastik",
+      "Gewässer",
+      "Abrieb",
+      "Umwelt",
+      "Mikroplastikpartikel"
+    ],
+    "einstieg": [
+      "Umweltbundesamt",
+      "Alfred-Wegener-Institut",
+      "Bundesinstitut für Risikobewertung"
+    ]
+  },
+  {
+    "id": "wi-inflation",
+    "kategorie": "wissen",
+    "titel": "Inflation",
+    "hintergrund": "Von Inflation spricht man, wenn das allgemeine Preisniveau steigt und das Geld an Kaufkraft verliert. Gemessen wird sie in Deutschland unter anderem mit dem Verbraucherpreisindex des Statistischen Bundesamts. Die Europäische Zentralbank versucht, die Preise stabil zu halten.",
+    "leitfragen": [
+      "Wie entsteht Inflation, und woran wird sie gemessen?",
+      "Wen trifft sie besonders, wen weniger?",
+      "Was kann eine Zentralbank dagegen tun, und was nicht?"
+    ],
+    "schlagwoerter": [
+      "Inflation",
+      "Preise",
+      "Kaufkraft",
+      "Verbraucherpreisindex",
+      "Zentralbank",
+      "Zinsen",
+      "Geld"
+    ],
+    "einstieg": [
+      "Destatis (Statistisches Bundesamt)",
+      "Deutsche Bundesbank",
+      "Europäische Zentralbank"
+    ]
+  },
+  {
+    "id": "wi-schlaf",
+    "kategorie": "wissen",
+    "titel": "Schlaf und Schlafphasen",
+    "hintergrund": "Im Schlaf durchläuft der Körper mehrere Phasen, darunter Leichtschlaf, Tiefschlaf und den Traumschlaf (REM-Phase). Der Schlaf hilft bei Erholung und Lernen; wie viel Schlaf ein Mensch braucht, ist individuell verschieden.",
+    "leitfragen": [
+      "Was passiert in den einzelnen Schlafphasen?",
+      "Warum ist Schlaf für Lernen und Gesundheit wichtig?",
+      "Welche Gewohnheiten helfen beim Einschlafen, und welche stören?"
+    ],
+    "schlagwoerter": [
+      "Schlaf",
+      "Schlafphasen",
+      "Tiefschlaf",
+      "Traum",
+      "Erholung",
+      "Gehirn",
+      "Müdigkeit"
+    ],
+    "einstieg": [
+      "Bundeszentrale für gesundheitliche Aufklärung (BZgA)",
+      "Deutsche Gesellschaft für Schlafforschung und Schlafmedizin",
+      "Krankenkassen-Ratgeber"
+    ]
+  },
+  {
+    "id": "wi-impfungen",
+    "kategorie": "wissen",
+    "titel": "Wie Impfungen wirken",
+    "hintergrund": "Eine Impfung trainiert das Immunsystem, einen Erreger zu erkennen, ohne dass man die Krankheit durchmachen muss. In Deutschland gibt die Ständige Impfkommission (STIKO) am Robert Koch-Institut Empfehlungen ab. Welche Impfungen aktuell empfohlen werden, ändert sich mit dem Stand der Forschung; recherchiere den aktuellen Stand.",
+    "leitfragen": [
+      "Wie erkennt das Immunsystem einen Erreger?",
+      "Was bedeutet Herdenschutz?",
+      "Wie wird die Sicherheit von Impfstoffen geprüft?"
+    ],
+    "schlagwoerter": [
+      "Impfung",
+      "Impfstoff",
+      "Immunsystem",
+      "Antikörper",
+      "STIKO",
+      "Herdenschutz",
+      "Erreger"
+    ],
+    "einstieg": [
+      "Robert Koch-Institut",
+      "Bundeszentrale für gesundheitliche Aufklärung (BZgA)",
+      "Paul-Ehrlich-Institut"
+    ]
+  },
+  {
+    "id": "wi-blockchain",
+    "kategorie": "wissen",
+    "titel": "Blockchain",
+    "hintergrund": "Eine Blockchain ist eine Datenbank, in der Einträge in verketteten Blöcken gespeichert werden und die von vielen Rechnern gemeinsam geführt wird. Bekannt wurde sie durch die Kryptowährung Bitcoin, die 2009 startete. Wofür sie sich im Alltag eignet, ist umstritten.",
+    "leitfragen": [
+      "Wie ist eine Blockchain aufgebaut?",
+      "Warum soll sie fälschungssicher sein?",
+      "Wofür wird sie genutzt, und wo ist ihr Einsatz fraglich?"
+    ],
+    "schlagwoerter": [
+      "Blockchain",
+      "Bitcoin",
+      "Kryptowährung",
+      "Datenbank",
+      "dezentral",
+      "Block",
+      "Mining"
+    ],
+    "einstieg": [
+      "Bundesamt für Sicherheit in der Informationstechnik (BSI)",
+      "Bundesbank",
+      "Verbraucherzentrale"
+    ]
+  },
+  {
+    "id": "wi-polarlichter",
+    "kategorie": "wissen",
+    "titel": "Polarlichter",
+    "hintergrund": "Polarlichter entstehen, wenn geladene Teilchen von der Sonne auf das Magnetfeld und die Atmosphäre der Erde treffen und Gase zum Leuchten bringen. Meist sind sie in der Nähe der Polargebiete zu sehen, bei starker Sonnenaktivität aber auch weiter südlich.",
+    "leitfragen": [
+      "Wie entstehen die Leuchterscheinungen am Himmel?",
+      "Warum gibt es unterschiedliche Farben?",
+      "Wann und wo lassen sich Polarlichter beobachten und filmen?"
+    ],
+    "schlagwoerter": [
+      "Polarlicht",
+      "Sonnenwind",
+      "Magnetfeld",
+      "Atmosphäre",
+      "Sonnenaktivität",
+      "Nordlicht",
+      "Himmel"
+    ],
+    "einstieg": [
+      "Deutsches Zentrum für Luft- und Raumfahrt",
+      "Max-Planck-Institut für Sonnensystemforschung",
+      "Deutscher Wetterdienst"
+    ]
+  },
+  {
+    "id": "wi-bienensterben",
+    "kategorie": "wissen",
+    "titel": "Bienensterben und Insektenschutz",
+    "hintergrund": "Honigbienen werden von Imkerinnen und Imkern betreut, Wildbienen leben dagegen ohne Imker. Als mögliche Gründe für Rückgänge werden etwa die Varroamilbe, Pflanzenschutzmittel und der Verlust von Lebensräumen genannt. Wie sich die Bestände entwickeln, schwankt; recherchiere den aktuellen Stand.",
+    "leitfragen": [
+      "Worin unterscheiden sich Honigbienen und Wildbienen?",
+      "Welche Ursachen für Rückgänge werden genannt?",
+      "Was kann man im Garten, auf dem Balkon oder in der Politik tun?"
+    ],
+    "schlagwoerter": [
+      "Biene",
+      "Wildbiene",
+      "Insekten",
+      "Bestäubung",
+      "Pestizide",
+      "Varroamilbe",
+      "Lebensraum"
+    ],
+    "einstieg": [
+      "Bundesamt für Naturschutz",
+      "NABU",
+      "Imkerverbände"
+    ]
+  },
+  {
+    "id": "wi-treibhauseffekt",
+    "kategorie": "wissen",
+    "titel": "Treibhauseffekt",
+    "hintergrund": "Gase wie Kohlendioxid und Methan halten einen Teil der Wärme der Erde in der Atmosphäre zurück. Ohne diesen natürlichen Treibhauseffekt wäre es auf der Erde deutlich kälter; durch menschliche Emissionen verstärkt er sich. Zusammenfassungen der Forschung liefert unter anderem der Weltklimarat IPCC.",
+    "leitfragen": [
+      "Wie funktioniert der natürliche Treibhauseffekt?",
+      "Welche Rolle spielen menschliche Emissionen?",
+      "Wie lässt sich das Thema verständlich im Bild erklären?"
+    ],
+    "schlagwoerter": [
+      "Treibhauseffekt",
+      "Klima",
+      "Kohlendioxid",
+      "Atmosphäre",
+      "Methan",
+      "Erderwärmung",
+      "IPCC"
+    ],
+    "einstieg": [
+      "Deutscher Wetterdienst",
+      "Umweltbundesamt",
+      "Weltklimarat (IPCC)"
+    ]
+  },
+  {
+    "id": "wi-gps",
+    "kategorie": "wissen",
+    "titel": "Wie GPS funktioniert",
+    "hintergrund": "Satelliten senden Signale mit Zeitangaben aus, ein Empfänger misst, wie lange sie unterwegs waren, und berechnet daraus seine Position. Für eine genaue Ortung braucht das Gerät Signale von mehreren Satelliten. Neben dem amerikanischen GPS gibt es weitere Systeme wie das europäische Galileo.",
+    "leitfragen": [
+      "Wie wird aus Signallaufzeiten eine Position?",
+      "Warum braucht man mehrere Satelliten?",
+      "Wo versagt die Ortung, etwa in Häusern oder Tunneln?"
+    ],
+    "schlagwoerter": [
+      "GPS",
+      "Satellit",
+      "Navigation",
+      "Signal",
+      "Ortung",
+      "Galileo",
+      "Position"
+    ],
+    "einstieg": [
+      "Deutsches Zentrum für Luft- und Raumfahrt",
+      "Bundesamt für Kartographie und Geodäsie",
+      "Europäische Weltraumagentur ESA"
+    ]
+  },
+  {
+    "id": "wi-stromnetz",
+    "kategorie": "wissen",
+    "titel": "Wie der Strom zur Steckdose kommt",
+    "hintergrund": "Strom wird in Kraftwerken und Anlagen erzeugt, über Hoch- und Niedrigspannungsnetze verteilt und zu Hause genutzt. Erzeugung und Verbrauch müssen im Netz ständig im Gleichgewicht bleiben. Mit mehr Sonne und Wind wird diese Aufgabe schwieriger.",
+    "leitfragen": [
+      "Wie läuft der Weg vom Kraftwerk bis zur Steckdose?",
+      "Warum müssen Angebot und Nachfrage jederzeit zusammenpassen?",
+      "Welche Rolle spielen Speicher und Netzausbau?"
+    ],
+    "schlagwoerter": [
+      "Strom",
+      "Stromnetz",
+      "Kraftwerk",
+      "Erneuerbare",
+      "Netzbetreiber",
+      "Speicher",
+      "Steckdose"
+    ],
+    "einstieg": [
+      "Bundesnetzagentur",
+      "Fraunhofer-Institut für Solare Energiesysteme",
+      "Stadtwerke der Region"
+    ]
+  },
+  {
+    "id": "wi-passwoerter",
+    "kategorie": "wissen",
+    "titel": "Sichere Passwörter und Zwei-Faktor-Anmeldung",
+    "hintergrund": "Ein sicheres Passwort ist lang, wird nur für ein einzelnes Konto genutzt und lässt sich nicht erraten. Bei der Zwei-Faktor-Anmeldung kommt ein zweiter Nachweis hinzu, etwa ein Code aus einer App. Passwortmanager helfen, viele verschiedene Passwörter zu verwalten.",
+    "leitfragen": [
+      "Was macht ein Passwort sicher oder unsicher?",
+      "Wie funktioniert die Zwei-Faktor-Anmeldung?",
+      "Wie lässt sich das in einem kurzen Video einprägsam zeigen?"
+    ],
+    "schlagwoerter": [
+      "Passwort",
+      "Zwei-Faktor",
+      "Konto",
+      "Passwortmanager",
+      "Sicherheit",
+      "Phishing",
+      "Anmeldung"
+    ],
+    "einstieg": [
+      "Bundesamt für Sicherheit in der Informationstechnik (BSI)",
+      "Verbraucherzentrale",
+      "Polizeiliche Kriminalprävention"
+    ]
+  },
+  {
+    "id": "wi-recycling",
+    "kategorie": "wissen",
+    "titel": "Mülltrennung und Recycling",
+    "hintergrund": "In Deutschland wird Abfall getrennt gesammelt, zum Beispiel Papier, Glas, Verpackungen und Bioabfall. Aus den Stoffen können neue Produkte entstehen, wenn sie sortenrein sind. Was in welche Tonne gehört, regeln die Städte und Gemeinden; recherchiere die Regeln deiner Stadt.",
+    "leitfragen": [
+      "Was passiert mit dem Müll nach dem Einwerfen in die Tonne?",
+      "Warum ist das Trennen manchmal schwierig?",
+      "Was bedeutet Recycling, und wo hat es Grenzen?"
+    ],
+    "schlagwoerter": [
+      "Recycling",
+      "Müll",
+      "Mülltrennung",
+      "Abfall",
+      "Verpackung",
+      "Wertstoff",
+      "Entsorgung"
+    ],
+    "einstieg": [
+      "Umweltbundesamt",
+      "Abfallberatung der eigenen Stadt",
+      "Verbraucherzentrale"
+    ]
+  },
+  {
+    "id": "wi-schwarze-loecher",
+    "kategorie": "wissen",
+    "titel": "Schwarze Löcher",
+    "hintergrund": "Ein Schwarzes Loch ist ein Bereich im Weltraum, in dem die Schwerkraft so stark ist, dass nicht einmal Licht entkommt. 2019 wurde mit dem Event Horizon Telescope erstmals ein Bild der Umgebung eines Schwarzen Lochs veröffentlicht. Vieles an diesem Thema ist noch Gegenstand der Forschung.",
+    "leitfragen": [
+      "Wie entsteht ein Schwarzes Loch?",
+      "Wie kann man etwas beobachten, das kein Licht abgibt?",
+      "Was ist ein Ereignishorizont?"
+    ],
+    "schlagwoerter": [
+      "Schwarzes Loch",
+      "Schwerkraft",
+      "Ereignishorizont",
+      "Astronomie",
+      "Licht",
+      "Stern",
+      "Raumzeit"
+    ],
+    "einstieg": [
+      "Max-Planck-Institut für Radioastronomie",
+      "Deutsches Zentrum für Luft- und Raumfahrt",
+      "Europäische Südsternwarte"
+    ]
+  },
+  {
+    "id": "wi-wetter-klima",
+    "kategorie": "wissen",
+    "titel": "Wetter und Klima",
+    "hintergrund": "Wetter beschreibt den Zustand der Atmosphäre an einem Ort zu einer bestimmten Zeit, Klima das typische Wettergeschehen über viele Jahre. Wetterdienste berechnen Vorhersagen mit Messdaten und Computermodellen. Je weiter der Zeitraum in die Zukunft reicht, desto unsicherer wird die Vorhersage.",
+    "leitfragen": [
+      "Was ist der Unterschied zwischen Wetter und Klima?",
+      "Wie entsteht eine Wettervorhersage?",
+      "Warum sind lange Vorhersagen schwieriger?"
+    ],
+    "schlagwoerter": [
+      "Wetter",
+      "Klima",
+      "Vorhersage",
+      "Atmosphäre",
+      "Wetterdienst",
+      "Messdaten",
+      "Hochdruck"
+    ],
+    "einstieg": [
+      "Deutscher Wetterdienst",
+      "Max-Planck-Institut für Meteorologie",
+      "Umweltbundesamt"
+    ]
+  },
+  {
+    "id": "wi-akkus",
+    "kategorie": "wissen",
+    "titel": "Akkus und Batterien",
+    "hintergrund": "Akkus speichern elektrische Energie chemisch und lassen sich wieder aufladen, Batterien nicht. In Handys, Laptops und Elektroautos stecken meist Lithium-Ionen-Akkus. Wie sich Akkus altern, wie sie recycelt werden und welche Rohstoffe sie brauchen, ist Gegenstand von Forschung und Debatte.",
+    "leitfragen": [
+      "Wie funktioniert ein Akku, und wie unterscheidet er sich von einer Batterie?",
+      "Was lässt Akkus altern, und wie pflegt man sie?",
+      "Was passiert mit alten Akkus?"
+    ],
+    "schlagwoerter": [
+      "Akku",
+      "Batterie",
+      "Lithium",
+      "Ladung",
+      "Elektroauto",
+      "Recycling",
+      "Energie"
+    ],
+    "einstieg": [
+      "Fraunhofer-Institute",
+      "Umweltbundesamt",
+      "Stiftung Gemeinsames Rücknahmesystem Batterien"
+    ]
+  },
+  {
+    "id": "wi-zucker",
+    "kategorie": "wissen",
+    "titel": "Zucker und Süßstoffe",
+    "hintergrund": "Zucker liefert schnell Energie, kann aber bei häufigem Verzehr Zähnen und Gesundheit schaden. Süßstoffe schmecken süß, liefern aber kaum Energie; über ihre Wirkung wird weiter geforscht. Wie viel Zucker empfohlen wird, geben Fachgesellschaften vor; recherchiere die aktuellen Empfehlungen.",
+    "leitfragen": [
+      "Wo steckt überall Zucker drin, auch in Produkten, die nicht süß schmecken?",
+      "Wie unterscheiden sich Zucker, Zuckeraustauschstoffe und Süßstoffe?",
+      "Was empfehlen Fachleute für den Alltag?"
+    ],
+    "schlagwoerter": [
+      "Zucker",
+      "Süßstoff",
+      "Ernährung",
+      "Zähne",
+      "Energie",
+      "Getränke",
+      "Zuckerersatz"
+    ],
+    "einstieg": [
+      "Deutsche Gesellschaft für Ernährung",
+      "Verbraucherzentrale",
+      "Bundesinstitut für Risikobewertung"
+    ]
+  },
+  {
+    "id": "me-deepfakes",
+    "kategorie": "medien",
+    "titel": "Deepfakes",
+    "hintergrund": "Deepfakes sind mit künstlicher Intelligenz erzeugte oder veränderte Bilder, Stimmen und Videos, die echt wirken sollen. Sie können für Satire und Filmtechnik genutzt werden, aber auch für Betrug und Falschmeldungen. Wie sich Fälschungen erkennen lassen, wird laufend erforscht; recherchiere den aktuellen Stand.",
+    "leitfragen": [
+      "Wie entsteht ein Deepfake, grob erklärt?",
+      "Woran erkennt man Fälschungen, und wo stößt das an Grenzen?",
+      "Welche legalen und kreativen Einsatzmöglichkeiten gibt es?"
+    ],
+    "schlagwoerter": [
+      "Deepfake",
+      "KI",
+      "Fälschung",
+      "Video",
+      "Stimme",
+      "Desinformation",
+      "Gesichtstausch"
+    ],
+    "einstieg": [
+      "Bundesamt für Sicherheit in der Informationstechnik (BSI)",
+      "klicksafe.de",
+      "Faktencheck-Redaktionen"
+    ]
+  },
+  {
+    "id": "me-meme-urheberrecht",
+    "kategorie": "medien",
+    "titel": "Urheberrecht bei Memes",
+    "hintergrund": "Memes bestehen oft aus fremden Bildern, Filmausschnitten und Texten. Das Urheberrecht schützt solche Werke grundsätzlich, es kennt aber Ausnahmen, etwa für Zitate und für Karikatur, Parodie und Pastiche. Wo die Grenzen verlaufen, entscheidet im Streitfall ein Gericht; recherchiere den aktuellen Stand.",
+    "leitfragen": [
+      "Wer besitzt die Rechte an einem Bild, das zum Meme wird?",
+      "Was ist ein Zitat, was eine Parodie?",
+      "Wie können Kreative sich absichern?"
+    ],
+    "schlagwoerter": [
+      "Meme",
+      "Urheberrecht",
+      "Parodie",
+      "Zitat",
+      "Lizenz",
+      "Bildrechte",
+      "Pastiche"
+    ],
+    "einstieg": [
+      "Verbraucherzentrale",
+      "iRights.info",
+      "klicksafe.de"
+    ]
+  },
+  {
+    "id": "me-streaming-algorithmen",
+    "kategorie": "medien",
+    "titel": "Streaming-Algorithmen",
+    "hintergrund": "Streamingdienste und Videoplattformen schlagen Inhalte vor, die auf bisherigem Verhalten und Daten anderer Nutzer beruhen. Das erleichtert die Auswahl, kann aber auch dazu führen, dass man immer ähnliche Inhalte sieht. Wie Empfehlungen genau berechnet werden, legen Anbieter meist nicht offen.",
+    "leitfragen": [
+      "Wie entstehen Empfehlungen, grob erklärt?",
+      "Was bedeutet „Filterblase“, und wie stark wirkt sie?",
+      "Wie können Zuschauer selbst bewusster auswählen?"
+    ],
+    "schlagwoerter": [
+      "Algorithmus",
+      "Streaming",
+      "Empfehlung",
+      "Plattform",
+      "Filterblase",
+      "Nutzerdaten",
+      "Videoportal"
+    ],
+    "einstieg": [
+      "Landesmedienanstalten",
+      "klicksafe.de",
+      "Verbraucherzentrale"
+    ]
+  },
+  {
+    "id": "me-barrierefreiheit",
+    "kategorie": "medien",
+    "titel": "Barrierefreiheit in Videos",
+    "hintergrund": "Videos sind barrierefrei, wenn möglichst viele Menschen sie nutzen können, zum Beispiel mit Untertiteln, Audiodeskription und gut lesbaren Schriften. Für Gehörlose und schwerhörige Menschen sind Untertitel wichtig, für blinde und sehbehinderte Menschen eine Bildbeschreibung. Auch viele andere schauen Videos ohne Ton.",
+    "leitfragen": [
+      "Welche Hilfen gibt es für unterschiedliche Einschränkungen?",
+      "Wie erstellt man Untertitel mit vertretbarem Aufwand?",
+      "Welche Rolle spielen Kontrast, Schriftgröße und Tempo?"
+    ],
+    "schlagwoerter": [
+      "Barrierefreiheit",
+      "Untertitel",
+      "Audiodeskription",
+      "Inklusion",
+      "Kontrast",
+      "Gebärdensprache",
+      "Video"
+    ],
+    "einstieg": [
+      "Aktion Mensch",
+      "Deutscher Blinden- und Sehbehindertenverband",
+      "Deutscher Gehörlosen-Bund"
+    ]
+  },
+  {
+    "id": "me-quellenpruefung",
+    "kategorie": "medien",
+    "titel": "Quellenprüfung und Faktencheck",
+    "hintergrund": "Im Netz verbreiten sich Nachrichten schnell, richtige wie falsche. Faktencheck-Redaktionen prüfen Behauptungen, Bilder und Videos, zum Beispiel mit Rückwärtssuche, Quellenvergleich und Prüfung des Ursprungs. Wer selbst recherchiert, sollte mehrere unabhängige Quellen heranziehen.",
+    "leitfragen": [
+      "Woran erkennt man seriöse Quellen?",
+      "Wie funktioniert eine Bilder-Rückwärtssuche?",
+      "Warum verbreiten sich falsche Meldungen so schnell?"
+    ],
+    "schlagwoerter": [
+      "Faktencheck",
+      "Quelle",
+      "Desinformation",
+      "Rückwärtssuche",
+      "Nachrichten",
+      "Falschmeldung",
+      "Recherche"
+    ],
+    "einstieg": [
+      "Faktencheck-Redaktionen von Medienhäusern",
+      "klicksafe.de",
+      "bpb.de (Bundeszentrale für politische Bildung)"
+    ]
+  },
+  {
+    "id": "me-influencer-werbung",
+    "kategorie": "medien",
+    "titel": "Werbung durch Influencer",
+    "hintergrund": "Viele Influencerinnen und Influencer verdienen Geld mit Produktempfehlungen. Wer dafür etwas bekommt, muss das als Werbung kenntlich machen; wann genau das gilt, regeln das Gesetz und Gerichtsurteile. Für Zuschauer ist Werbung nicht immer leicht zu erkennen.",
+    "leitfragen": [
+      "Woran erkennt man Werbung in Videos und Beiträgen?",
+      "Welche Kennzeichnung ist vorgeschrieben?",
+      "Wie könnte ein faires Verhältnis von Empfehlung und Werbung aussehen?"
+    ],
+    "schlagwoerter": [
+      "Influencer",
+      "Werbung",
+      "Kennzeichnung",
+      "Schleichwerbung",
+      "Sponsoring",
+      "Social Media",
+      "Marke"
+    ],
+    "einstieg": [
+      "Verbraucherzentrale",
+      "Landesmedienanstalten",
+      "Deutscher Werberat"
+    ]
+  },
+  {
+    "id": "me-kurzvideos",
+    "kategorie": "medien",
+    "titel": "Kurzvideos und Aufmerksamkeit",
+    "hintergrund": "Kurzvideos auf Plattformen wie Reels, Shorts und TikTok sind ein großer Teil der Mediennutzung junger Menschen. Fachleute diskutieren, wie sich das auf Konzentration, Lernen und Wohlbefinden auswirkt. Studien kommen teils zu unterschiedlichen Ergebnissen; recherchiere den aktuellen Stand.",
+    "leitfragen": [
+      "Warum funktionieren Kurzvideos so gut?",
+      "Was sagt die Forschung zu Aufmerksamkeit und Konzentration?",
+      "Was bedeutet das fürs Filmemachen: Wie fesselt man in wenigen Sekunden?"
+    ],
+    "schlagwoerter": [
+      "Kurzvideo",
+      "Aufmerksamkeit",
+      "TikTok",
+      "Reels",
+      "Mediennutzung",
+      "Plattform",
+      "Jugendliche"
+    ],
+    "einstieg": [
+      "Medienpädagogischer Forschungsverbund Südwest (JIM-Studie)",
+      "Landesmedienanstalten",
+      "klicksafe.de"
+    ]
+  },
+  {
+    "id": "me-datenschutz",
+    "kategorie": "medien",
+    "titel": "Datenschutz in sozialen Netzwerken",
+    "hintergrund": "Soziale Netzwerke sammeln Daten über Nutzerinnen und Nutzer, zum Beispiel über Interessen und Verhalten. In der EU regelt die Datenschutz-Grundverordnung, die seit 2018 gilt, wie Unternehmen mit solchen Daten umgehen dürfen. Nutzer können in den Einstellungen vieles selbst festlegen.",
+    "leitfragen": [
+      "Welche Daten sammeln Plattformen, und wofür?",
+      "Welche Rechte haben Nutzer laut Datenschutz-Grundverordnung?",
+      "Wie schützt man Fotos und Videos von anderen Personen?"
+    ],
+    "schlagwoerter": [
+      "Datenschutz",
+      "DSGVO",
+      "Daten",
+      "Soziale Netzwerke",
+      "Einwilligung",
+      "Privatsphäre",
+      "Tracking"
+    ],
+    "einstieg": [
+      "Landesdatenschutzbeauftragte",
+      "Verbraucherzentrale",
+      "klicksafe.de"
+    ]
+  },
+  {
+    "id": "me-ki-videoschnitt",
+    "kategorie": "medien",
+    "titel": "KI-Werkzeuge im Videoschnitt",
+    "hintergrund": "Programme mit künstlicher Intelligenz übernehmen heute Aufgaben wie Untertitel, Rauschentfernung, Farbkorrektur oder das automatische Auswählen von Szenen. Sie sparen Zeit, werfen aber Fragen zu Qualität, Rechten und Berufsbildern auf. Wie weit sich solche Werkzeuge durchsetzen, ändert sich schnell; recherchiere den aktuellen Stand.",
+    "leitfragen": [
+      "Welche Arbeitsschritte lassen sich heute automatisieren?",
+      "Wo liefern die Werkzeuge schlechte Ergebnisse?",
+      "Wie verändert das den Beruf Mediengestalter Bild und Ton?"
+    ],
+    "schlagwoerter": [
+      "KI",
+      "Videoschnitt",
+      "Automatisierung",
+      "Untertitel",
+      "Software",
+      "Berufsbild",
+      "Postproduktion"
+    ],
+    "einstieg": [
+      "Fachmagazine für Film und Video",
+      "Hersteller-Dokumentationen der Schnittprogramme",
+      "Berufsverbände der Medienbranche"
+    ]
+  },
+  {
+    "id": "ni-speedcubing",
+    "kategorie": "nischen",
+    "titel": "Speedcubing",
+    "hintergrund": "Beim Speedcubing versuchen Spielerinnen und Spieler, einen Zauberwürfel möglichst schnell zu lösen. Der Würfel wurde 1974 vom ungarischen Erfinder Ernő Rubik entwickelt. Heute gibt es Wettbewerbe und viele Varianten, zum Beispiel mit verbundenen Augen.",
+    "leitfragen": [
+      "Wie lernt man, einen Würfel zu lösen?",
+      "Wie läuft ein Wettbewerb ab?",
+      "Wie lässt sich die Spannung eines Durchgangs filmisch einfangen?"
+    ],
+    "schlagwoerter": [
+      "Speedcubing",
+      "Zauberwürfel",
+      "Rubik",
+      "Wettbewerb",
+      "Algorithmus",
+      "Würfel",
+      "Zeit"
+    ],
+    "einstieg": [
+      "Deutsche Speedcubing-Vereinigung",
+      "World Cube Association",
+      "Lokale Cubing-Treffs"
+    ]
+  },
+  {
+    "id": "ni-urban-gardening",
+    "kategorie": "nischen",
+    "titel": "Urban Gardening",
+    "hintergrund": "Beim Urban Gardening bauen Menschen in der Stadt Gemüse, Kräuter und Blumen an, zum Beispiel auf Balkonen, Dächern und in Gemeinschaftsgärten. Neben der Ernte geht es oft um Nachbarschaft, Nachhaltigkeit und mehr Grün in der Stadt.",
+    "leitfragen": [
+      "Wo und wie lässt sich in der Stadt gärtnern?",
+      "Welche Rolle spielen Gemeinschaftsgärten?",
+      "Wie zeigt man den Wachstumsverlauf einer Pflanze anschaulich im Film?"
+    ],
+    "schlagwoerter": [
+      "Urban Gardening",
+      "Gemeinschaftsgarten",
+      "Stadtgrün",
+      "Hochbeet",
+      "Nachbarschaft",
+      "Nachhaltigkeit",
+      "Gemüse"
+    ],
+    "einstieg": [
+      "Stadtverwaltung (Grünflächenamt)",
+      "anstiftung",
+      "Gemeinschaftsgärten der Region"
+    ]
+  },
+  {
+    "id": "ni-esport",
+    "kategorie": "nischen",
+    "titel": "E-Sport",
+    "hintergrund": "E-Sport bezeichnet Wettkämpfe in Computerspielen, die als Einzel- oder Teamsport ausgetragen werden. Es gibt Profiligen, Turniere mit Zuschauern und Übertragungen im Netz. Ob E-Sport als Sport anerkannt werden sollte, wird kontrovers diskutiert; recherchiere den aktuellen Stand.",
+    "leitfragen": [
+      "Wie läuft ein E-Sport-Turnier ab?",
+      "Was spricht dafür und was dagegen, E-Sport als Sport zu sehen?",
+      "Wie überträgt und kommentiert man ein Spiel für Zuschauer?"
+    ],
+    "schlagwoerter": [
+      "E-Sport",
+      "Computerspiel",
+      "Turnier",
+      "Liga",
+      "Team",
+      "Übertragung",
+      "Streaming"
+    ],
+    "einstieg": [
+      "ESBD (E-Sport-Bund Deutschland)",
+      "Deutscher Olympischer Sportbund",
+      "Spielefachmagazine"
+    ]
+  },
+  {
+    "id": "ni-imkerei",
+    "kategorie": "nischen",
+    "titel": "Imkerei",
+    "hintergrund": "Imkerinnen und Imker halten Honigbienen in Beuten und gewinnen Honig und Wachs. Ein Bienenvolk lebt in einer festen Ordnung mit Königin, Arbeiterinnen und Drohnen. Die Imkerei bringt auch ökologische Aufgaben mit sich, weil Bienen Pflanzen bestäuben.",
+    "leitfragen": [
+      "Wie sieht ein Jahr in der Imkerei aus?",
+      "Wie ist ein Bienenvolk organisiert?",
+      "Welche Bilder und Töne eignen sich, um das Summen und die Arbeit am Stock zu zeigen?"
+    ],
+    "schlagwoerter": [
+      "Imkerei",
+      "Honig",
+      "Biene",
+      "Bienenvolk",
+      "Beute",
+      "Königin",
+      "Bestäubung"
+    ],
+    "einstieg": [
+      "Imkerverbände",
+      "Deutscher Imkerbund",
+      "Bieneninstitute von Hochschulen"
+    ]
+  },
+  {
+    "id": "ni-vinyl-comeback",
+    "kategorie": "nischen",
+    "titel": "Vinyl-Comeback",
+    "hintergrund": "Schallplatten wurden lange von CD und Streaming verdrängt, finden aber seit einigen Jahren wieder Käufer. Fans schätzen den Klang, das große Cover und das bewusste Hören. Wie groß der Markt ist, schwankt; recherchiere den aktuellen Stand.",
+    "leitfragen": [
+      "Wie funktioniert eine Schallplatte technisch?",
+      "Warum greifen viele Menschen wieder zu Vinyl?",
+      "Wie fängt man das Knistern und den Plattenspieler stimmungsvoll ein?"
+    ],
+    "schlagwoerter": [
+      "Vinyl",
+      "Schallplatte",
+      "Plattenspieler",
+      "Musik",
+      "Sammler",
+      "Plattenladen",
+      "Analog"
+    ],
+    "einstieg": [
+      "Bundesverband Musikindustrie",
+      "Plattenläden in der Region",
+      "Musikmagazine"
+    ]
+  },
+  {
+    "id": "ni-bouldern",
+    "kategorie": "nischen",
+    "titel": "Bouldern",
+    "hintergrund": "Beim Bouldern klettert man ohne Seil und Gurt in geringer Höhe, gesichert durch dicke Matten. Es gibt viele Hallen und natürliche Felsen, an denen gebouldert wird. Als Teil des Sportkletterns gehört Bouldern zum Programm der Olympischen Spiele.",
+    "leitfragen": [
+      "Worin unterscheiden sich Bouldern, Seilklettern und Sportklettern?",
+      "Welche Regeln und Sicherheitshinweise gelten?",
+      "Wie filmt man Bewegung an der Wand, ohne den Überblick zu verlieren?"
+    ],
+    "schlagwoerter": [
+      "Bouldern",
+      "Klettern",
+      "Matte",
+      "Route",
+      "Kletterhalle",
+      "Sportklettern",
+      "Griff"
+    ],
+    "einstieg": [
+      "Deutscher Alpenverein",
+      "Kletterhallen der Region",
+      "Deutscher Olympischer Sportbund"
+    ]
+  },
+  {
+    "id": "ni-food-saving",
+    "kategorie": "nischen",
+    "titel": "Lebensmittel retten",
+    "hintergrund": "Viele noch genießbare Lebensmittel landen im Müll. Initiativen wie Foodsharing und Apps zum Retten von Essen sammeln Überschüsse ein oder verkaufen sie günstiger. Manche Supermärkte arbeiten mit sozialen Einrichtungen zusammen.",
+    "leitfragen": [
+      "Warum werden Lebensmittel weggeworfen?",
+      "Wie funktionieren Foodsharing, Tafeln und Retter-Apps?",
+      "Was bedeutet das Mindesthaltbarkeitsdatum?"
+    ],
+    "schlagwoerter": [
+      "Lebensmittelretten",
+      "Foodsharing",
+      "Verschwendung",
+      "Tafel",
+      "Mindesthaltbarkeit",
+      "Überschuss",
+      "Nachhaltigkeit"
+    ],
+    "einstieg": [
+      "Bundesministerium für Ernährung und Landwirtschaft",
+      "Verbraucherzentrale",
+      "Tafeln und Foodsharing-Initiativen"
+    ]
+  },
+  {
+    "id": "ni-geocaching",
+    "kategorie": "nischen",
+    "titel": "Geocaching",
+    "hintergrund": "Beim Geocaching versteckt jemand einen kleinen Behälter, den „Cache“, und veröffentlicht die Koordinaten im Netz. Andere suchen ihn mit GPS oder Smartphone und tragen sich in ein Logbuch ein. Die Schatzsuche verbindet Bewegung, Naturerlebnis und Rätsel.",
+    "leitfragen": [
+      "Wie funktioniert die Suche genau?",
+      "Welche Regeln gelten für das Verstecken?",
+      "Wie lässt sich eine Suche im Film als kleine Geschichte erzählen?"
+    ],
+    "schlagwoerter": [
+      "Geocaching",
+      "Cache",
+      "GPS",
+      "Schatzsuche",
+      "Koordinaten",
+      "Logbuch",
+      "Outdoor"
+    ],
+    "einstieg": [
+      "Geocaching-Plattformen und Foren",
+      "Lokale Cacher-Treffen",
+      "Naturschutzverbände"
+    ]
+  },
+  {
+    "id": "ni-cosplay",
+    "kategorie": "nischen",
+    "titel": "Cosplay",
+    "hintergrund": "Cosplay ist ein Hobby, bei dem man Kostüme von Figuren aus Filmen, Spielen, Comics und Serien selbst herstellt und trägt. Auf Conventions und in sozialen Netzwerken zeigen Cosplayer ihre Werke, oft auch in Wettbewerben. Viele Teilnehmende investieren viel Zeit in Nähen, Basteln und Make-up.",
+    "leitfragen": [
+      "Wie entsteht ein Kostüm von der Idee bis zum Auftritt?",
+      "Was reizt Menschen an diesem Hobby?",
+      "Wie fotografiert und filmt man Kostüme, ohne die Arbeit zu verschenken?"
+    ],
+    "schlagwoerter": [
+      "Cosplay",
+      "Kostüm",
+      "Convention",
+      "Comic",
+      "Fan",
+      "Nähen",
+      "Anime"
+    ],
+    "einstieg": [
+      "Conventions und Messen",
+      "Fan-Communities",
+      "Fachmagazine zur Popkultur"
+    ]
+  },
+  {
+    "id": "ni-schach",
+    "kategorie": "nischen",
+    "titel": "Schach online",
+    "hintergrund": "Schach ist ein Brettspiel mit sehr alter Tradition, das heute auch viele Menschen im Netz spielen. Plattformen übertragen Turniere live mit Kommentar. Auch Computerprogramme spielen Schach – seit 1997 besiegte der Rechner Deep Blue den Weltmeister Garri Kasparow in einem Wettkampf.",
+    "leitfragen": [
+      "Wie lernt man Schach, und wie hilft das Internet dabei?",
+      "Wie hat der Computer das Spiel verändert?",
+      "Wie überträgt man ein Brettspiel spannend im Video?"
+    ],
+    "schlagwoerter": [
+      "Schach",
+      "Brettspiel",
+      "Turnier",
+      "Computer",
+      "Online",
+      "Kasparow",
+      "Zug"
+    ],
+    "einstieg": [
+      "Deutscher Schachbund",
+      "Schachvereine vor Ort",
+      "Deutsches Museum"
+    ]
+  },
+  {
+    "id": "ni-retro-gaming",
+    "kategorie": "nischen",
+    "titel": "Retro-Gaming",
+    "hintergrund": "Beim Retro-Gaming spielen Menschen alte Spiele auf Konsolen und Computern früherer Jahrzehnte. Sammlerinnen und Sammler suchen Originalgeräte, andere nutzen Nachbauten oder Emulatoren. Auch Museen widmen sich der Geschichte der Videospiele.",
+    "leitfragen": [
+      "Warum begeistern alte Spiele auch heute?",
+      "Wie bewahrt man Spiele und Geräte für die Zukunft?",
+      "Wie bildet man Pixelgrafik und Röhrenfernseher gut im Video ab?"
+    ],
+    "schlagwoerter": [
+      "Retro-Gaming",
+      "Konsole",
+      "Videospiel",
+      "Sammler",
+      "Pixel",
+      "Emulator",
+      "Spielemuseum"
+    ],
+    "einstieg": [
+      "Computerspielemuseum Berlin",
+      "Heinz Nixdorf MuseumsForum",
+      "Spielefachmagazine"
+    ]
+  }
+]

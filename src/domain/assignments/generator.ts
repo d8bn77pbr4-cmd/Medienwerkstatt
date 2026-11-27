@@ -1,6 +1,6 @@
 import { pick, rng, weighted } from '../rng';
 import type { Level, Rules } from '../chef/rules';
-import { loadCatalogs, type Anlass, type Catalogs, type HakenEintrag, type Kanal } from './catalogs';
+import { loadCatalogs, type Anlass, type Catalogs, type HakenEintrag, type Kanal, type Kunde } from './catalogs';
 import { fileNameFor, padNumber } from './naming';
 import type {
   Assignment,
@@ -107,7 +107,11 @@ function toHook(h: HakenEintrag): Hook {
 }
 
 function planVideo(r: () => number, level: Level, catalogs: Catalogs, rules: Rules): VideoPlan {
-  const anlass = pick(r, catalogs.anlaesse);
+  // Themen-Anlässe (Erklärvideo, Kurzdoku) gehören zu Themen-Aufträgen und werden hier nie gezogen.
+  const anlass = pick(
+    r,
+    catalogs.anlaesse.filter(a => !a.thema),
+  );
   const kanal = catalogs.kanaele.find(k => k.id === anlass.kanal);
   if (!kanal) throw new Error(`Anlass ${anlass.id}: unbekannter Kanal ${anlass.kanal}`);
   const zielgruppe = pick(r, kanal.zielgruppen);
@@ -127,7 +131,8 @@ function planVideo(r: () => number, level: Level, catalogs: Catalogs, rules: Rul
       h.appliesTo.includes('video') &&
       !(h.excludeKinds ?? []).includes(anlass.kind) &&
       (h.minDurationSec ?? 0) <= durationSec &&
-      (h.onlyChannels === undefined || h.onlyChannels.includes(anlass.kanal)),
+      (h.onlyChannels === undefined || h.onlyChannels.includes(anlass.kanal)) &&
+      !h.nurThema,
   );
   const hakenEintrag = pick(r, candidates);
   const hook = toHook(hakenEintrag);
@@ -188,6 +193,12 @@ function shootingNotesFor(spec: VideoSpec): string[] {
   return ['HDR-Video aus', `Bildrate ${spec.fps} fps`, spec.aspect === '9:16' ? 'Hochformat halten' : 'Querformat halten'];
 }
 
+/** Kopie des Steckbriefs (die Aufträge teilen keine Objekte mit dem Katalog). */
+function profileOf(k: Kunde): NonNullable<Assignment['client']['profile']> {
+  const p = k.profile;
+  return { ...p, werte: [...p.werte], ansprechperson: { ...p.ansprechperson }, synonyme: [...p.synonyme] };
+}
+
 /**
  * Erzeugt einen Auftrag deterministisch aus `rng(installId + '#' + number)` (kein Date.now, kein Math.random).
  * `deadline` und `expiresAt` sind Platzhalter (= issuedAt); `schedule.tick` setzt sie samt Status.
@@ -212,7 +223,11 @@ export function generateAssignment(
   const mainType: AssignmentType = kombi
     ? 'video'
     : weighted(r, types.map(t => [t, rules.typeWeights[t]] as [AssignmentType, number]));
-  const client = pick(r, catalogs.kunden);
+  const kunde = pick(
+    r,
+    catalogs.kunden.filter(k => k.art === 'betrieb'),
+  );
+  const client: Assignment['client'] = { name: kunde.name, branche: kunde.branche, profile: profileOf(kunde) };
   const id = `A${padNumber(number)}`;
 
   let partial: Pick<Assignment, 'type' | 'occasion' | 'title' | 'briefing' | 'hook' | 'deliverables' | 'shootingNotes'>;
@@ -220,7 +235,7 @@ export function generateAssignment(
   if (mainType === 'research') {
     const template = pick(r, TEMPLATES);
     const topic = pick(r, catalogs.recherche[template]);
-    const hook = toHook(pick(r, catalogs.haken.filter(h => h.appliesTo.includes('research'))));
+    const hook = toHook(pick(r, catalogs.haken.filter(h => h.appliesTo.includes('research') && !h.nurThema)));
     const label = TEMPLATE_LABEL[template];
     partial = {
       type: 'research',
@@ -266,7 +281,7 @@ export function generateAssignment(
     deadline: issuedAt,
     expiresAt: issuedAt,
     level,
-    client: { name: client.name, branche: client.branche },
+    client,
     status: 'open',
     submissions: [],
     ...partial,

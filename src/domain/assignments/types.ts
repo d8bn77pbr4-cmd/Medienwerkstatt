@@ -29,6 +29,38 @@ export interface Hook {
 
 export type ResearchTemplateId = 'expose' | 'drehplan' | 'shotlist' | 'rechte' | 'kaufberatung' | 'formatvergleich';
 
+/** Themenbereiche des Themenkatalogs (Phase 1.1, 3b). */
+export type ThemaKategorie = 'gesellschaft' | 'geschichte' | 'wissen' | 'medien' | 'nischen';
+
+/** „Welt“ eines Auftrags: ein erfundener Betrieb oder ein Thema aus einer Kategorie. */
+export type WorldId = 'betrieb' | ThemaKategorie;
+
+/** Steckbrief eines erfundenen Kunden (Betrieb, Redaktion, Bildungsträger). */
+export interface ClientProfile {
+  gegruendet: number;
+  mitarbeitende: number;
+  ort: string;
+  angebot: string;
+  werte: string[];
+  zielgruppe: string;
+  ansprechperson: { name: string; rolle: string };
+  besonderheit: string;
+  /** Wörter nahe an der Branche (für den Themenbezug der Recherche). */
+  synonyme: string[];
+}
+
+/** Thema eines Themen-Auftrags (Kopie aus `catalogs/themen.json`). */
+export interface AssignmentTopic {
+  id: string;
+  kategorie: ThemaKategorie;
+  titel: string;
+  hintergrund: string;
+  leitfragen: string[];
+  schlagwoerter: string[];
+  /** Quellenarten für den Recherche-Einstieg (keine Links). */
+  einstieg: string[];
+}
+
 export interface Deliverable {
   id: string;
   kind: 'video' | 'research';
@@ -53,11 +85,14 @@ export interface Assignment {
   baseDeadline?: number;
   level: Level;
   type: AssignmentType | 'kombi';
-  client: { name: string; branche: string };
+  /** `profile` fehlt in Ständen vor Phase 1.1 (3b). */
+  client: { name: string; branche: string; profile?: ClientProfile };
   occasion: string;
   title: string;
   briefing: string;
   hook: Hook;
+  /** Nur bei Themen-Aufträgen (Redaktion statt Betrieb); fehlt in Ständen vor Phase 1.1 (3b). */
+  topic?: AssignmentTopic;
   deliverables: Deliverable[];
   shootingNotes: string[];
   status: 'open' | 'submitted' | 'evaluated' | 'expired';

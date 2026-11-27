@@ -51,5 +51,11 @@
   { "id": "ml-5", "kanal": "messe-loop", "name": "Kundenstimmen-Loop", "satz": "eine Schleife mit kurzen Interviews zufriedener Kunden, mit Zwischenschnitten", "kind": "interview", "minSec": 60, "maxSec": 120 },
   { "id": "ml-6", "kanal": "messe-loop", "name": "Sortimentsschau", "satz": "eine Schau, die das gesamte Sortiment zeigt", "kind": "produkt", "minSec": 45, "maxSec": 90 },
   { "id": "ml-7", "kanal": "messe-loop", "name": "Master-Loop in hoher Qualität", "satz": "eine Schleife, die als Master in hoher Qualität an den Standbauer geht", "kind": "loop", "minSec": 60, "maxSec": 120, "master": true },
-  { "id": "ml-8", "kanal": "messe-loop", "name": "Info-Loop", "satz": "eine Schleife, die das Angebot ohne Worte erklärt", "kind": "tutorial", "minSec": 60, "maxSec": 120 }
+  { "id": "ml-8", "kanal": "messe-loop", "name": "Info-Loop", "satz": "eine Schleife, die das Angebot ohne Worte erklärt", "kind": "tutorial", "minSec": 60, "maxSec": 120 },
+
+  { "id": "th-1", "kanal": "youtube", "name": "Erklärvideo", "satz": "ein Erklärvideo zum Thema {thema}, das die wichtigsten Punkte verständlich zeigt", "kind": "tutorial", "minSec": 60, "maxSec": 90, "thema": true },
+  { "id": "th-2", "kanal": "youtube", "name": "Kurzdoku", "satz": "eine Kurzdoku zum Thema {thema}, die ein Bild von verschiedenen Seiten zeichnet", "kind": "bericht", "minSec": 60, "maxSec": 90, "thema": true },
+  { "id": "th-3", "kanal": "instagram-reel", "name": "Erklär-Reel", "satz": "einen Erklär-Reel zum Thema {thema}, der in kurzer Zeit das Wichtigste zeigt", "kind": "tutorial", "minSec": 60, "maxSec": 90, "thema": true },
+  { "id": "th-4", "kanal": "tiktok", "name": "Erklär-Clip", "satz": "einen Erklär-Clip zum Thema {thema}, der eine klare Frage beantwortet", "kind": "tutorial", "minSec": 60, "maxSec": 90, "thema": true },
+  { "id": "th-5", "kanal": "lokal-tv", "name": "Themenbeitrag fürs Lokalfernsehen", "satz": "einen Themenbeitrag zum Thema {thema}, der sachlich und ausgewogen informiert", "kind": "bericht", "minSec": 60, "maxSec": 90, "thema": true }
 ]

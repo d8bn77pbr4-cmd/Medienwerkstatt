@@ -16,10 +16,12 @@ const videoSpec = (a: Assignment): VideoSpec => specs(a)[0];
 const range = (n: number) => Array.from({ length: n }, (_, i) => i + 1);
 const LEVELS: Level[] = [1, 2, 3, 4, 5];
 const anlassOf = (a: Assignment) => catalogs.anlaesse.find(x => a.occasion.endsWith(x.name))!;
+/** Betriebs-Aufträge (ohne Thema): ihre Themen-Sätze stehen im Katalog `recherche`. */
+const isBetrieb = (a: Assignment) => a.topic === undefined;
 
 describe('Kataloge', () => {
   it('Mengen', () => {
-    expect(catalogs.kunden.length).toBeGreaterThanOrEqual(20);
+    expect(catalogs.kunden.length).toBeGreaterThanOrEqual(28);
     expect(catalogs.kunden.map(k => k.name)).toContain('Bäckerei Korn & Kruste');
     for (const k of catalogs.kanaele) expect(catalogs.anlaesse.filter(x => x.kanal === k.id).length).toBeGreaterThanOrEqual(8);
     expect(catalogs.haken.length).toBeGreaterThanOrEqual(15);
@@ -186,7 +188,7 @@ describe('generateAssignment', () => {
     }
   });
   it('Recherche-Auftrag: eine Recherche-Abgabe, keine Drehhinweise, Thema im Briefing', () => {
-    const list = range(200).map(n => gen('x', n, 1)).filter(a => a.type === 'research');
+    const list = range(200).map(n => gen('x', n, 1)).filter(a => a.type === 'research' && isBetrieb(a));
     expect(list.length).toBeGreaterThan(10);
     const seenTemplates = new Set<string>();
     for (const a of list) {
@@ -196,12 +198,12 @@ describe('generateAssignment', () => {
       expect(d.kind).toBe('research');
       expect(d.videoSpec).toBeUndefined();
       seenTemplates.add(d.researchTemplate!);
-      expect(catalogs.recherche[d.researchTemplate!].some(t => a.briefing.includes(t))).toBe(true);
+      expect(catalogs.recherche[d.researchTemplate as keyof typeof catalogs.recherche].some(t => a.briefing.includes(t))).toBe(true);
     }
     expect(seenTemplates.size).toBeGreaterThanOrEqual(5);
   });
   it('Kombi: Video-Abgabe plus Recherche-Abgabe (Shotlist oder Drehplan)', () => {
-    const list = range(200).map(n => gen('x', n, 3)).filter(a => a.type === 'kombi');
+    const list = range(200).map(n => gen('x', n, 3)).filter(a => a.type === 'kombi' && isBetrieb(a));
     expect(list.length).toBeGreaterThan(10);
     for (const a of list) {
       expect(a.deliverables.filter(d => d.kind === 'research')).toHaveLength(1);
@@ -234,7 +236,7 @@ describe('generateAssignment', () => {
         expect(a.briefing).toContain(a.hook.text);
         expect(a.title.length).toBeGreaterThan(3);
         expect(a.occasion.length).toBeGreaterThan(3);
-        expect(catalogs.kunden).toContainEqual(a.client);
+        expect(catalogs.kunden.some(k => k.name === a.client.name && k.branche === a.client.branche)).toBe(true);
       }
     }
   });

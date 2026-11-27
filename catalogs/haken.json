@@ -1,9 +1,9 @@
 [
-  { "id": "v-ohne-text", "text": "Ohne gesprochenen Text – nur Bild, Musik und Atmo", "verify": "self", "appliesTo": ["video"], "excludeKinds": ["interview"] },
+  { "id": "v-ohne-text", "text": "Ohne gesprochenen Text – nur Bild, Musik und Atmo", "verify": "self", "appliesTo": ["video"], "excludeKinds": ["interview"], "nurBetrieb": true },
   { "id": "v-tageslicht", "text": "Nur Tageslicht, kein Kunstlicht beim Dreh", "verify": "self", "appliesTo": ["video"] },
   { "id": "v-longshot", "text": "Mindestens eine Einstellung ist 8 Sekunden oder länger", "verify": "auto", "autoRule": "longShot8s", "appliesTo": ["video"], "minDurationSec": 30 },
   { "id": "v-both", "text": "Der Kunde will Hochformat und Querformat vom selben Film", "verify": "auto", "autoRule": "bothFormats", "appliesTo": ["video"], "onlyChannels": ["instagram-reel", "tiktok", "youtube", "website"] },
-  { "id": "v-atmo", "text": "Ton nur aus Atmo, keine Musik und kein Sprecher", "verify": "self", "appliesTo": ["video"], "excludeKinds": ["interview"] },
+  { "id": "v-atmo", "text": "Ton nur aus Atmo, keine Musik und kein Sprecher", "verify": "self", "appliesTo": ["video"], "excludeKinds": ["interview"], "nurBetrieb": true },
   { "id": "v-handy", "text": "Alles mit dem Handy gedreht, keine Kamera", "verify": "self", "appliesTo": ["video"] },
   { "id": "v-schwenk", "text": "Keine Schwenks, nur feste Bildausschnitte", "verify": "self", "appliesTo": ["video"] },
   { "id": "v-farbe", "text": "Eine Farbstimmung durchziehen, warm oder kühl, aber nicht mischen", "verify": "self", "appliesTo": ["video"] },
@@ -14,7 +14,10 @@
   { "id": "v-gesichter", "text": "Keine erkennbaren Gesichter im Bild", "verify": "self", "appliesTo": ["video"], "excludeKinds": ["interview", "bericht"] },
   { "id": "r-eineseite", "text": "Das Ergebnis passt auf eine Seite", "verify": "self", "appliesTo": ["research"] },
   { "id": "r-quellen", "text": "Mindestens drei Quellen, jeweils mit Link", "verify": "self", "appliesTo": ["research"] },
-  { "id": "r-klar", "text": "Klare Sprache, sodass der Kunde keine Rückfrage braucht", "verify": "self", "appliesTo": ["research"] },
-  { "id": "r-alternative", "text": "Mit einer Alternative für den Fall, dass der erste Vorschlag scheitert", "verify": "self", "appliesTo": ["research"] },
-  { "id": "r-euro", "text": "Alle Kosten in Euro, nichts ohne Preis", "verify": "self", "appliesTo": ["research"] }
+  { "id": "r-klar", "text": "Klare Sprache, sodass der Kunde keine Rückfrage braucht", "verify": "self", "appliesTo": ["research"], "nurBetrieb": true },
+  { "id": "r-alternative", "text": "Mit einer Alternative für den Fall, dass der erste Vorschlag scheitert", "verify": "self", "appliesTo": ["research"], "nurBetrieb": true },
+  { "id": "r-euro", "text": "Alle Kosten in Euro, nichts ohne Preis", "verify": "self", "appliesTo": ["research"], "nurBetrieb": true },
+  { "id": "t-fakten", "text": "Fakten und Meinung sind im Text klar getrennt", "verify": "self", "appliesTo": ["research"], "nurThema": true },
+  { "id": "t-fachwoerter", "text": "Fachwörter werden so erklärt, dass man ohne Vorwissen folgen kann", "verify": "self", "appliesTo": ["research"], "nurThema": true },
+  { "id": "t-datum", "text": "Zu jeder Quelle steht, wann du sie gelesen hast", "verify": "self", "appliesTo": ["research"], "nurThema": true }
 ]

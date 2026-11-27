@@ -11,7 +11,15 @@ export const AppStateSchema = z.looseObject({
     nextNumber: z.number(),
     vacations: z.array(z.looseObject({ start: z.number(), end: z.number() })),
   }),
-  assignments: z.array(z.looseObject({ id: z.string(), number: z.number() })),
+  assignments: z.array(
+    z.looseObject({
+      id: z.string(),
+      number: z.number(),
+      // Phase 1.1 (3b): Steckbrief und Thema sind optional; ältere Stände haben sie nicht, und eine unbekannte Form macht den Stand nicht unlesbar.
+      client: z.looseObject({ profile: z.looseObject({ ort: z.string() }).optional().catch(undefined) }).optional().catch(undefined),
+      topic: z.looseObject({ id: z.string(), kategorie: z.string(), titel: z.string() }).optional().catch(undefined),
+    }),
+  ),
   evaluations: z.array(z.looseObject({ practice: z.boolean().optional(), freeProjectId: z.string().optional() })),
   settings: z.looseObject({
     // Phase 1.1: optional; ein unbekannter Wert macht den Stand nicht unlesbar (die App setzt dann den Standard).

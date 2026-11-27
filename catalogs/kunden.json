@@ -1,26 +1,917 @@
 [
-  { "name": "Bäckerei Korn & Kruste", "branche": "Bäckerei" },
-  { "name": "Sportverein Rot-Weiß Lindenhain", "branche": "Sportverein" },
-  { "name": "Stadtbibliothek Wiesenbach", "branche": "Bibliothek" },
-  { "name": "Fahrradladen Speichenglück", "branche": "Fahrradhandel" },
-  { "name": "Lokalsender-Redaktion Kanal Nordost", "branche": "Lokalsender" },
-  { "name": "Kistenkraft", "branche": "Start-up für Lagersoftware" },
-  { "name": "Musikschule Taktgefühl", "branche": "Musikschule" },
-  { "name": "Blumenhaus Rosenrausch", "branche": "Floristik" },
-  { "name": "Café Morgenrot", "branche": "Gastronomie" },
-  { "name": "Tierheim Pfotenglück", "branche": "Tierschutz" },
-  { "name": "Volkshochschule Mittelweide", "branche": "Weiterbildung" },
-  { "name": "Schreinerei Holzwerk Brandt", "branche": "Handwerk" },
-  { "name": "Freiwillige Feuerwehr Lindenbruch", "branche": "Feuerwehr" },
-  { "name": "Kletterhalle Steilwand", "branche": "Freizeit und Sport" },
-  { "name": "Buchhandlung Seitenblick", "branche": "Buchhandel" },
-  { "name": "Brauerei Hopfenhaus Lenz", "branche": "Brauerei" },
-  { "name": "Yogastudio Atemraum", "branche": "Gesundheit und Fitness" },
-  { "name": "Stadtwerke Flussquell", "branche": "Energieversorger" },
-  { "name": "Hofladen Ackerglück", "branche": "Landwirtschaft" },
-  { "name": "Zahnarztpraxis Lächelwerk", "branche": "Arztpraxis" },
-  { "name": "Repair-Café Werkbank", "branche": "Bürgerinitiative" },
-  { "name": "Theatergruppe Vorhang auf", "branche": "Kultur" },
-  { "name": "Eisdiele Zitronenfalter", "branche": "Gastronomie" },
-  { "name": "Gartenbau Grünfinger Möller", "branche": "Gartenbau" }
+  {
+    "name": "Bäckerei Korn & Kruste",
+    "branche": "Bäckerei",
+    "profile": {
+      "gegruendet": 1987,
+      "mitarbeitende": 14,
+      "ort": "Hameln",
+      "angebot": "Brot, Brötchen und Kuchen aus der eigenen Backstube, mit langer Teigführung.",
+      "werte": [
+        "Handwerk statt Fließband",
+        "Zutaten aus der Region"
+      ],
+      "zielgruppe": "Stammkundschaft aus dem Viertel und Berufspendler, die morgens schnell ein frisches Frühstück möchten.",
+      "ansprechperson": {
+        "name": "Jutta Kornmann",
+        "rolle": "Inhaberin"
+      },
+      "besonderheit": "Der Sauerteig wird seit der Gründung aus demselben Ansatz geführt.",
+      "synonyme": [
+        "Backstube",
+        "Brot",
+        "Brötchen",
+        "Konditorei",
+        "Handwerk"
+      ]
+    }
+  },
+  {
+    "name": "Sportverein Rot-Weiß Lindenhain",
+    "branche": "Sportverein",
+    "profile": {
+      "gegruendet": 1921,
+      "mitarbeitende": 6,
+      "ort": "Detmold",
+      "angebot": "Breitensport für Kinder, Erwachsene und Seniorinnen und Senioren in mehreren Abteilungen.",
+      "werte": [
+        "Ehrenamt",
+        "Gemeinschaft",
+        "Sport für alle"
+      ],
+      "zielgruppe": "Familien und Vereinsmitglieder aus dem Ort, dazu Neuzugezogene, die Anschluss suchen.",
+      "ansprechperson": {
+        "name": "Thomas Reinholt",
+        "rolle": "Vorsitzender"
+      },
+      "besonderheit": "Fast alle Trainerinnen und Trainer arbeiten ehrenamtlich.",
+      "synonyme": [
+        "Verein",
+        "Training",
+        "Fußball",
+        "Ehrenamt",
+        "Mannschaft"
+      ]
+    }
+  },
+  {
+    "name": "Stadtbibliothek Wiesenbach",
+    "branche": "Bibliothek",
+    "profile": {
+      "gegruendet": 1956,
+      "mitarbeitende": 11,
+      "ort": "Marburg",
+      "angebot": "Ausleihe von Büchern, Medien und Spielen, dazu Lesungen und Kurse.",
+      "werte": [
+        "freier Zugang zu Wissen",
+        "Offenheit"
+      ],
+      "zielgruppe": "Schulklassen, Studierende und Ältere, die einen ruhigen Ort zum Lernen und Lesen suchen.",
+      "ansprechperson": {
+        "name": "Dr. Mareike Sander",
+        "rolle": "Leiterin"
+      },
+      "besonderheit": "Neben Büchern gibt es eine Bibliothek der Dinge zum Ausleihen.",
+      "synonyme": [
+        "Bücherei",
+        "Lesen",
+        "Medien",
+        "Ausleihe",
+        "Literatur"
+      ]
+    }
+  },
+  {
+    "name": "Fahrradladen Speichenglück",
+    "branche": "Fahrradhandel",
+    "profile": {
+      "gegruendet": 2009,
+      "mitarbeitende": 7,
+      "ort": "Göttingen",
+      "angebot": "Verkauf, Wartung und Reparatur von Fahrrädern und Lastenrädern.",
+      "werte": [
+        "Nachhaltigkeit",
+        "ehrliche Beratung"
+      ],
+      "zielgruppe": "Alltagsradelnde, Studierende und Familien, die ein Lastenrad ausprobieren möchten.",
+      "ansprechperson": {
+        "name": "Felix Ahrens",
+        "rolle": "Geschäftsführer"
+      },
+      "besonderheit": "Lastenräder können vor dem Kauf eine Woche zur Probe geliehen werden.",
+      "synonyme": [
+        "Fahrrad",
+        "Radwerkstatt",
+        "Zweirad",
+        "Lastenrad",
+        "Mobilität"
+      ]
+    }
+  },
+  {
+    "name": "Lokalsender-Redaktion Kanal Nordost",
+    "branche": "Lokalsender",
+    "profile": {
+      "gegruendet": 1996,
+      "mitarbeitende": 18,
+      "ort": "Rostock",
+      "angebot": "Regionales Fernsehprogramm mit Nachrichten, Magazinen und Veranstaltungsberichten.",
+      "werte": [
+        "Nähe zu den Menschen",
+        "faire Berichterstattung"
+      ],
+      "zielgruppe": "Zuschauerinnen und Zuschauer im Sendegebiet, viele davon über fünfzig.",
+      "ansprechperson": {
+        "name": "Birgit Hellwig",
+        "rolle": "Redaktionsleiterin"
+      },
+      "besonderheit": "Der Sender produziert fast alles mit einem kleinen Team selbst.",
+      "synonyme": [
+        "Fernsehen",
+        "Regionalsender",
+        "Nachrichten",
+        "Redaktion",
+        "Berichterstattung"
+      ]
+    }
+  },
+  {
+    "name": "Kistenkraft",
+    "branche": "Start-up für Lagersoftware",
+    "profile": {
+      "gegruendet": 2021,
+      "mitarbeitende": 9,
+      "ort": "Kassel",
+      "angebot": "Eine Software, die kleinen Lagern hilft, Bestände und Aufträge im Blick zu behalten.",
+      "werte": [
+        "einfache Bedienung",
+        "schnelle Antworten"
+      ],
+      "zielgruppe": "Kleine Händler und Handwerksbetriebe mit eigenem Lager, die keine große Lösung brauchen.",
+      "ansprechperson": {
+        "name": "Lena Vogtmann",
+        "rolle": "Mitgründerin"
+      },
+      "besonderheit": "Das Team besteht größtenteils aus früheren Lagerarbeitern und Entwicklern.",
+      "synonyme": [
+        "Software",
+        "Lager",
+        "Logistik",
+        "Start-up",
+        "Bestand"
+      ]
+    }
+  },
+  {
+    "name": "Musikschule Taktgefühl",
+    "branche": "Musikschule",
+    "profile": {
+      "gegruendet": 1994,
+      "mitarbeitende": 22,
+      "ort": "Passau",
+      "angebot": "Instrumental- und Gesangsunterricht für alle Altersgruppen, dazu Ensembles und Konzerte.",
+      "werte": [
+        "Freude an Musik",
+        "gemeinsames Musizieren"
+      ],
+      "zielgruppe": "Kinder und Jugendliche, aber auch Erwachsene, die spät ein Instrument lernen wollen.",
+      "ansprechperson": {
+        "name": "Martin Eder",
+        "rolle": "Schulleiter"
+      },
+      "besonderheit": "Jedes Halbjahr gibt es ein Konzert, bei dem alle Schülerinnen und Schüler auftreten dürfen.",
+      "synonyme": [
+        "Musik",
+        "Unterricht",
+        "Instrument",
+        "Konzert",
+        "Gesang"
+      ]
+    }
+  },
+  {
+    "name": "Blumenhaus Rosenrausch",
+    "branche": "Floristik",
+    "profile": {
+      "gegruendet": 1978,
+      "mitarbeitende": 5,
+      "ort": "Bamberg",
+      "angebot": "Schnittblumen, Sträuße, Trauerfloristik und Dekoration für Feste.",
+      "werte": [
+        "Saisonalität",
+        "persönliche Beratung"
+      ],
+      "zielgruppe": "Menschen, die für einen besonderen Anlass Blumen suchen, und Firmen mit regelmäßigem Bedarf.",
+      "ansprechperson": {
+        "name": "Sabine Rosen",
+        "rolle": "Inhaberin"
+      },
+      "besonderheit": "Die Sträuße folgen der Saison und enthalten möglichst Blumen aus der Umgebung.",
+      "synonyme": [
+        "Blumen",
+        "Blumenladen",
+        "Floristin",
+        "Sträuße",
+        "Gärtnerei"
+      ]
+    }
+  },
+  {
+    "name": "Café Morgenrot",
+    "branche": "Gastronomie",
+    "profile": {
+      "gegruendet": 2014,
+      "mitarbeitende": 8,
+      "ort": "Lüneburg",
+      "angebot": "Frühstück, Kuchen und Mittagsgerichte in einem gemütlichen Café mit Hofgarten.",
+      "werte": [
+        "Gastfreundschaft",
+        "regionale Zutaten"
+      ],
+      "zielgruppe": "Studierende, Familien am Wochenende und Gäste aus der Altstadt.",
+      "ansprechperson": {
+        "name": "Hanna Brückner",
+        "rolle": "Inhaberin"
+      },
+      "besonderheit": "Das Café hat einen Hofgarten, der im Sommer zum Treffpunkt der Nachbarschaft wird.",
+      "synonyme": [
+        "Café",
+        "Frühstück",
+        "Kaffee",
+        "Restaurant",
+        "Kuchen"
+      ]
+    }
+  },
+  {
+    "name": "Tierheim Pfotenglück",
+    "branche": "Tierschutz",
+    "profile": {
+      "gegruendet": 1989,
+      "mitarbeitende": 12,
+      "ort": "Flensburg",
+      "angebot": "Aufnahme, Pflege und Vermittlung von Hunden, Katzen und Kleintieren.",
+      "werte": [
+        "Verantwortung",
+        "Tierschutz",
+        "Geduld"
+      ],
+      "zielgruppe": "Menschen, die ein Tier aufnehmen möchten, und Spenderinnen und Spender aus der Region.",
+      "ansprechperson": {
+        "name": "Ines Petersen",
+        "rolle": "Tierheimleiterin"
+      },
+      "besonderheit": "Ehrenamtliche gehen täglich mit den Hunden spazieren.",
+      "synonyme": [
+        "Tierheim",
+        "Tiere",
+        "Hunde",
+        "Katzen",
+        "Adoption"
+      ]
+    }
+  },
+  {
+    "name": "Volkshochschule Mittelweide",
+    "branche": "Weiterbildung",
+    "profile": {
+      "gegruendet": 1947,
+      "mitarbeitende": 25,
+      "ort": "Gießen",
+      "angebot": "Kurse zu Sprachen, Gesundheit, Kultur, Beruf und Computer für Erwachsene.",
+      "werte": [
+        "lebenslanges Lernen",
+        "Bildung für alle"
+      ],
+      "zielgruppe": "Erwachsene jeden Alters, die sich beruflich oder privat weiterbilden wollen.",
+      "ansprechperson": {
+        "name": "Dieter Wolff",
+        "rolle": "Programmleiter"
+      },
+      "besonderheit": "Viele Kurse finden abends statt, damit Berufstätige teilnehmen können.",
+      "synonyme": [
+        "Kurs",
+        "Bildung",
+        "Volkshochschule",
+        "Lernen",
+        "Seminar"
+      ]
+    }
+  },
+  {
+    "name": "Schreinerei Holzwerk Brandt",
+    "branche": "Handwerk",
+    "profile": {
+      "gegruendet": 1973,
+      "mitarbeitende": 9,
+      "ort": "Paderborn",
+      "angebot": "Möbel nach Maß, Küchen, Treppen und Innenausbau aus Massivholz.",
+      "werte": [
+        "Qualität",
+        "Langlebigkeit",
+        "Handarbeit"
+      ],
+      "zielgruppe": "Privatleute, die Möbel nach Maß wollen, und Architekturbüros aus der Region.",
+      "ansprechperson": {
+        "name": "Rainer Brandt",
+        "rolle": "Tischlermeister und Inhaber"
+      },
+      "besonderheit": "Aus Resten entstehen kleine Holzspielzeuge, die an Kitas gehen.",
+      "synonyme": [
+        "Tischlerei",
+        "Holz",
+        "Möbel",
+        "Handwerk",
+        "Schreiner"
+      ]
+    }
+  },
+  {
+    "name": "Freiwillige Feuerwehr Lindenbruch",
+    "branche": "Feuerwehr",
+    "profile": {
+      "gegruendet": 1903,
+      "mitarbeitende": 4,
+      "ort": "Bad Segeberg",
+      "angebot": "Brandschutz, Hilfeleistung und Nachwuchsarbeit in einer Jugendfeuerwehr.",
+      "werte": [
+        "Zusammenhalt",
+        "Hilfsbereitschaft"
+      ],
+      "zielgruppe": "Jugendliche und Erwachsene, die sich ehrenamtlich engagieren möchten, und die Bevölkerung im Ort.",
+      "ansprechperson": {
+        "name": "Jörg Hansen",
+        "rolle": "Wehrführer"
+      },
+      "besonderheit": "Alle Einsatzkräfte arbeiten ehrenamtlich neben ihrem Beruf.",
+      "synonyme": [
+        "Brandschutz",
+        "Löschen",
+        "Rettung",
+        "Ehrenamt",
+        "Einsatz"
+      ]
+    }
+  },
+  {
+    "name": "Kletterhalle Steilwand",
+    "branche": "Freizeit und Sport",
+    "profile": {
+      "gegruendet": 2012,
+      "mitarbeitende": 10,
+      "ort": "Kempten",
+      "angebot": "Kletter- und Boulderflächen mit Kursen für Kinder, Anfänger und Fortgeschrittene.",
+      "werte": [
+        "Sicherheit",
+        "Mut",
+        "Gemeinschaft"
+      ],
+      "zielgruppe": "Jugendliche, Studierende und Familien, die einen Sport für Regentage suchen.",
+      "ansprechperson": {
+        "name": "Nico Frey",
+        "rolle": "Hallenleiter"
+      },
+      "besonderheit": "Die Routen werden regelmäßig von Teammitgliedern neu geschraubt.",
+      "synonyme": [
+        "Klettern",
+        "Bouldern",
+        "Sport",
+        "Halle",
+        "Training"
+      ]
+    }
+  },
+  {
+    "name": "Buchhandlung Seitenblick",
+    "branche": "Buchhandel",
+    "profile": {
+      "gegruendet": 1990,
+      "mitarbeitende": 6,
+      "ort": "Celle",
+      "angebot": "Bücher, Kalender und Geschenke, dazu Lesungen und Bestellservice.",
+      "werte": [
+        "Beratung",
+        "Leseförderung"
+      ],
+      "zielgruppe": "Lesebegeisterte jeden Alters, Schulen und Menschen auf der Suche nach einem Geschenk.",
+      "ansprechperson": {
+        "name": "Claudia Berger",
+        "rolle": "Inhaberin"
+      },
+      "besonderheit": "Die Mitarbeitenden schreiben handgeschriebene Empfehlungszettel an die Regale.",
+      "synonyme": [
+        "Buchladen",
+        "Bücher",
+        "Lesen",
+        "Literatur",
+        "Verlag"
+      ]
+    }
+  },
+  {
+    "name": "Brauerei Hopfenhaus Lenz",
+    "branche": "Brauerei",
+    "profile": {
+      "gegruendet": 1889,
+      "mitarbeitende": 28,
+      "ort": "Bayreuth",
+      "angebot": "Biere nach traditionellen Rezepten, dazu ein Ausschank mit Biergarten.",
+      "werte": [
+        "Tradition",
+        "Reinheit",
+        "Familienbetrieb"
+      ],
+      "zielgruppe": "Kundschaft aus der Region, Gastronomie und Besucher des Biergartens.",
+      "ansprechperson": {
+        "name": "Ulrich Lenz",
+        "rolle": "Braumeister und Geschäftsführer"
+      },
+      "besonderheit": "Das Familienunternehmen wird in der vierten Generation geführt.",
+      "synonyme": [
+        "Bier",
+        "Brauhaus",
+        "Getränke",
+        "Brauen",
+        "Gastronomie"
+      ]
+    }
+  },
+  {
+    "name": "Yogastudio Atemraum",
+    "branche": "Gesundheit und Fitness",
+    "profile": {
+      "gegruendet": 2016,
+      "mitarbeitende": 6,
+      "ort": "Freiburg",
+      "angebot": "Yoga-, Pilates- und Entspannungskurse für Anfänger und Fortgeschrittene.",
+      "werte": [
+        "Achtsamkeit",
+        "Ruhe",
+        "Respekt"
+      ],
+      "zielgruppe": "Berufstätige, die einen Ausgleich suchen, und Menschen nach einer Verletzung.",
+      "ansprechperson": {
+        "name": "Miriam Köhler",
+        "rolle": "Studioleiterin"
+      },
+      "besonderheit": "Es gibt Kurse am Morgen vor der Arbeit und in der Mittagspause.",
+      "synonyme": [
+        "Yoga",
+        "Fitness",
+        "Entspannung",
+        "Gesundheit",
+        "Pilates"
+      ]
+    }
+  },
+  {
+    "name": "Stadtwerke Flussquell",
+    "branche": "Energieversorger",
+    "profile": {
+      "gegruendet": 1952,
+      "mitarbeitende": 140,
+      "ort": "Trier",
+      "angebot": "Strom, Gas, Wasser und Fernwärme für Haushalte und Betriebe der Stadt.",
+      "werte": [
+        "Versorgungssicherheit",
+        "Verantwortung vor Ort"
+      ],
+      "zielgruppe": "Privathaushalte, Gewerbe und die Stadtverwaltung.",
+      "ansprechperson": {
+        "name": "Susanne Marx",
+        "rolle": "Leiterin Kommunikation"
+      },
+      "besonderheit": "Die Stadtwerke gehören der Stadt und investieren in Anlagen vor Ort.",
+      "synonyme": [
+        "Energie",
+        "Strom",
+        "Wasser",
+        "Versorger",
+        "Fernwärme"
+      ]
+    }
+  },
+  {
+    "name": "Hofladen Ackerglück",
+    "branche": "Landwirtschaft",
+    "profile": {
+      "gegruendet": 1998,
+      "mitarbeitende": 5,
+      "ort": "Oldenburg",
+      "angebot": "Gemüse, Eier, Fleisch und Backwaren vom eigenen Hof und von Nachbarbetrieben.",
+      "werte": [
+        "Regionalität",
+        "Transparenz",
+        "Tierwohl"
+      ],
+      "zielgruppe": "Haushalte aus der Umgebung, die wissen möchten, wo ihr Essen herkommt.",
+      "ansprechperson": {
+        "name": "Werner Hüsing",
+        "rolle": "Landwirt und Inhaber"
+      },
+      "besonderheit": "Besucherinnen und Besucher dürfen sich die Felder und Ställe ansehen.",
+      "synonyme": [
+        "Bauernhof",
+        "Landwirt",
+        "Gemüse",
+        "Regional",
+        "Direktvermarktung"
+      ]
+    }
+  },
+  {
+    "name": "Zahnarztpraxis Lächelwerk",
+    "branche": "Arztpraxis",
+    "profile": {
+      "gegruendet": 2005,
+      "mitarbeitende": 12,
+      "ort": "Siegen",
+      "angebot": "Zahnmedizinische Vorsorge und Behandlung, auch für Kinder und Angstpatienten.",
+      "werte": [
+        "Vertrauen",
+        "Zeit für Patienten"
+      ],
+      "zielgruppe": "Familien und Menschen, die ungern zum Zahnarzt gehen.",
+      "ansprechperson": {
+        "name": "Dr. Anja Kessler",
+        "rolle": "Zahnärztin und Praxisinhaberin"
+      },
+      "besonderheit": "Das Wartezimmer ist als kleine Spielecke für Kinder gestaltet.",
+      "synonyme": [
+        "Zahnarzt",
+        "Praxis",
+        "Zähne",
+        "Medizin",
+        "Prophylaxe"
+      ]
+    }
+  },
+  {
+    "name": "Repair-Café Werkbank",
+    "branche": "Bürgerinitiative",
+    "profile": {
+      "gegruendet": 2015,
+      "mitarbeitende": 3,
+      "ort": "Fulda",
+      "angebot": "Ehrenamtliche reparieren gemeinsam mit den Gästen defekte Geräte, Kleidung und Fahrräder.",
+      "werte": [
+        "Wiederverwenden",
+        "Gemeinschaft",
+        "Wissen teilen"
+      ],
+      "zielgruppe": "Menschen aus dem Viertel mit kaputten Alltagsgegenständen und Interesse an Nachhaltigkeit.",
+      "ansprechperson": {
+        "name": "Peter Lorenz",
+        "rolle": "Koordinator"
+      },
+      "besonderheit": "Es wird nur gemeinsam repariert, damit alle etwas dabei lernen.",
+      "synonyme": [
+        "Reparatur",
+        "Nachhaltigkeit",
+        "Ehrenamt",
+        "Werkstatt",
+        "Initiative"
+      ]
+    }
+  },
+  {
+    "name": "Theatergruppe Vorhang auf",
+    "branche": "Kultur",
+    "profile": {
+      "gegruendet": 1983,
+      "mitarbeitende": 4,
+      "ort": "Greifswald",
+      "angebot": "Eigene Stücke und Klassiker einer Laienbühne, dazu Workshops für Jugendliche.",
+      "werte": [
+        "Kreativität",
+        "Mut zur Bühne"
+      ],
+      "zielgruppe": "Theaterfreunde aus der Stadt und Jugendliche, die Bühnenluft schnuppern möchten.",
+      "ansprechperson": {
+        "name": "Annette Wegner",
+        "rolle": "Regisseurin"
+      },
+      "besonderheit": "Die Gruppe spielt in einem umgebauten Gemeindesaal.",
+      "synonyme": [
+        "Theater",
+        "Bühne",
+        "Schauspiel",
+        "Laienbühne",
+        "Kultur"
+      ]
+    }
+  },
+  {
+    "name": "Eisdiele Zitronenfalter",
+    "branche": "Gastronomie",
+    "profile": {
+      "gegruendet": 2008,
+      "mitarbeitende": 7,
+      "ort": "Schwerin",
+      "angebot": "Eis aus eigener Herstellung mit wechselnden Saisonsorten, dazu Kaffee und Waffeln.",
+      "werte": [
+        "Handwerk",
+        "Genuss",
+        "Saisonalität"
+      ],
+      "zielgruppe": "Familien, Spaziergänger und Stammgäste in den Sommermonaten.",
+      "ansprechperson": {
+        "name": "Giorgia Neumann",
+        "rolle": "Inhaberin"
+      },
+      "besonderheit": "Jede Woche gibt es eine neue Sorte, die Gäste vorschlagen dürfen.",
+      "synonyme": [
+        "Eis",
+        "Eisdiele",
+        "Eiscreme",
+        "Café",
+        "Sommer"
+      ]
+    }
+  },
+  {
+    "name": "Gartenbau Grünfinger Möller",
+    "branche": "Gartenbau",
+    "profile": {
+      "gegruendet": 1992,
+      "mitarbeitende": 15,
+      "ort": "Landshut",
+      "angebot": "Planung, Anlage und Pflege von Gärten, Terrassen und Außenanlagen.",
+      "werte": [
+        "Naturnähe",
+        "Zuverlässigkeit"
+      ],
+      "zielgruppe": "Hausbesitzer, Wohnungsbaugesellschaften und Gemeinden.",
+      "ansprechperson": {
+        "name": "Tobias Möller",
+        "rolle": "Geschäftsführer"
+      },
+      "besonderheit": "Der Betrieb bildet seit vielen Jahren Gärtnerinnen und Gärtner aus.",
+      "synonyme": [
+        "Garten",
+        "Landschaftsbau",
+        "Pflanzen",
+        "Gärtner",
+        "Grünanlage"
+      ]
+    }
+  },
+  {
+    "name": "Wissenskanal Neugierwerk",
+    "branche": "Online-Wissenschaftskanal",
+    "art": "redaktion",
+    "profile": {
+      "gegruendet": 2018,
+      "mitarbeitende": 8,
+      "ort": "Karlsruhe",
+      "angebot": "Kurze Erklärvideos zu Alltagsfragen aus Natur, Technik und Gesellschaft.",
+      "werte": [
+        "Neugier",
+        "Genauigkeit",
+        "verständliche Sprache"
+      ],
+      "zielgruppe": "Jugendliche und junge Erwachsene, die sich schnell in ein Thema einarbeiten wollen.",
+      "ansprechperson": {
+        "name": "Dr. Lukas Meinert",
+        "rolle": "Chefredakteur"
+      },
+      "besonderheit": "Jedes Video nennt am Ende die verwendeten Quellen.",
+      "synonyme": [
+        "Wissenschaft",
+        "Erklärvideo",
+        "Wissen",
+        "Kanal",
+        "Bildung"
+      ]
+    }
+  },
+  {
+    "name": "Stadtmagazin Pflasterstein",
+    "branche": "Stadtmagazin",
+    "art": "redaktion",
+    "profile": {
+      "gegruendet": 1985,
+      "mitarbeitende": 10,
+      "ort": "Münster",
+      "angebot": "Ein monatliches Magazin und eine Website mit Geschichten aus der Stadt und ihren Vierteln.",
+      "werte": [
+        "Vielfalt",
+        "Haltung zeigen",
+        "saubere Recherche"
+      ],
+      "zielgruppe": "Stadtbewohnerinnen und Stadtbewohner mit Interesse an Politik, Kultur und Alltag.",
+      "ansprechperson": {
+        "name": "Katrin Albers",
+        "rolle": "Chefin vom Dienst"
+      },
+      "besonderheit": "Das Heft wird von einer kleinen Redaktion und vielen freien Autorinnen und Autoren gemacht.",
+      "synonyme": [
+        "Magazin",
+        "Zeitschrift",
+        "Stadt",
+        "Lokaljournalismus",
+        "Redaktion"
+      ]
+    }
+  },
+  {
+    "name": "Schulfernsehen Klappe Elbtal",
+    "branche": "Schulprojekt Fernsehen",
+    "art": "redaktion",
+    "profile": {
+      "gegruendet": 2011,
+      "mitarbeitende": 2,
+      "ort": "Dresden",
+      "angebot": "Eine Film-AG, die Beiträge zu Schulthemen und aktuellen Fragen dreht und im Schulnetz zeigt.",
+      "werte": [
+        "Teamarbeit",
+        "Ausprobieren",
+        "fairer Umgang"
+      ],
+      "zielgruppe": "Mitschülerinnen und Mitschüler, Lehrkräfte und Eltern.",
+      "ansprechperson": {
+        "name": "Sven Hartmann",
+        "rolle": "Lehrer und AG-Leiter"
+      },
+      "besonderheit": "Alle Beiträge werden von Schülerinnen und Schülern selbst geplant, gedreht und geschnitten.",
+      "synonyme": [
+        "Schule",
+        "Film-AG",
+        "Schülerzeitung",
+        "Fernsehen",
+        "Projekt"
+      ]
+    }
+  },
+  {
+    "name": "Museumsbildung Hafenspeicher",
+    "branche": "Museumspädagogik",
+    "art": "redaktion",
+    "profile": {
+      "gegruendet": 1999,
+      "mitarbeitende": 6,
+      "ort": "Bremerhaven",
+      "angebot": "Führungen, Workshops und Medienangebote für Schulklassen und Familien im Stadtmuseum.",
+      "werte": [
+        "Geschichte erlebbar machen",
+        "Neugier wecken"
+      ],
+      "zielgruppe": "Schulklassen, Familien und Besucher, die sich für Stadtgeschichte interessieren.",
+      "ansprechperson": {
+        "name": "Dr. Eva Lindner",
+        "rolle": "Leiterin der Bildungsabteilung"
+      },
+      "besonderheit": "Die Ausstellungsstücke dürfen in Workshops teilweise angefasst werden.",
+      "synonyme": [
+        "Museum",
+        "Ausstellung",
+        "Geschichte",
+        "Bildung",
+        "Vermittlung"
+      ]
+    }
+  },
+  {
+    "name": "Jugendradio Funkenflug",
+    "branche": "Jugendradio",
+    "art": "redaktion",
+    "profile": {
+      "gegruendet": 2007,
+      "mitarbeitende": 5,
+      "ort": "Erfurt",
+      "angebot": "Ein Bürgerradio, das junge Menschen selbst moderieren, recherchieren und senden.",
+      "werte": [
+        "Mitmachen",
+        "Meinungsvielfalt",
+        "Respekt"
+      ],
+      "zielgruppe": "Jugendliche und junge Erwachsene aus der Region.",
+      "ansprechperson": {
+        "name": "Jonas Kleiber",
+        "rolle": "Projektleiter"
+      },
+      "besonderheit": "Das Programm wird fast ausschließlich von Jugendlichen gestaltet.",
+      "synonyme": [
+        "Radio",
+        "Jugendmedien",
+        "Podcast",
+        "Moderation",
+        "Sender"
+      ]
+    }
+  },
+  {
+    "name": "Verein Zukunftswerkstatt Nordstern",
+    "branche": "Gemeinnütziger Verein",
+    "art": "redaktion",
+    "profile": {
+      "gegruendet": 2010,
+      "mitarbeitende": 7,
+      "ort": "Kiel",
+      "angebot": "Ein Verein, der Projekte zu Nachhaltigkeit, Demokratie und Medienkompetenz für junge Menschen anbietet.",
+      "werte": [
+        "Beteiligung",
+        "Nachhaltigkeit",
+        "Offenheit"
+      ],
+      "zielgruppe": "Schulklassen, Jugendgruppen und Ehrenamtliche.",
+      "ansprechperson": {
+        "name": "Lea Sommerfeld",
+        "rolle": "Geschäftsführerin"
+      },
+      "besonderheit": "Die Projekte werden gemeinsam mit den Teilnehmenden geplant.",
+      "synonyme": [
+        "Verein",
+        "Jugendarbeit",
+        "Nachhaltigkeit",
+        "Gemeinnützigkeit",
+        "Bildung"
+      ]
+    }
+  },
+  {
+    "name": "Medienhaus Südwestblick",
+    "branche": "Regionales Medienhaus",
+    "art": "redaktion",
+    "profile": {
+      "gegruendet": 1949,
+      "mitarbeitende": 60,
+      "ort": "Konstanz",
+      "angebot": "Zeitung, Online-Portal und Videoangebote für die Region.",
+      "werte": [
+        "Unabhängigkeit",
+        "Regionalbezug"
+      ],
+      "zielgruppe": "Leserinnen und Leser jeden Alters, die sich über die Region informieren möchten.",
+      "ansprechperson": {
+        "name": "Michael Roth",
+        "rolle": "Leiter Video und Online"
+      },
+      "besonderheit": "Neben der Zeitung entsteht ein eigenes Videoformat für das Netz.",
+      "synonyme": [
+        "Zeitung",
+        "Medienhaus",
+        "Journalismus",
+        "Verlag",
+        "Online"
+      ]
+    }
+  },
+  {
+    "name": "Podcast-Kollektiv Ohrenzeugen",
+    "branche": "Podcast-Kollektiv",
+    "art": "redaktion",
+    "profile": {
+      "gegruendet": 2019,
+      "mitarbeitende": 5,
+      "ort": "Leipzig",
+      "angebot": "Ein Zusammenschluss von Autorinnen und Autoren, die Gesprächs- und Reportage-Podcasts produzieren.",
+      "werte": [
+        "Zuhören",
+        "gründliche Vorbereitung"
+      ],
+      "zielgruppe": "Hörerinnen und Hörer, die sich Zeit für ein Thema nehmen wollen.",
+      "ansprechperson": {
+        "name": "Nadine Pohl",
+        "rolle": "Mitgründerin"
+      },
+      "besonderheit": "Die Folgen erscheinen gemeinsam mit einem kurzen Video für das Netz.",
+      "synonyme": [
+        "Podcast",
+        "Audio",
+        "Reportage",
+        "Gespräch",
+        "Hörfunk"
+      ]
+    }
+  },
+  {
+    "name": "Bürgermedien Offener Kanal Weserbogen",
+    "branche": "Bürgermedien",
+    "art": "redaktion",
+    "profile": {
+      "gegruendet": 1994,
+      "mitarbeitende": 9,
+      "ort": "Minden",
+      "angebot": "Ein offener Kanal, in dem Bürgerinnen und Bürger eigene Sendungen und Filme machen können.",
+      "werte": [
+        "Teilhabe",
+        "Vielfalt",
+        "Medienkompetenz"
+      ],
+      "zielgruppe": "Vereine, Schulen und Privatleute, die selbst senden möchten.",
+      "ansprechperson": {
+        "name": "Hasan Yildiz",
+        "rolle": "Kanalleiter"
+      },
+      "besonderheit": "Wer möchte, bekommt Technik und Anleitung für die erste eigene Sendung.",
+      "synonyme": [
+        "Bürgerfunk",
+        "Offener Kanal",
+        "Sendung",
+        "Fernsehen",
+        "Mitmachen"
+      ]
+    }
+  }
 ]
