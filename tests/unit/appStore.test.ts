@@ -309,3 +309,24 @@ describe('Speicherfehler', () => {
     expect(unhandled).not.toHaveBeenCalled();
   });
 });
+
+describe('Themen-Aufträge im Store (Phase 1.1, 3b)', () => {
+  it('der Verlauf fließt in die Ausgabe: viele Aufträge nacheinander ohne Themen-Wiederholung und mit Steckbrief', async () => {
+    const clock = stubClock();
+    await app().init(new MockBackend(), clock, { installId: 'store-themen' });
+    // 150 Ausgaben in einem Durchlauf (alle 72 Stunden): der Verlauf enthält auch die im selben Durchlauf ausgegebenen
+    clock.advance(149 * 72 * H);
+    app().tickNow();
+    const list = [...st().assignments].sort((a, b) => a.number - b.number);
+    expect(list).toHaveLength(150);
+    expect(list.every((a) => a.client.profile !== undefined)).toBe(true);
+    expect(list.filter((a) => a.topic).length).toBeGreaterThan(50);
+    let run = 1;
+    list.forEach((a, i) => {
+      const id = a.topic?.id;
+      if (id) expect(list.slice(Math.max(0, i - 20), i).some((x) => x.topic?.id === id), `Auftrag ${a.number}`).toBe(false);
+      run = i > 0 && a.topic && a.topic.kategorie === list[i - 1].topic?.kategorie ? run + 1 : 1;
+      expect(run).toBeLessThanOrEqual(2);
+    });
+  });
+});

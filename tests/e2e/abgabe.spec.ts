@@ -158,8 +158,8 @@ test('Export- und Abgabe-Blatt ohne axe-Verstöße (hell und dunkel)', async ({ 
 });
 
 test('Zweites Format: Sequenz anlegen, wechseln, dort schneiden, zurück; „Neu aus aktiver Sequenz“', async ({ page }) => {
-  // Seed e2e-6: Auftrag #1 mit Hochformat (9:16) UND Querformat (16:9)
-  await openFromAuftraege(page, 'perfekt', 'e2e-6');
+  // Seed e2e-6-388: Auftrag #1 mit Hochformat (9:16) UND Querformat (16:9)
+  await openFromAuftraege(page, 'perfekt', 'e2e-6-388');
   await cut(page);
   const clips = page.getByRole('list', { name: 'Clips in der Timeline' }).getByRole('button');
   await expect(page.locator('.ws-seq select')).toHaveCount(0);

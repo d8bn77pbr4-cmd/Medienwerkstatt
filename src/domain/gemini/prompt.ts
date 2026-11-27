@@ -60,6 +60,7 @@ export function buildGeminiPrompt(a: Assignment, input: EvaluationInput, ruleDed
     `Briefing: ${a.briefing}`,
     `Haken (Zusatzaufgabe): ${a.hook.text}`,
   );
+  if (a.topic) out.push(`Thema: ${a.topic.titel}. Leitfragen: ${a.topic.leitfragen.join(' ')}`);
   for (const d of a.deliverables) {
     out.push('', `## Abgabe „${d.label}“`);
     if (d.kind === 'video' && d.videoSpec) {

@@ -151,11 +151,17 @@ function ticked(s: AppState, now: number): AppState {
   const rules = loadRules();
   const catalogs = loadCatalogs();
   const level = account(s.evaluations, s.assignments, rules).level;
+  // Frühere Aufträge (auch die in diesem Durchlauf ausgegebenen) sorgen dafür, dass sich Themen nicht wiederholen.
+  const issued: Assignment[] = [];
   const r = tick(
     s.schedule,
     s.assignments,
     now,
-    (number, issuedAt) => generateAssignment(s.installId, number, issuedAt, level, AVAILABLE_TYPES, catalogs, rules),
+    (number, issuedAt) => {
+      const a = generateAssignment(s.installId, number, issuedAt, level, AVAILABLE_TYPES, catalogs, rules, [...s.assignments, ...issued]);
+      issued.push(a);
+      return a;
+    },
     rules,
   );
   if (!r.changed) return s;

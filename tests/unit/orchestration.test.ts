@@ -19,7 +19,7 @@ const rules = loadRules();
 const HOUR = 3_600_000;
 const t0 = Date.parse('2026-11-23T10:00:00+01:00');
 const seedA: Assignment = generateAssignment('e2e-film', 1, t0, 1, AVAILABLE_TYPES, loadCatalogs(), rules);
-const bothA: Assignment = generateAssignment('e2e-6', 1, t0, 1, AVAILABLE_TYPES, loadCatalogs(), rules);
+const bothA: Assignment = generateAssignment('e2e-6-388', 1, t0, 1, AVAILABLE_TYPES, loadCatalogs(), rules);
 
 const media: MediaItem = {
   id: 'm1', kind: 'video', durationSec: 60, width: 1920, height: 1080, fps: 25, hasAudio: true, hdr: false,

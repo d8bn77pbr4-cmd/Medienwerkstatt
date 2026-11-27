@@ -1,15 +1,18 @@
 import { pick, rng, weighted } from '../rng';
 import type { Level, Rules } from '../chef/rules';
-import { loadCatalogs, type Anlass, type Catalogs, type HakenEintrag, type Kanal, type Kunde } from './catalogs';
+import { loadCatalogs, type Anlass, type Catalogs, type HakenEintrag, type Kanal, type Kunde, type Thema } from './catalogs';
 import { fileNameFor, padNumber } from './naming';
 import type {
   Assignment,
   AssignmentType,
+  AssignmentTopic,
   Deliverable,
   Hook,
   ResearchTemplateId,
   ShotSize,
+  ThemaKategorie,
   VideoSpec,
+  WorldId,
 } from './types';
 
 export { loadCatalogs };
@@ -42,8 +45,26 @@ const TEMPLATE_PHRASE: Record<ResearchTemplateId, string> = {
   erklaer: 'ein Erklärvideo-Konzept',
 };
 /** Vorlagen der Betriebs-Aufträge (Themen mit eigenem Katalog `recherche`). */
-const TEMPLATES: (keyof Catalogs['recherche'])[] = ['expose', 'drehplan', 'shotlist', 'rechte', 'kaufberatung', 'formatvergleich'];
+type BetriebTemplateId = keyof Catalogs['recherche'];
+const TEMPLATES: BetriebTemplateId[] = ['expose', 'drehplan', 'shotlist', 'rechte', 'kaufberatung', 'formatvergleich'];
 const KOMBI_TEMPLATES: ResearchTemplateId[] = ['shotlist', 'drehplan'];
+
+/** Haupt-Vorlage je Themen-Welt; in einem von vier Fällen ersetzt das Exposé sie (ein Film zum Thema). */
+const WORLD_TEMPLATE: Record<ThemaKategorie, ResearchTemplateId> = {
+  gesellschaft: 'meinung',
+  geschichte: 'geschichte',
+  wissen: 'erklaer',
+  medien: 'erklaer',
+  nischen: 'erklaer',
+};
+const EXPOSE_SHARE = 0.25;
+
+/** Wie viele Aufträge nach hinten ein Thema nicht wiederkehrt, und wie oft dieselbe Kategorie hintereinander vorkommen darf. */
+const TOPIC_MEMORY = 20;
+const MAX_SAME_KATEGORIE_IN_ROW = 2;
+
+/** Aufträge davor, soweit für Abwechslung nötig (`number` und `topic`). */
+export type AssignmentHistory = readonly Pick<Assignment, 'number' | 'topic'>[];
 
 const SIZE_ORDER: ShotSize[] = ['totale', 'halbtotale', 'halbnah', 'nah', 'gross', 'detail'];
 const SIZE_LABEL: Record<ShotSize, string> = {
@@ -113,12 +134,13 @@ function toHook(h: HakenEintrag): Hook {
   return { id: h.id, text: h.text, verify: h.verify, ...(h.autoRule ? { autoRule: h.autoRule } : {}) };
 }
 
-function planVideo(r: () => number, level: Level, catalogs: Catalogs, rules: Rules): VideoPlan {
-  // Themen-Anlässe (Erklärvideo, Kurzdoku) gehören zu Themen-Aufträgen und werden hier nie gezogen.
-  const anlass = pick(
+/** `topic`: Themen-Auftrag – der Anlass kommt dann aus den Themen-Anlässen (Erklärvideo, Kurzdoku), sonst aus den übrigen. */
+function planVideo(r: () => number, level: Level, catalogs: Catalogs, rules: Rules, topic?: Thema): VideoPlan {
+  const gewaehlt = pick(
     r,
-    catalogs.anlaesse.filter(a => !a.thema),
+    catalogs.anlaesse.filter(a => (a.thema === true) === (topic !== undefined)),
   );
+  const anlass = topic ? { ...gewaehlt, satz: gewaehlt.satz.replace('{thema}', `„${topic.titel}“`) } : gewaehlt;
   const kanal = catalogs.kanaele.find(k => k.id === anlass.kanal);
   if (!kanal) throw new Error(`Anlass ${anlass.id}: unbekannter Kanal ${anlass.kanal}`);
   const zielgruppe = pick(r, kanal.zielgruppen);
@@ -139,7 +161,7 @@ function planVideo(r: () => number, level: Level, catalogs: Catalogs, rules: Rul
       !(h.excludeKinds ?? []).includes(anlass.kind) &&
       (h.minDurationSec ?? 0) <= durationSec &&
       (h.onlyChannels === undefined || h.onlyChannels.includes(anlass.kanal)) &&
-      !h.nurThema,
+      (topic ? !h.nurBetrieb : !h.nurThema),
   );
   const hakenEintrag = pick(r, candidates);
   const hook = toHook(hakenEintrag);
@@ -181,13 +203,13 @@ function videoDeliverables(plan: VideoPlan): Deliverable[] {
   }));
 }
 
-function videoBriefing(client: Assignment['client'], plan: VideoPlan, kombi?: ResearchTemplateId): string {
+function videoBriefing(client: Assignment['client'], plan: VideoPlan, kombi?: ResearchTemplateId, bezug = 'Film'): string {
   const { anlass, kanal, zielgruppe, hook } = plan;
   const spec = plan.specs[0];
   const wants = [`mindestens ${spec.minShots} Einstellungen (${spec.requiredShotSizes.map(s => SIZE_LABEL[s]).join(', ')})`];
   if (spec.requireJCut) wants.push('einen J-Cut');
   if (spec.requireLowerThird) wants.push('eine Bauchbinde');
-  const extra = kombi ? `, dazu ${TEMPLATE_PHRASE[kombi]} zum Film` : '';
+  const extra = kombi ? `, dazu ${TEMPLATE_PHRASE[kombi]} zum ${bezug}` : '';
   return [
     `${client.name} (${client.branche}) braucht ${anlass.satz}${extra}.`,
     `Der Film läuft ${kanal.ort} und dauert etwa ${formatDuration(spec.durationSec)}; Zielgruppe: ${zielgruppe}.`,
@@ -206,10 +228,54 @@ function profileOf(k: Kunde): NonNullable<Assignment['client']['profile']> {
   return { ...p, werte: [...p.werte], ansprechperson: { ...p.ansprechperson }, synonyme: [...p.synonyme] };
 }
 
+function topicOf(t: Thema): AssignmentTopic {
+  return { id: t.id, kategorie: t.kategorie, titel: t.titel, hintergrund: t.hintergrund, leitfragen: [...t.leitfragen], schlagwoerter: [...t.schlagwoerter], einstieg: [...t.einstieg] };
+}
+
+const WORLDS: WorldId[] = ['betrieb', 'gesellschaft', 'geschichte', 'wissen', 'medien', 'nischen'];
+
+/** Die letzten `n` früheren Aufträge (neueste zuerst). */
+function recentBefore(history: AssignmentHistory, number: number, n: number): AssignmentHistory {
+  return history
+    .filter(h => h.number < number)
+    .sort((a, b) => b.number - a.number)
+    .slice(0, n);
+}
+
+/**
+ * Zieht die Welt (Betrieb oder Themenbereich) nach `rules.worldWeights` aus einem eigenen Zufallsstrom
+ * (`…#welt`), damit der Rest des Auftrags für Betriebe unverändert bleibt. Dieselbe Kategorie kommt höchstens zweimal
+ * hintereinander vor: Standen die letzten beiden Aufträge in derselben Kategorie, scheidet sie aus.
+ */
+export function drawWorld(installId: string, number: number, rules: Rules, history: AssignmentHistory = []): WorldId {
+  const rw = rng(`${installId}#${number}#welt`);
+  const last = recentBefore(history, number, MAX_SAME_KATEGORIE_IN_ROW);
+  const blocked =
+    last.length === MAX_SAME_KATEGORIE_IN_ROW && last[0].topic && last.every(h => h.topic?.kategorie === last[0].topic?.kategorie)
+      ? last[0].topic.kategorie
+      : null;
+  let weights = WORLDS.map(w => [w, rules.worldWeights[w]] as [WorldId, number]);
+  const allowed = weights.filter(([w]) => w !== blocked);
+  if (allowed.some(([, x]) => x > 0)) weights = allowed;
+  return weighted(rw, weights);
+}
+
+/** Thema der Kategorie, das in den letzten Aufträgen nicht vorkam (gibt es keins mehr, das am längsten nicht gezogene). */
+function pickTopic(r: () => number, catalogs: Catalogs, kategorie: ThemaKategorie, recent: AssignmentHistory): Thema {
+  const pool = catalogs.themen.filter(t => t.kategorie === kategorie);
+  const used = new Set(recent.flatMap(h => (h.topic ? [h.topic.id] : [])));
+  const fresh = pool.filter(t => !used.has(t.id));
+  if (fresh.length > 0) return pick(r, fresh);
+  const oldestFirst = [...recent].reverse().flatMap(h => (h.topic?.kategorie === kategorie ? [h.topic.id] : []));
+  return pool.find(t => t.id === oldestFirst[0]) ?? pick(r, pool);
+}
+
 /**
  * Erzeugt einen Auftrag deterministisch aus `rng(installId + '#' + number)` (kein Date.now, kein Math.random).
  * `deadline` und `expiresAt` sind Platzhalter (= issuedAt); `schedule.tick` setzt sie samt Status.
  * Typen außerhalb von AVAILABLE_TYPES (ton, bild, motion) werden ignoriert, auch wenn sie in `available` stehen.
+ * `history`: frühere Aufträge, damit Themen sich nicht wiederholen und eine Kategorie nicht mehr als zweimal in Folge
+ * kommt; ohne sie gibt es keine solche Beschränkung (die Erzeugung bleibt deterministisch zu Seed und History).
  */
 export function generateAssignment(
   installId: string,
@@ -219,10 +285,12 @@ export function generateAssignment(
   available: AssignmentType[],
   catalogs: Catalogs,
   rules: Rules,
+  history: AssignmentHistory = [],
 ): Assignment {
   const r = rng(`${installId}#${number}`);
   const types = available.filter(t => AVAILABLE_TYPES.includes(t));
   if (types.length === 0) throw new Error('generateAssignment: keine unterstützten Typen verfügbar');
+  const world = drawWorld(installId, number, rules, history);
 
   const kombiRoll = r();
   const kombi =
@@ -230,27 +298,35 @@ export function generateAssignment(
   const mainType: AssignmentType = kombi
     ? 'video'
     : weighted(r, types.map(t => [t, rules.typeWeights[t]] as [AssignmentType, number]));
-  const kunde = pick(
-    r,
-    catalogs.kunden.filter(k => k.art === 'betrieb'),
-  );
+  const kunde = pick(r, catalogs.kunden.filter(k => k.art === (world === 'betrieb' ? 'betrieb' : 'redaktion')));
   const client: Assignment['client'] = { name: kunde.name, branche: kunde.branche, profile: profileOf(kunde) };
   const id = `A${padNumber(number)}`;
+  const thema = world === 'betrieb' ? undefined : pickTopic(r, catalogs, world, recentBefore(history, number, TOPIC_MEMORY));
+  /** Vorlage des Themas (ein Zufallswert; nur bei Themen-Aufträgen gezogen). */
+  const topicTemplate = (t: Thema): ResearchTemplateId => (r() < EXPOSE_SHARE ? 'expose' : WORLD_TEMPLATE[t.kategorie]);
 
   let partial: Pick<Assignment, 'type' | 'occasion' | 'title' | 'briefing' | 'hook' | 'deliverables' | 'shootingNotes'>;
 
   if (mainType === 'research') {
-    const template = pick(r, TEMPLATES);
-    const topic = pick(r, catalogs.recherche[template]);
-    const hook = toHook(pick(r, catalogs.haken.filter(h => h.appliesTo.includes('research') && !h.nurThema)));
+    let template: ResearchTemplateId;
+    let subject: string;
+    if (thema) {
+      template = topicTemplate(thema);
+      subject = `„${thema.titel}“`;
+    } else {
+      const betriebTemplate = pick(r, TEMPLATES);
+      template = betriebTemplate;
+      subject = pick(r, catalogs.recherche[betriebTemplate]);
+    }
+    const hook = toHook(pick(r, catalogs.haken.filter(h => h.appliesTo.includes('research') && (thema ? !h.nurBetrieb : !h.nurThema))));
     const label = TEMPLATE_LABEL[template];
     partial = {
       type: 'research',
       occasion: `Recherche: ${label}`,
-      title: `${label} für ${client.name}`,
+      title: thema ? `${label}: ${thema.titel}` : `${label} für ${client.name}`,
       briefing: [
         `${client.name} (${client.branche}) braucht von dir ${TEMPLATE_PHRASE[template]}.`,
-        `Es geht um ${topic}.`,
+        `Es geht um ${subject}.`,
         `Besonderheit: ${hook.text}.`,
       ].join(' '),
       hook,
@@ -258,23 +334,23 @@ export function generateAssignment(
       shootingNotes: [],
     };
   } else {
-    const plan = planVideo(r, level, catalogs, rules);
+    const plan = planVideo(r, level, catalogs, rules, thema);
     const deliverables = videoDeliverables(plan);
     let researchTemplate: ResearchTemplateId | undefined;
     if (kombi) {
-      researchTemplate = pick(r, KOMBI_TEMPLATES);
+      researchTemplate = thema ? topicTemplate(thema) : pick(r, KOMBI_TEMPLATES);
       deliverables.push({
         id: 'recherche',
         kind: 'research',
-        label: `${TEMPLATE_LABEL[researchTemplate]} zum Film`,
+        label: `${TEMPLATE_LABEL[researchTemplate]} zum ${thema ? 'Thema' : 'Film'}`,
         researchTemplate,
       });
     }
     partial = {
       type: kombi ? 'kombi' : 'video',
       occasion: `${plan.kanal.name}: ${plan.anlass.name}`,
-      title: `${plan.anlass.name} – ${client.name}`,
-      briefing: videoBriefing(client, plan, researchTemplate),
+      title: thema ? `${plan.anlass.name}: ${thema.titel}` : `${plan.anlass.name} – ${client.name}`,
+      briefing: videoBriefing(client, plan, researchTemplate, thema ? 'Thema' : 'Film'),
       hook: plan.hook,
       deliverables,
       shootingNotes: shootingNotesFor(plan.specs[0]),
@@ -289,6 +365,7 @@ export function generateAssignment(
     expiresAt: issuedAt,
     level,
     client,
+    ...(thema ? { topic: topicOf(thema) } : {}),
     status: 'open',
     submissions: [],
     ...partial,
