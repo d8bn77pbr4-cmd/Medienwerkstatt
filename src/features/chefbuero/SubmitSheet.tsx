@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { getBackend } from '../../backend';
 import type { Assignment } from '../../domain/assignments/types';
 import { canCorrect, correctionBlockedText } from '../../domain/chef/correction';
-import { RESEARCH_TEMPLATES, validSources } from '../../domain/chef/research';
+import { countedSources, RESEARCH_TEMPLATES } from '../../domain/chef/research';
 import { loadRules } from '../../domain/chef/rules';
 import type { Evaluation } from '../../domain/chef/types';
 import type { Project } from '../../domain/timeline/types';
@@ -79,7 +79,7 @@ export function SubmitSheet({ assignment, onClose, onDone }: { assignment: Assig
           id: d.id,
           label: d.label,
           ok: !!doc,
-          text: doc ? `${filled} von ${required} Pflichtfeldern, ${validSources(doc.sources).length} Quellen` : 'Noch nichts geschrieben – ohne diese Abgabe gibt es Abzug.',
+          text: doc ? `${filled} von ${required} Pflichtfeldern, ${countedSources(doc.sources)} Quellen` : 'Noch nichts geschrieben – ohne diese Abgabe gibt es Abzug.',
           action: { label: 'Recherche bearbeiten', to: `/auftraege/${assignment.id}/recherche/${d.id}` },
         };
       }),

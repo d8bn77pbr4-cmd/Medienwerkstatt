@@ -2,7 +2,7 @@ import type { Measurements } from '../../backend/types';
 import type { Assignment } from '../assignments/types';
 import type { ShotSize } from '../assignments/types';
 import type { GeminiResult } from '../gemini/schema';
-import type { ResearchDoc } from './research';
+import type { ResearchDoc, SourceStatus } from './research';
 
 export type Category = 'technik' | 'gestaltung' | 'auftrag' | 'frist' | 'bonus';
 export type Panel = 'audio' | 'farbe' | 'export' | 'timeline' | 'medien';
@@ -47,6 +47,10 @@ export type EvaluationInput = {
    * neues Zuspätkommen). Fehlt er, gilt `submittedAt`.
    */
   lateBasisAt?: number;
+  /** Ergebnis der Online-Prüfung der Recherche-Links beim Abgeben (je Link-Adresse). Fehlt: nicht geprüft. */
+  sourceCheck?: Record<string, SourceStatus>;
+  /** Die Link-Prüfung lief ohne Netz (alle Links unerreichbar oder Prüfung fehlgeschlagen): kein Link-Abzug. */
+  sourcesOffline?: boolean;
 };
 
 export type CategoryResult = { max: number; points: number; deductions: Deduction[] };
@@ -73,6 +77,10 @@ export type Evaluation = {
   geminiShift?: { gestaltung: number; auftrag: number };
   /** Hinweis im Protokoll, wenn Gemini nicht mitgewirkt hat (abgelehnt, Fehler, Limit, offline). */
   geminiNote?: string;
+  /** Hinweis im Protokoll, wenn die Links der Recherche nicht online geprüft werden konnten (kein Abzug). */
+  sourceNote?: string;
+  /** Höchstpunktzahl (Recherche-Auftrag aus Unsinn); gilt auch nach Bonus und Gemini. */
+  capTotal?: number;
   /** Die abgegebenen Dateien (für Showreel-Merkliste und „Im Finder zeigen“). */
   exports?: { deliverableId: string; fileName: string; path: string }[];
 };

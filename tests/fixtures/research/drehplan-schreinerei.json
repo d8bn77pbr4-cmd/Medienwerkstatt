@@ -1,0 +1,15 @@
+{
+  "templateId": "drehplan",
+  "fields": {
+    "datum": "Samstag, 13.03.2027, Ausweichtermin 20.03.2027",
+    "ort": "Werkstatt der Schreinerei Holzwerk Brandt, Lindenstraße 4, Hof und Holzlager",
+    "motive": "Werkstatt mit Hobelbänken, Maschinenhalle, Holzlager, Hof mit dem alten Firmenschild, Büro der Chefin, Ausstellungsraum mit fertigen Möbeln",
+    "personen": "Jana Brandt (Meisterin, Interview), Malik (Azubi), Paula (Gesellin), ein Kundenpaar am Nachmittag",
+    "technik": "Kamera mit 24–70 mm, Stativ, Gimbal, zwei LED-Leuchten mit Softbox, Funkstrecke für das Interview, Ersatzakkus, drei SD-Karten, Kopfhörer, Verlängerungskabel",
+    "zeitplan": "08:00 Ankunft, Aufbau von Licht und Ton in der Werkstatt. 08:45 Interview mit Jana Brandt an der Hobelbank. 10:00 Bilder vom Arbeiten: Hände, Späne, Details der Maschinen. 11:30 Mittagspause. 12:15 Holzlager mit Malik, danach der Hof und das Schild, falls das Wetter passt. 14:00 Übergabe des Tisches an das Kundenpaar. 15:00 Abbau und Sicherung der Karten."
+  },
+  "sources": [
+    "https://www.dguv.de/medien/fb-holzundmetall/publikationen-dokumente/schreinerei.pdf",
+    "https://www.wetter.de/deutschland/wetter-lindenhain"
+  ]
+}

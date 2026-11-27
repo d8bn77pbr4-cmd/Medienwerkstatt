@@ -12,6 +12,7 @@ import loud from '../fixtures/measurements/loud.json';
 import overexposed from '../fixtures/measurements/overexposed.json';
 import perfectM from '../fixtures/measurements/perfect.json';
 import silent from '../fixtures/measurements/silent.json';
+import exposeFixture from '../fixtures/research/expose-schreinerei.json';
 
 const rules = loadRules();
 const H = 3_600_000;
@@ -232,10 +233,10 @@ describe('Auftrag', () => {
     expect(e.categories.auftrag.points).toBe(10);
     expect(e.bonus.map(b => b.ruleId)).not.toContain('allTechPerfect');
   });
-  const researchA = () => assignment({ type: 'research', deliverables: [{ id: 'r', kind: 'research', label: 'Exposé', researchTemplate: 'expose' }] });
+  // Kunde passend zum Beispiel-Exposé (Themenbezug); das Exposé selbst ist echter Text (Tastatursalat kostet seit 3a Punkte).
+  const researchA = () => assignment({ type: 'research', client: { name: 'Schreinerei Holzwerk Brandt', branche: 'Handwerk' }, deliverables: [{ id: 'r', kind: 'research', label: 'Exposé', researchTemplate: 'expose' }] });
   const researchIn = (doc: ResearchDoc | null, a = researchA()): EvaluationInput => ({ ...input(perfectM, {}, goodFacts(), a), videos: {}, research: { r: doc } });
-  const words = (n: number) => Array.from({ length: n }, (_, i) => `w${i}`).join(' ');
-  const goodDoc = (): ResearchDoc => ({ templateId: 'expose', fields: { arbeitstitel: 'T', logline: words(20), zielgruppe: 'Z', inhalt: words(120), gestaltung: words(60), laenge: '90 s' }, sources: ['https://a.de/x', 'https://b.de/y'] });
+  const goodDoc = (): ResearchDoc => ({ ...(JSON.parse(JSON.stringify(exposeFixture)) as ResearchDoc), sources: ['https://a.de/x', 'https://b.de/y'] });
   it('Recherche-only: perfekt → 100, Technik/Gestaltung nicht anwendbar', () => {
     const e = evaluate(researchIn(goodDoc()), rules);
     expect(e.categories.technik).toEqual({ max: 0, points: 0, deductions: [] });

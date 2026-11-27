@@ -47,7 +47,7 @@ export function researchVorgaben(d: Deliverable): Vorgabe[] {
   const out: Vorgabe[] = [];
   if (required.length) out.push({ id: `${d.id}:pflicht`, text: `Pflichtfelder ausfüllen: ${required.join(', ')}` });
   out.push({ id: `${d.id}:laenge`, text: 'Texte im Längenrahmen des jeweiligen Felds halten' });
-  out.push({ id: `${d.id}:quellen`, text: `Mindestens ${rules.deductions.auftrag.researchMinSources} Quellen mit vollständigem Link (https://…)` });
+  out.push({ id: `${d.id}:quellen`, text: `Mindestens ${rules.deductions.auftrag.researchMinSources} Quellen mit vollständigem Link (https://…) von verschiedenen Seiten` });
   return out;
 }
 

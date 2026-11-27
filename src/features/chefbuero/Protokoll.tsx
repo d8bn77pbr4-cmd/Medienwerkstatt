@@ -22,7 +22,16 @@ export function useJumpToTool(assignmentId?: string, projectId?: string) {
 }
 
 function Points({ value }: { value: number }) {
-  const good = value >= 0;
+  // 0 Punkte (z. B. „Recherche gedeckelt“, wenn die Punkte schon darunter lagen): neutral, weder Bonus noch Abzug.
+  if (value === 0) {
+    return (
+      <span className="pts">
+        <span>{signed(value)}</span>
+        <span className="sr-only"> Punkte</span>
+      </span>
+    );
+  }
+  const good = value > 0;
   const Icon = good ? CirclePlus : CircleMinus;
   return (
     <span className={`pts ${good ? 'is-good' : 'is-bad'}`}>
@@ -94,6 +103,11 @@ export function Protokoll({ evaluation: e, assignment, fresh }: ProtokollProps) 
         {e.geminiNote && (
           <p className="kurz-note" role="note">
             {e.geminiNote}
+          </p>
+        )}
+        {e.sourceNote && (
+          <p className="kurz-note" role="note">
+            {e.sourceNote}
           </p>
         )}
       </section>

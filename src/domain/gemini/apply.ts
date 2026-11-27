@@ -49,7 +49,7 @@ export function applyGemini(e: Evaluation, g: GeminiResult, rules: Rules, opts: 
   const next: Evaluation = {
     ...e,
     categories,
-    total: totalOf(categories, e.bonus, e.late, rules, opts.isCorrection ?? false),
+    total: totalOf(categories, e.bonus, e.late, rules, opts.isCorrection ?? false, e.capTotal),
     gemini: g,
     geminiShift: applied,
   };

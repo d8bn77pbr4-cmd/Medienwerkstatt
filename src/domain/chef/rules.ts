@@ -50,6 +50,16 @@ const auftrag = z.object({
   researchLengthOutOfRange: z.number(),
 });
 
+/** Abzüge der Textprüfung je Recherche (Kombi-Werte etwa ein Viertel der Recherche-Auftrag-Werte). */
+const researchQualityPoints = z.object({
+  copiedField: z.number(),
+  offTopic: z.number(),
+  implausibleField: z.number(),
+  placeholderSource: z.number(),
+  sourceNotFound: z.number(),
+  sourceUnreachable: z.number(),
+});
+
 export const RulesSchema = z.object({
   schedule: z.object({
     intervalHours: z.number().positive(),
@@ -68,6 +78,16 @@ export const RulesSchema = z.object({
     gestaltung,
     auftrag,
     researchOnly: z.object({ max: z.number(), missingDeliverable: z.number(), emptyField: z.number(), tooFewSources: z.number(), lengthOutOfRange: z.number(), hookNotMet: z.number() }),
+  }),
+  /**
+   * Recherche ehrlich bewerten: Deckel bei Unsinn (Recherche-Auftrag höchstens `gibberishCapTotal` Punkte, sobald
+   * mindestens `gibberishCapShare` der Pflichtfelder Unsinn sind) und die Abzüge der Textprüfung.
+   */
+  researchQuality: z.object({
+    gibberishCapTotal: z.number(),
+    gibberishCapShare: z.number().min(0).max(1),
+    kombi: researchQualityPoints,
+    researchOnly: researchQualityPoints,
   }),
   frist: z.object({ perDay: z.number(), maxDays: z.number(), expiredAccount: z.number() }),
   bonus: z.object({ max: z.number(), early24h: z.number(), earlyHours: z.number(), allTechPerfect: z.number() }),

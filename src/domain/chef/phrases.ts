@@ -18,9 +18,18 @@ function plain(d: Deduction): string {
   return `${d.label} (${d.ist} statt ${d.soll}).`;
 }
 
+/** Chef-Satz, wenn die Recherche aus Tastatursalat besteht (mindestens die Hälfte der Pflichtfelder Unsinn). */
+export const GIBBERISH_PHRASE = 'Das ist Tastatursalat, keine Recherche. So geht nichts an den Kunden.';
+/** Regeln, die der Tastatursalat-Satz schon ausspricht (sie stehen nicht noch einmal dahinter). */
+const GIBBERISH_RULES = new Set(['researchGibberish', 'researchGibberishCap']);
+
 export function phraseFor(e: Evaluation, rules: Rules = loadRules()): string {
-  const base = e.total < rules.tone.badBelow ? 'So geht das nicht raus.' : e.total < rules.tone.okBelow ? 'Brauchbar, aber da geht mehr.' : 'Kann so zum Kunden.';
   const all = allDeductions(e);
+  if (all.some(d => d.ruleId === 'researchGibberishCap')) {
+    const rest = all.filter(d => !GIBBERISH_RULES.has(d.ruleId) && d.points < 0).sort((x, y) => x.points - y.points).slice(0, 2);
+    return [GIBBERISH_PHRASE, ...rest.map(plain)].join(' ');
+  }
+  const base = e.total < rules.tone.badBelow ? 'So geht das nicht raus.' : e.total < rules.tone.okBelow ? 'Brauchbar, aber da geht mehr.' : 'Kann so zum Kunden.';
   const top = [...all].sort((x, y) => x.points - y.points).slice(0, 2);
   return [base, ...top.map(plain)].join(' ');
 }

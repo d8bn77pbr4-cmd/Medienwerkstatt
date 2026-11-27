@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { loadRules } from '../../src/domain/chef/rules';
+import { loadRules, RulesSchema } from '../../src/domain/chef/rules';
+import rulesJson from '../../rules.json';
 
 describe('loadRules', () => {
   const rules = loadRules();
@@ -19,5 +20,24 @@ describe('loadRules', () => {
     expect(rules.correction).toMatchObject({ windowHours: 24, maxScore: 90 });
     expect(rules.gemini.maxShift).toBe(10);
     expect(rules.showreelMinScore).toBe(80);
+  });
+  it('Recherche ehrlich bewerten (Phase 1.1, 3a): Deckel 15 ab der Hälfte Unsinn, Kombi-Werte etwa ein Viertel', () => {
+    const q = rules.researchQuality;
+    expect(q.gibberishCapTotal).toBe(15);
+    expect(q.gibberishCapShare).toBe(0.5);
+    const keys = ['copiedField', 'offTopic', 'implausibleField', 'placeholderSource', 'sourceNotFound', 'sourceUnreachable'] as const;
+    for (const k of keys) {
+      expect(q.kombi[k], k).toBeLessThan(0);
+      expect(q.researchOnly[k], k).toBeLessThan(q.kombi[k]);
+    }
+  });
+  it('Schema prüft researchQuality wie die übrigen Schlüssel', () => {
+    const broken = JSON.parse(JSON.stringify(rulesJson)) as Record<string, Record<string, unknown>>;
+    delete broken.researchQuality.kombi;
+    expect(RulesSchema.safeParse(broken).success).toBe(false);
+    const share = JSON.parse(JSON.stringify(rulesJson)) as Record<string, Record<string, unknown>>;
+    share.researchQuality.gibberishCapShare = 2;
+    expect(RulesSchema.safeParse(share).success).toBe(false);
+    expect(RulesSchema.safeParse(rulesJson).success).toBe(true);
   });
 });

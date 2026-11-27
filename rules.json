@@ -60,6 +60,12 @@
     },
     "researchOnly": { "max": 100, "missingDeliverable": -100, "emptyField": -12, "tooFewSources": -20, "lengthOutOfRange": -10, "hookNotMet": -15 }
   },
+  "researchQuality": {
+    "gibberishCapTotal": 15,
+    "gibberishCapShare": 0.5,
+    "kombi": { "copiedField": -2, "offTopic": -3, "implausibleField": -1, "placeholderSource": -1, "sourceNotFound": -2, "sourceUnreachable": -1 },
+    "researchOnly": { "copiedField": -8, "offTopic": -12, "implausibleField": -4, "placeholderSource": -5, "sourceNotFound": -6, "sourceUnreachable": -3 }
+  },
   "frist": { "perDay": -10, "maxDays": 3, "expiredAccount": -20 },
   "bonus": { "max": 5, "early24h": 3, "earlyHours": 24, "allTechPerfect": 2 },
   "correction": { "windowHours": 24, "maxScore": 90, "loops": 1 },

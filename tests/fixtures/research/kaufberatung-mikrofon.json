@@ -1,0 +1,14 @@
+{
+  "templateId": "kaufberatung",
+  "fields": {
+    "budget": "150 Euro inkl. MwSt.",
+    "bedarf": "Die Bäckerei Korn & Kruste will kurze Interviews mit dem Team drehen, meistens in der lauten Backstube und manchmal draußen vor dem Laden. Gefilmt wird mit dem Smartphone, deshalb muss das Mikrofon dort ohne Adapter funktionieren.",
+    "empfehlung": "Ich empfehle ein Funk-Ansteckmikrofon mit zwei Sendern, zum Beispiel das Rode Wireless Go II oder ein ähnliches Set für rund 140 Euro. Die Sender klemmt man an die Kleidung, so bleibt der Abstand zum Mund immer gleich und die Stimme ist auch neben dem Ofen gut zu verstehen. Der Empfänger passt per USB-C oder Lightning an das Handy. Wichtig ist, dass das Set eine eingebaute Aufnahme als Sicherung hat, falls die Funkverbindung kurz abreißt. Die Akkus halten etwa sieben Stunden, das reicht für einen Drehtag.",
+    "alternativen": "Günstiger ist ein kabelgebundenes Lavalier-Mikrofon für etwa 30 Euro, aber das Kabel stört, wenn sich die Leute bewegen. Ein Richtmikrofon auf dem Handy kostet rund 80 Euro, nimmt in der Backstube aber viel Lärm von den Maschinen mit auf.",
+    "fazit": "Für Interviews in einer lauten Umgebung lohnt sich das Funkset mit zwei Sendern, auch wenn es fast das ganze Budget braucht."
+  },
+  "sources": [
+    "https://www.test.de/Mikrofone-im-Test",
+    "https://www.thomann.de/de/funkmikrofone.html"
+  ]
+}

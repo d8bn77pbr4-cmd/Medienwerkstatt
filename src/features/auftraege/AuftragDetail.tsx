@@ -5,7 +5,7 @@ import { researchKey, useApp } from '../../state/appStore';
 import { loadProjectFor } from '../../state/projectAccess';
 import { SubmitSheet } from '../chefbuero/SubmitSheet';
 import { countedEvaluations } from '../../domain/chef/types';
-import { RESEARCH_TEMPLATES, validSources } from '../../domain/chef/research';
+import { countedSources, RESEARCH_TEMPLATES } from '../../domain/chef/research';
 import { formatDeadline } from './format';
 import { StatusBadge } from './StatusBadge';
 import { useStatusOf } from './useStatus';
@@ -133,7 +133,7 @@ export function AuftragDetail() {
               else if (template) {
                 const req = template.fields.filter((f) => f.required);
                 const filled = req.filter((f) => (doc?.fields[f.key] ?? '').trim() !== '').length;
-                info = `${filled} von ${req.length} Pflichtfeldern, ${validSources(doc?.sources ?? []).length} Quellen`;
+                info = `${filled} von ${req.length} Pflichtfeldern, ${countedSources(doc?.sources ?? [])} Quellen`;
               } else info = '';
               return (
                 <li key={d.id}>
