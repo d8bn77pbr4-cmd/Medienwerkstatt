@@ -1,4 +1,4 @@
-import type { Settings } from '../../backend/types';
+import { AUTOSAVE_CHOICES, DEFAULT_AUTOSAVE_MINUTES, type Settings } from '../../backend/types';
 import { useApp } from '../../state/appStore';
 import { GeminiSection } from './GeminiSection';
 import { VacationSection } from './VacationSection';
@@ -29,11 +29,33 @@ function ThemeSection() {
   );
 }
 
-/** Die Abschnitte der Einstellungen: Darstellung, Urlaub, Gemini (Sparplan-Look, je Abschnitt eine Hauptaktion). */
+function AutosaveSection() {
+  const minutes = useApp((s) => s.state?.settings.autosaveMinutes ?? DEFAULT_AUTOSAVE_MINUTES);
+  const setMinutes = useApp((s) => s.setAutosaveMinutes);
+  return (
+    <section className="card" aria-labelledby="sichern-h">
+      <h2 id="sichern-h">Sichern</h2>
+      <p className="muted set-lead" id="sichern-lead">
+        Alle {minutes} Minuten legt die App eine Sicherungsversion an (die letzten 20 bleiben). Das passiert nur, wenn sich seit der letzten etwas geändert hat. Mit ⌘S geht es sofort; in der Werkstatt holst du über „Ältere Version …“ einen früheren Stand zurück.
+      </p>
+      <div className="segmented" role="radiogroup" aria-label="Sicherungsversion alle" aria-describedby="sichern-lead">
+        {AUTOSAVE_CHOICES.map((n) => (
+          <label key={n} className="segmented-item pressable">
+            <input type="radio" name="autosave" value={n} checked={minutes === n} onChange={() => setMinutes(n)} />
+            <span>{n} min</span>
+          </label>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/** Die Abschnitte der Einstellungen: Darstellung, Sichern, Urlaub, Gemini (Sparplan-Look, je Abschnitt eine Hauptaktion). */
 export function SettingsView() {
   return (
     <>
       <ThemeSection />
+      <AutosaveSection />
       <VacationSection />
       <GeminiSection />
     </>

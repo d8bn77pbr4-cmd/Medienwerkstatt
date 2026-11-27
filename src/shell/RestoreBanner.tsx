@@ -6,6 +6,7 @@ export function RestoreBanner() {
   const restored = useApp((s) => s.restoredFromBackup);
   const dismiss = useApp((s) => s.dismissRestoredBanner);
   const saveError = useApp((s) => s.saveError);
+  const versionError = useApp((s) => s.versionError);
   const initError = useApp((s) => s.initError);
   const restart = useApp((s) => s.restart);
   return (
@@ -21,6 +22,11 @@ export function RestoreBanner() {
       {saveError && (
         <div className="banner" role="alert">
           <span>Speichern fehlgeschlagen – neuer Versuch …</span>
+        </div>
+      )}
+      {versionError && (
+        <div className="banner" role="status">
+          <span>Sicherungsversion konnte nicht angelegt werden – neuer Versuch im nächsten Takt.</span>
         </div>
       )}
       {restored && (

@@ -95,3 +95,17 @@ describe('geminiNotReady', () => {
     expect(geminiNotReady({ enabled: true, model: 'm' }, null)).toBe(false);
   });
 });
+
+describe('Sichern', () => {
+  it('zeigt Standard 10, erklärt den Takt und stellt die Zeit um', async () => {
+    await mount(<SettingsView />);
+    const group = host.querySelector('[role="radiogroup"][aria-label="Sicherungsversion alle"]')!;
+    const radios = [...group.querySelectorAll<HTMLInputElement>('input[type="radio"]')];
+    expect(radios.map((r) => r.value)).toEqual(['5', '10', '15', '30']);
+    expect(radios.find((r) => r.checked)?.value).toBe('10');
+    expect(host.textContent).toContain('Alle 10 Minuten legt die App eine Sicherungsversion an (die letzten 20 bleiben).');
+    await act(async () => radios.find((r) => r.value === '15')!.click());
+    expect(useApp.getState().state?.settings.autosaveMinutes).toBe(15);
+    expect(host.textContent).toContain('Alle 15 Minuten legt die App');
+  });
+});

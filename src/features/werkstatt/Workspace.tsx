@@ -1,9 +1,11 @@
-import { ChevronsLeftRight, Hand, Keyboard, LayoutGrid, Magnet, MousePointer2, Scissors, UnfoldHorizontal, X, type LucideIcon } from 'lucide-react';
+import { ChevronsLeftRight, Hand, History, Keyboard, LayoutGrid, Magnet, MousePointer2, Scissors, UnfoldHorizontal, X, type LucideIcon } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getBackend } from '../../backend';
+import { DEFAULT_AUTOSAVE_MINUTES } from '../../backend/types';
 import { newSequence } from '../../domain/timeline/sequence';
 import type { MediaItem, Sequence } from '../../domain/timeline/types';
+import { useApp } from '../../state/appStore';
 import { FREE_DELIVERABLE_ID, exportStale, latestExport } from '../../state/submission';
 import { targetKey, useProject, type OpenTarget } from '../../state/projectStore';
 import { COMMANDS, type CommandCtx } from './commands';
@@ -19,6 +21,7 @@ import { Monitor } from './Monitor';
 import { PlaybackEngine, SourceEngine, sequenceEnd } from './playback';
 import { Scopes } from './Scopes';
 import { ShortcutOverlay } from './ShortcutOverlay';
+import { VersionSheet } from './VersionSheet';
 import { Timeline } from './Timeline';
 import { useWerkstatt, type Tool } from './uiStore';
 import { useKeymap, type KeyHandlers } from './useKeymap';
@@ -57,6 +60,25 @@ function SequenceSwitcher() {
   );
 }
 
+/** „Gespeichert · 18:42“, „Speichert …“ oder der Fehlerzustand; ruhig, höflich vorgelesen (aria-live), kein Blinken. */
+function SaveStatus() {
+  const saveError = useProject((s) => s.saveError);
+  const versionError = useProject((s) => s.versionError);
+  const pending = useProject((s) => s.savePending);
+  const savedAt = useProject((s) => s.savedAt);
+  let text: string;
+  if (saveError) text = 'Nicht gespeichert – neuer Versuch läuft';
+  else if (versionError) text = 'Sicherungsversion fehlgeschlagen – neuer Versuch folgt';
+  else if (pending) text = 'Speichert …';
+  else if (savedAt !== null) text = `Gespeichert · ${new Date(savedAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`;
+  else text = 'Gespeichert';
+  return (
+    <span className={`ws-save${saveError || versionError ? ' is-error' : ''}`} aria-live="polite" data-testid="save-status">
+      {text}
+    </span>
+  );
+}
+
 /** Programm-Vorschau: bei „Vorher zeigen“ ohne Farbkorrektur des gewählten Clips (zwischengespeichert je Stand). */
 function previewSequence(): () => Sequence {
   let last: { seq: Sequence; id: string; out: Sequence } | null = null;
@@ -92,6 +114,8 @@ export function Workspace({ target, heading }: { target: OpenTarget; heading: st
   const practiceOpen = useWerkstatt((s) => s.practiceOpen);
   const project = useProject((s) => s.project);
   const navigate = useNavigate();
+  const autosaveMinutes = useApp((s) => s.state?.settings.autosaveMinutes ?? DEFAULT_AUTOSAVE_MINUTES);
+  const [versionsOpen, setVersionsOpen] = useState(false);
   const [engines, setEngines] = useState<{ program: PlaybackEngine; source: SourceEngine } | null>(null);
   const [loaded, setLoaded] = useState<MediaItem | null>(null);
   const [scopes, setScopes] = useState(false);
@@ -204,6 +228,10 @@ export function Workspace({ target, heading }: { target: OpenTarget; heading: st
           <span className="ws-format" data-testid="seq-format">
             {seq.width}×{seq.height} · {seq.fps} fps
           </span>
+          <SaveStatus />
+          <button type="button" className="btn btn-small" onClick={() => setVersionsOpen(true)}>
+            <History aria-hidden="true" /> Ältere Version …
+          </button>
           <button type="button" className="btn btn-small" title={tooltipFor('help.shortcuts')} onClick={() => COMMANDS['help.shortcuts'](ctx)}>
             <Keyboard aria-hidden="true" /> Tastenkürzel
           </button>
@@ -268,6 +296,7 @@ export function Workspace({ target, heading }: { target: OpenTarget; heading: st
           {engines && <Timeline engine={engines.program} ctx={ctx} />}
         </div>
       </div>
+      {versionsOpen && <VersionSheet minutes={autosaveMinutes} onClose={() => setVersionsOpen(false)} />}
       {shortcutsOpen && <ShortcutOverlay onClose={() => useWerkstatt.getState().setShortcutsOpen(false)} />}
       {exportOpen && target.kind === 'free' && <FreeExportSheet freeProject={target.project} onClose={() => useWerkstatt.getState().setExportOpen(false)} />}
       {practiceOpen && target.kind === 'free' && <PracticeSheet freeProject={target.project} onClose={() => useWerkstatt.getState().setPracticeOpen(false)} />}
