@@ -6,6 +6,7 @@ import { loadProjectFor } from '../../state/projectAccess';
 import { SubmitSheet } from '../chefbuero/SubmitSheet';
 import { countedEvaluations } from '../../domain/chef/types';
 import { countedSources, RESEARCH_TEMPLATES } from '../../domain/chef/research';
+import { SteckbriefKarte, ThemaKarte } from './AuftragHintergrund';
 import { formatDeadline } from './format';
 import { StatusBadge } from './StatusBadge';
 import { useStatusOf } from './useStatus';
@@ -88,6 +89,8 @@ export function AuftragDetail() {
           </p>
           <p>{assignment.briefing}</p>
         </section>
+
+        {assignment.topic ? <ThemaKarte topic={assignment.topic} /> : <SteckbriefKarte client={assignment.client} />}
 
         <section className="card" aria-labelledby="vorgaben-h">
           <h2 id="vorgaben-h">Vorgaben</h2>

@@ -187,3 +187,84 @@ for (const scheme of ['light', 'dark'] as const) {
     await check('Einstellungen');
   });
 }
+
+// Phase 1.1 (3b): Steckbrief und Themen-Aufträge. Seeds (Auftrag #1): e2e-thema-8 = Kommentar zum Handyverbot,
+// e2e-thema-5 = Dossier zum Buchdruck, e2e-thema-1 = Erklärvideo-Konzept zu Schlaf, e2e-geschichte-4 = Kurzdoku (Video) zum Handyverbot.
+const KOMMENTAR = 'e2e-thema-8';
+const DOSSIER = 'e2e-thema-5';
+const ERKLAER = 'e2e-thema-1';
+const KURZDOKU = 'e2e-geschichte-4';
+
+test('Betriebs-Auftrag zeigt den Steckbrief als Definitionsliste, kein Thema', async ({ page }) => {
+  await page.goto(`/auftraege/A01?seed=${VIDEO}`);
+  const steckbrief = page.locator('section[aria-labelledby="steckbrief-h"]');
+  await expect(steckbrief.getByRole('heading', { level: 2, name: 'Steckbrief' })).toBeVisible();
+  await expect(steckbrief.getByText('Der Betrieb ist erfunden – alles Wichtige steht hier. Recherchiere Branche und Thema.')).toBeVisible();
+  for (const term of ['Branche', 'Ort', 'Gegründet', 'Mitarbeitende', 'Angebot', 'Werte', 'Zielgruppe', 'Ansprechperson', 'Besonderheit']) {
+    await expect(steckbrief.locator('dt', { hasText: new RegExp(`^${term}$`) })).toHaveCount(1);
+  }
+  await expect(steckbrief.locator('dl dd')).toHaveCount(9);
+  await expect(page.getByRole('heading', { level: 2, name: 'Thema' })).toHaveCount(0);
+});
+
+test('Themen-Auftrag zeigt Thema mit Leitfragen und Recherche-Einstieg, keinen Steckbrief', async ({ page }) => {
+  await page.goto(`/auftraege/A01?seed=${KOMMENTAR}`);
+  await expect(page.getByRole('heading', { level: 1, name: /Kommentar: Handyverbot an Schulen/ })).toBeVisible();
+  const thema = page.locator('section[aria-labelledby="thema-h"]');
+  await expect(thema.getByRole('heading', { level: 2, name: 'Thema' })).toBeVisible();
+  await expect(thema).toContainText('Smartphones gehören für viele Jugendliche zum Alltag');
+  await expect(thema.getByRole('heading', { level: 3, name: 'Leitfragen' })).toBeVisible();
+  await expect(thema.getByRole('list').nth(0).getByRole('listitem')).toHaveCount(3);
+  await expect(thema.getByRole('heading', { level: 3, name: 'Recherche-Einstieg' })).toBeVisible();
+  expect(await thema.getByRole('list').nth(1).getByRole('listitem').count()).toBeGreaterThanOrEqual(2);
+  await expect(thema.getByText('Recherchiere den aktuellen Stand und gib deine Quellen an.')).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Steckbrief' })).toHaveCount(0);
+});
+
+test('Kommentar: Formular zeigt die Felder, zählt und speichert', async ({ page }) => {
+  await page.goto(`/auftraege/A01?seed=${KOMMENTAR}`);
+  await page.getByRole('button', { name: 'Recherche bearbeiten' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Kommentar' })).toBeVisible();
+  for (const label of ['These', 'Argumente dafür', 'Argumente dagegen', 'Eigene Meinung und Fazit']) await expect(page.getByLabel(label)).toBeVisible();
+  await page.getByLabel('These').fill('Ein Handyverbot an Schulen ist sinnvoll, wenn es klare Ausnahmen gibt.');
+  await expect(page.getByText(/Ziel: 10–40 Wörter/)).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel('These')).toHaveValue(/klare Ausnahmen/);
+});
+
+test('Dossier: Formular zeigt die Felder', async ({ page }) => {
+  await page.goto(`/auftraege/A01/recherche/recherche?seed=${DOSSIER}`);
+  await expect(page.getByRole('heading', { level: 1, name: 'Dossier' })).toBeVisible();
+  for (const label of ['Ereignis', 'Zeitleiste', 'Ursachen', 'Folgen', 'Bedeutung heute']) await expect(page.getByLabel(label)).toBeVisible();
+});
+
+test('Erklärvideo-Konzept: Formular zeigt die Felder', async ({ page }) => {
+  await page.goto(`/auftraege/A01/recherche/recherche?seed=${ERKLAER}`);
+  await expect(page.getByRole('heading', { level: 1, name: 'Erklärvideo-Konzept' })).toBeVisible();
+  for (const label of ['Kernfrage', 'Zielgruppe', 'Drei Kernaussagen', 'Skript-Entwurf', 'Visualisierung']) await expect(page.getByLabel(label)).toBeVisible();
+});
+
+test('Themen-Video: Kurzdoku mit Thema, Steckbrief entfällt', async ({ page }) => {
+  await page.goto(`/auftraege/A01?seed=${KURZDOKU}`);
+  await expect(page.getByRole('heading', { level: 1, name: /Kurzdoku: Handyverbot an Schulen/ })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Thema' })).toBeVisible();
+  await expect(page.locator('section[aria-labelledby="briefing-h"]')).toContainText('„Handyverbot an Schulen“');
+  await expect(page.getByRole('button', { name: 'In der Werkstatt öffnen' })).toBeVisible();
+});
+
+for (const scheme of ['light', 'dark'] as const) {
+  const pages: [string, string, () => string][] = [
+    ['Steckbrief', `/auftraege/A01?seed=${VIDEO}`, () => 'Steckbrief'],
+    ['Thema', `/auftraege/A01?seed=${KOMMENTAR}`, () => 'Thema'],
+    ['Dossier-Formular', `/auftraege/A01/recherche/recherche?seed=${DOSSIER}`, () => 'Dossier'],
+  ];
+  for (const [label, url, heading] of pages) {
+    test(`keine axe-Verstöße: ${label} (${scheme})`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.goto(url);
+      await expect(page.getByRole('heading', { name: heading(), exact: true }).first()).toBeVisible();
+      const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
+      expect(results.violations, `${label} (${scheme})`).toEqual([]);
+    });
+  }
+}
