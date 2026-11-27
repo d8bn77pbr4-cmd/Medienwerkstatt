@@ -71,6 +71,49 @@ test('Recherche-Auftrag: Formular ausfüllen, Neuladen, Eingaben noch da', async
   await expect(page.getByLabel('Quelle 1', { exact: true })).toHaveValue('https://example.org/kamera-test');
 });
 
+/** Füllt die Kaufberatung des Recherche-Seeds, trägt zwei Links ein und gibt aus dem Auftrag heraus ab. */
+async function submitKaufberatung(page: Page, fields: Record<string, string>, links: string[], query = '') {
+  await page.goto(`/auftraege/A01?seed=${RESEARCH}${query}`);
+  await page.getByRole('button', { name: 'Recherche bearbeiten' }).click();
+  await expect(page.getByText('Beim Abgeben prüft die App deine Links kurz online (nur die eingetragenen Adressen).')).toBeVisible();
+  for (const [label, text] of Object.entries(fields)) await page.getByLabel(label).fill(text);
+  for (const [i, link] of links.entries()) {
+    await page.getByRole('button', { name: 'Quelle hinzufügen' }).click();
+    await page.getByLabel(`Quelle ${i + 1}`, { exact: true }).fill(link);
+  }
+  await page.getByRole('link', { name: 'Zurück zum Auftrag' }).click();
+  await page.getByRole('button', { name: 'Abgeben', exact: true }).click();
+  const submit = page.getByRole('dialog', { name: 'Abgeben' });
+  const hook = submit.getByRole('checkbox');
+  if (await hook.count()) await hook.check();
+  await submit.getByRole('button', { name: 'Abgeben', exact: true }).click();
+  await expect(page.getByRole('heading', { level: 2, name: 'Kurz gesagt' })).toBeVisible();
+}
+
+test('Recherche aus Tastatursalat mit zwei gültigen Links: höchstens 15 Punkte, Chef-Satz und Abzüge sichtbar', async ({ page }) => {
+  const mash = 'asdf jklö qwertz fdsa hjkl ölkj sdfg ghjk dfgh vbnm yxcv uiop fjdksl ghfjdk djfkls hdjskal';
+  await submitKaufberatung(page, { Budget: 'hgfd', Bedarf: mash, Empfehlung: `${mash} ${mash} ${mash}`, Alternativen: mash, Fazit: mash }, [
+    'https://www.thomann.de/de/funkmikrofone.html',
+    'https://de.wikipedia.org/wiki/Mikrofon',
+  ]);
+  const total = Number(await page.getByTestId('total').textContent());
+  expect(total).toBeLessThanOrEqual(15);
+  await expect(page.locator('.kurz-phrase')).toContainText('Das ist Tastatursalat, keine Recherche. So geht nichts an den Kunden.');
+  await page.getByText('Für Profis', { exact: true }).click();
+  await expect(page.locator('[data-rule="researchGibberish"]')).toHaveCount(5);
+  await expect(page.locator('[data-rule="researchGibberishCap"]')).toContainText('Recherche gedeckelt');
+  await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))));
+  const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
+  expect(results.violations).toEqual([]);
+});
+
+test('Link-Prüfung ohne Netz (?links=offline): kein Link-Abzug, Hinweis im Protokoll', async ({ page }) => {
+  await submitKaufberatung(page, { Budget: '150 Euro' }, ['https://www.thomann.de/de/404', 'https://de.wikipedia.org/wiki/Mikrofon'], '&links=offline');
+  await expect(page.getByRole('note').filter({ hasText: 'Links nicht online geprüft – keine Verbindung. Das kostet keine Punkte.' })).toBeVisible();
+  await page.getByText('Für Profis', { exact: true }).click();
+  await expect(page.locator('[data-rule="researchSourceNotFound"], [data-rule="researchSourceUnreachable"]')).toHaveCount(0);
+});
+
 test('Zeitsimulation +80 h: Status „verspätet“ in Rot mit Symbol und Text', async ({ page }) => {
   await page.goto(`/auftraege?seed=${VIDEO}`);
   await expect(card(page)).toBeVisible();

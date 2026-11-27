@@ -94,7 +94,8 @@ export function ResearchForm() {
 
           <fieldset className="sources">
             <legend>Quellen</legend>
-            <p className="muted">Mindestens zwei Quellen mit vollständigem Link (https://…).</p>
+            <p className="muted">Mindestens zwei Quellen mit vollständigem Link (https://…) von verschiedenen Seiten.</p>
+            <p className="muted">Beim Abgeben prüft die App deine Links kurz online (nur die eingetragenen Adressen).</p>
             {doc.sources.map((s, i) => (
               <div key={i} className="source-row">
                 <label className="sr-only" htmlFor={`src-${i}`}>

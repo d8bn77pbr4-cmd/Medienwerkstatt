@@ -4,9 +4,9 @@ import type { Assignment } from '../domain/assignments/types';
 import { evaluate } from '../domain/chef/evaluate';
 import { evaluatePractice } from '../domain/chef/practice';
 import type { ProjectFormat } from '../domain/projects';
-import type { ResearchDoc } from '../domain/chef/research';
+import { MAX_CHECKED_SOURCES, sourcesToCheck, type ResearchDoc, type SourceStatus } from '../domain/chef/research';
 import type { Rules } from '../domain/chef/rules';
-import type { Evaluation, ProjectFacts, VideoInput } from '../domain/chef/types';
+import type { Evaluation, EvaluationInput, ProjectFacts, VideoInput } from '../domain/chef/types';
 import { exportRange } from '../domain/render/filtergraph';
 import { projectFacts } from '../domain/timeline/facts';
 import { sequenceHash } from './hash';
@@ -84,6 +84,24 @@ export function exportSnapshot(project: Project, rec: ExportRecord): { facts: Pr
   return { facts, segments: facts.shots.map((s) => ({ start: s.start, end: s.end })) };
 }
 
+/**
+ * Recherche-Links kurz online prüfen (nur die eingetragenen Adressen, höchstens sechs, ohne Platzhalter).
+ * Offline heißt: Jeder Link war unerreichbar oder die Prüfung schlug fehl – dann kostet kein Link Punkte.
+ */
+export async function checkSources(backend: Backend, research: Record<string, ResearchDoc | null>): Promise<Pick<EvaluationInput, 'sourceCheck' | 'sourcesOffline'>> {
+  const urls: string[] = [];
+  for (const doc of Object.values(research)) for (const u of doc ? sourcesToCheck(doc.sources) : []) if (!urls.includes(u)) urls.push(u);
+  if (urls.length === 0) return {};
+  try {
+    const results = await backend.checkUrls(urls.slice(0, MAX_CHECKED_SOURCES));
+    const sourceCheck: Record<string, SourceStatus> = {};
+    for (const x of results) sourceCheck[x.url] = x.result;
+    return { sourceCheck, sourcesOffline: results.length > 0 && results.every((x) => x.result === 'unreachable') };
+  } catch {
+    return { sourcesOffline: true };
+  }
+}
+
 export type SubmissionRequest = {
   backend: Backend;
   rules: Rules;
@@ -104,7 +122,8 @@ export type SubmissionRequest = {
 
 /**
  * Abgabe prüfen und bewerten: je Video-Abgabe die neueste Export-Datei messen (Einstellungs-Segmente aus
- * dem Projektmodell), dann den Regel-Chef anwenden. Fehlende Abgaben bleiben `null` (→ Abzug).
+ * dem Projektmodell), die Recherche-Links online prüfen, dann den Regel-Chef anwenden. Fehlende Abgaben bleiben
+ * `null` (→ Abzug).
  */
 export async function runSubmission(r: SubmissionRequest): Promise<Evaluation> {
   const { assignment: a, project } = r;
@@ -127,8 +146,11 @@ export async function runSubmission(r: SubmissionRequest): Promise<Evaluation> {
     measured++;
   }
   if (measured === 0) r.onProgress?.('Prüfe Abgaben …');
+  const hasLinks = Object.values(r.research).some((doc) => doc && sourcesToCheck(doc.sources).length > 0);
+  if (hasLinks) r.onProgress?.('Prüfe Links …');
+  const links = hasLinks ? await checkSources(r.backend, r.research) : {};
   r.onProgress?.('Bewerte …');
-  const input = { assignment: a, submittedAt: r.submittedAt, videos, research: r.research, selfChecks: r.selfChecks, isCorrection: r.isCorrection, lateBasisAt: r.lateBasisAt };
+  const input: EvaluationInput = { assignment: a, submittedAt: r.submittedAt, videos, research: r.research, selfChecks: r.selfChecks, isCorrection: r.isCorrection, lateBasisAt: r.lateBasisAt, ...links };
   let e = evaluate(input, r.rules);
   if (r.gemini) {
     r.onProgress?.(r.gemini.choice.consent ? 'Frage Gemini …' : 'Bewerte …');
