@@ -1,6 +1,7 @@
 //! Tauri-Befehle, 1:1 zu den Methoden des TypeScript-Interfaces `Backend`.
 
 use crate::error::{CmdError, CmdResult};
+use crate::versions::{self, VersionInfo};
 use crate::{keychain, paths};
 use base64::Engine;
 use mw_media::{
@@ -206,6 +207,74 @@ pub async fn load_project(app: AppHandle, dir: String) -> CmdResult<Loaded> {
 pub async fn save_project(app: AppHandle, dir: String, project: Value) -> CmdResult<()> {
     let path = project_dir_checked(&app, &dir)?.join(PROJECT_FILE);
     blocking(move || save_json(&path, &project)).await
+}
+
+// ---------- Sicherungsversionen ----------
+
+fn project_versions_dir(app: &AppHandle, dir: &str) -> CmdResult<PathBuf> {
+    Ok(project_dir_checked(app, dir)?.join(versions::VERSION_DIR))
+}
+
+/// Kopiert das aktuelle `projekt.mwp` (nur, wenn es lesbar und gültig ist) nach `Auto-Save/<name>`.
+#[tauri::command]
+pub async fn save_project_version(app: AppHandle, dir: String, name: String) -> CmdResult<()> {
+    let project = project_dir_checked(&app, &dir)?.join(PROJECT_FILE);
+    let target = project_versions_dir(&app, &dir)?;
+    blocking(move || {
+        if !valid_project_shape(&fs::read(&project)?) {
+            return Err(CmdError::new("parse", "Projektdatei ist nicht gültig"));
+        }
+        versions::save_version(&project, &target, &name, versions::KEEP_VERSIONS)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn list_project_versions(app: AppHandle, dir: String) -> CmdResult<Vec<VersionInfo>> {
+    let target = project_versions_dir(&app, &dir)?;
+    blocking(move || Ok(versions::list_versions(&target))).await
+}
+
+/// Liest eine Version und gibt sie zurück; geschrieben wird nichts (das Sichern als aktueller Stand übernimmt die Oberfläche).
+#[tauri::command]
+pub async fn restore_project_version(
+    app: AppHandle,
+    dir: String,
+    name: String,
+) -> CmdResult<Value> {
+    let target = project_versions_dir(&app, &dir)?;
+    let value = blocking(move || {
+        let bytes = versions::read_version(&target, &name)?;
+        if !valid_project_shape(&bytes) {
+            return Err(CmdError::new("parse", "Diese Version ist beschädigt"));
+        }
+        serde_json::from_slice::<Value>(&bytes).map_err(|e| CmdError::new("parse", e.to_string()))
+    })
+    .await?;
+    for p in project_asset_paths(&value) {
+        let p = PathBuf::from(p);
+        if p.is_absolute() && p.is_file() {
+            allow_asset(&app, &p);
+        }
+    }
+    Ok(value)
+}
+
+/// Wie `save_project_version` für den App-Zustand: `<App-Daten>/Auto-Save/<name>`.
+#[tauri::command]
+pub async fn save_state_version(app: AppHandle, name: String) -> CmdResult<()> {
+    let state = state_path(&app)?;
+    let target = state
+        .parent()
+        .map(|p| p.join(versions::VERSION_DIR))
+        .ok_or_else(|| CmdError::io("Kein App-Datenordner"))?;
+    blocking(move || {
+        if !valid_state_shape(&fs::read(&state)?) {
+            return Err(CmdError::new("parse", "Zustandsdatei ist nicht gültig"));
+        }
+        versions::save_version(&state, &target, &name, versions::KEEP_VERSIONS)
+    })
+    .await
 }
 
 // ---------- Medien ----------
@@ -568,7 +637,9 @@ mod tests {
         let free = json!({"version":1,"freeProjectId":"p-1","media":[],"sequences":[]});
         assert!(valid_project_shape(free.to_string().as_bytes()));
         assert!(!valid_project_shape(
-            json!({"version":1,"media":[],"sequences":[]}).to_string().as_bytes()
+            json!({"version":1,"media":[],"sequences":[]})
+                .to_string()
+                .as_bytes()
         ));
         assert!(!valid_project_shape(
             json!({"version":1}).to_string().as_bytes()

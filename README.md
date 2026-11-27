@@ -70,6 +70,7 @@ Standardmäßig **aus**: ohne eingeschaltetes Gemini sendet die App keine Netzwe
 - `~/Library/Application Support/Medienwerkstatt/state.json` – Aufträge, Bewertungen, Punktekonto, Einstellungen (ohne Schlüssel).
 - `~/Movies/Medienwerkstatt/A{NN}_{Kunde}/` – ein Ordner je Auftrag mit `projekt.mwp`, `Medien/`, `Proxies/`, `Cache/`, `Export/`, `Recherche/`.
 - Gesichert werden die letzten 10 Versionen von `projekt.mwp` und `state.json` als `.bak1` … `.bak10`.
+- Zusätzlich legt die App alle 5, 10 (Standard), 15 oder 30 Minuten eine Sicherungsversion an, wenn sich etwas geändert hat, und bei ⌘S sofort: `Auto-Save/<JJJJ-MM-TT HH-MM-SS>.json` im Projektordner (die neuesten 20) bzw. im Ordner von `state.json` für den App-Zustand (ebenfalls 20). Ein älterer Projektstand lässt sich in der Werkstatt über „Ältere Version …“ zurückholen. Den App-Zustand holst du von Hand zurück: App beenden, die gewünschte Datei aus `Auto-Save/` neben `state.json` nach `state.json` kopieren (die aktuelle Datei vorher beiseitelegen) und die App wieder öffnen.
 
 ## Entwickeln
 

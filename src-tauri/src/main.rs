@@ -4,6 +4,7 @@ mod commands;
 mod error;
 mod keychain;
 mod paths;
+mod versions;
 
 fn main() {
     tauri::Builder::default()
@@ -15,6 +16,10 @@ fn main() {
             commands::project_dir,
             commands::load_project,
             commands::save_project,
+            commands::save_project_version,
+            commands::list_project_versions,
+            commands::restore_project_version,
+            commands::save_state_version,
             commands::pick_media_files,
             commands::import_media,
             commands::create_proxy,
