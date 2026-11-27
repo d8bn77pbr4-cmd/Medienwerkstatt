@@ -27,7 +27,16 @@ export interface Hook {
   autoRule?: 'longShot8s' | 'bothFormats';
 }
 
-export type ResearchTemplateId = 'expose' | 'drehplan' | 'shotlist' | 'rechte' | 'kaufberatung' | 'formatvergleich';
+export type ResearchTemplateId =
+  | 'expose'
+  | 'drehplan'
+  | 'shotlist'
+  | 'rechte'
+  | 'kaufberatung'
+  | 'formatvergleich'
+  | 'meinung'
+  | 'geschichte'
+  | 'erklaer';
 
 /** Themenbereiche des Themenkatalogs (Phase 1.1, 3b). */
 export type ThemaKategorie = 'gesellschaft' | 'geschichte' | 'wissen' | 'medien' | 'nischen';

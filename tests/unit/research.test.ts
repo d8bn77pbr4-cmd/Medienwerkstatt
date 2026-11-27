@@ -29,7 +29,7 @@ const longText = [exposeFixture.fields.inhalt, kaufFixture.fields.empfehlung, dr
 
 describe('Recherche-Vorlagen', () => {
   it('jede Vorlage hat 4–7 deutsche Felder', () => {
-    expect(Object.keys(RESEARCH_TEMPLATES).sort()).toEqual(['drehplan', 'expose', 'formatvergleich', 'kaufberatung', 'rechte', 'shotlist']);
+    expect(Object.keys(RESEARCH_TEMPLATES).sort()).toEqual(['drehplan', 'erklaer', 'expose', 'formatvergleich', 'geschichte', 'kaufberatung', 'meinung', 'rechte', 'shotlist']);
     for (const t of Object.values(RESEARCH_TEMPLATES)) {
       expect(t.fields.length).toBeGreaterThanOrEqual(4);
       expect(t.fields.length).toBeLessThanOrEqual(7);

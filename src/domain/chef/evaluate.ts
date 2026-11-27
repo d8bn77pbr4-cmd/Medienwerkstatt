@@ -85,7 +85,7 @@ export function evaluate(input: EvaluationInput, rules: Rules): Evaluation {
     gestaltung.push(...gestaltungRules(del.videoSpec, v, a.hook, rules, prefix));
     auftrag.push(...elementRules(del.videoSpec, v, rules, prefix));
   }
-  const ctx: ResearchContext = { keywords: assignmentKeywords(a), sourceCheck: input.sourceCheck, offline: input.sourcesOffline };
+  const ctx: ResearchContext = { keywords: assignmentKeywords(a), sourceCheck: input.sourceCheck, offline: input.sourcesOffline, topic: a.topic !== undefined };
   // Unsinn zählt nicht als vorliegende Abgabe (kein Frühbonus, wie bei der leeren Abgabe).
   let researchPresent = 0;
   let researchDocs = 0;

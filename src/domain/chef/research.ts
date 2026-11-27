@@ -15,7 +15,7 @@ export type SourceStatus = 'ok' | 'notFound' | 'unreachable';
  * Zusatzwissen für die Bewertung: Schlagwörter des Auftrags (Themenbezug) und das Ergebnis der Link-Prüfung.
  * `offline`: Die Prüfung lief ohne Netz – dann kostet kein Link Punkte.
  */
-export type ResearchContext = { keywords: string[]; sourceCheck?: Record<string, SourceStatus>; offline?: boolean };
+export type ResearchContext = { keywords: string[]; sourceCheck?: Record<string, SourceStatus>; offline?: boolean; /** Themen-Auftrag: Hinweise nennen das Thema statt des Betriebs. */ topic?: boolean };
 
 export const RESEARCH_TEMPLATES: Record<ResearchTemplateId, ResearchTemplate> = {
   expose: {
@@ -83,6 +83,38 @@ export const RESEARCH_TEMPLATES: Record<ResearchTemplateId, ResearchTemplate> = 
       { key: 'dateigroesse', label: 'Dateigröße', required: true, minWords: 10, maxWords: 150 },
       { key: 'einsatz', label: 'Einsatzzweck', required: true, minWords: 20, maxWords: 200 },
       { key: 'empfehlung', label: 'Empfehlung', required: true, minWords: 10, maxWords: 100 },
+    ],
+  },
+  meinung: {
+    id: 'meinung',
+    label: 'Kommentar',
+    fields: [
+      { key: 'these', label: 'These', required: true, minWords: 10, maxWords: 40 },
+      { key: 'dafuer', label: 'Argumente dafür', required: true, minWords: 40, maxWords: 200 },
+      { key: 'dagegen', label: 'Argumente dagegen', required: true, minWords: 40, maxWords: 200 },
+      { key: 'fazit', label: 'Eigene Meinung und Fazit', required: true, minWords: 40, maxWords: 200 },
+    ],
+  },
+  geschichte: {
+    id: 'geschichte',
+    label: 'Dossier',
+    fields: [
+      { key: 'ereignis', label: 'Ereignis', required: true, minWords: 10, maxWords: 60 },
+      { key: 'zeitleiste', label: 'Zeitleiste', required: true, minWords: 20, maxWords: 200 },
+      { key: 'ursachen', label: 'Ursachen', required: true, minWords: 30, maxWords: 200 },
+      { key: 'folgen', label: 'Folgen', required: true, minWords: 30, maxWords: 200 },
+      { key: 'heute', label: 'Bedeutung heute', required: true, minWords: 20, maxWords: 150 },
+    ],
+  },
+  erklaer: {
+    id: 'erklaer',
+    label: 'Erklärvideo-Konzept',
+    fields: [
+      { key: 'kernfrage', label: 'Kernfrage', required: true, minWords: 5, maxWords: 30 },
+      { key: 'zielgruppe', label: 'Zielgruppe', required: true },
+      { key: 'kernaussagen', label: 'Drei Kernaussagen', required: true, minWords: 15, maxWords: 120 },
+      { key: 'skript', label: 'Skript-Entwurf', required: true, minWords: 80, maxWords: 300 },
+      { key: 'visualisierung', label: 'Visualisierung', required: true, minWords: 30, maxWords: 200 },
     ],
   },
 };
@@ -215,6 +247,10 @@ const DATE_RES = [
 /** Abkürzungen, deren Punkt kein Satzende ist (z. B., ca., Nr. …). */
 const ABBREVIATIONS = new Set(['ca', 'bzw', 'usw', 'etc', 'ggf', 'inkl', 'evtl', 'vgl', 'nr', 'dr', 'st', 'sog', 'bspw', 'jh', 'jhd', 'mio', 'mrd', 'min', 'sek', 'std', 'max', 'zb', 'ua', 'dh']);
 const FILM_TERMS_MIN = 3;
+const TIMELINE_YEARS_MIN = 3;
+const KEY_POINTS_MIN = 3;
+/** Jahreszahl von 1000 bis 2099, ohne weitere Ziffern daneben (kein Lookbehind: Safari vor 16.4 kennt ihn nicht). */
+const YEAR_RE = /(?:^|\D)((?:1\d|20)\d{2})(?!\d)/g;
 
 /** Satzenden zählen: Punkt, Ausrufe- und Fragezeichen – nicht nach Zahlen (50. Jubiläum), Einzelbuchstaben (z. B.) und Abkürzungen. */
 export function sentenceEnds(text: string): number {
@@ -273,12 +309,61 @@ const checkLink: FieldCheck = (text, label) =>
     ? null
     : { label: `„${label}“ ist keine gültige Adresse`, soll: 'vollständiger Link (https://…)', ist: 'kein http(s)-Link', fix: `Kopier die Adresse aus dem Browser vollständig ins Feld „${label}“, mit https:// am Anfang.` };
 
+/** Verschiedene Jahreszahlen im Text (1000–2099). */
+function distinctYears(text: string): number {
+  const years = new Set<string>();
+  for (let m = YEAR_RE.exec(text); m; m = YEAR_RE.exec(text)) years.add(m[1]);
+  YEAR_RE.lastIndex = 0;
+  return years.size;
+}
+
+const checkTimeline: FieldCheck = (text, label) => {
+  const n = distinctYears(text);
+  return n >= TIMELINE_YEARS_MIN
+    ? null
+    : {
+        label: `„${label}“ nennt zu wenige Jahreszahlen`,
+        soll: `mindestens ${TIMELINE_YEARS_MIN} verschiedene Jahreszahlen`,
+        ist: `${n} Jahreszahl${n === 1 ? '' : 'en'}`,
+        fix: `Ordne in „${label}“ die wichtigsten Ereignisse mit Jahreszahl, z. B. „1961: …“, „1989: …“.`,
+      };
+};
+
+/** Einträge einer Aufzählung: Zeilen, Satzenden oder durch Semikolon getrennte Teile – das Größte davon. */
+function listItems(text: string): number {
+  const lines = text.split(/\n+/).filter(l => l.replace(/^\s*(?:[-–•*·]|\d+[.)])\s*/, '').trim() !== '').length;
+  const semicolons = text.split(';').filter(p => p.trim() !== '').length;
+  return Math.max(lines, semicolons, sentenceEnds(text));
+}
+
+const checkKeyPoints: FieldCheck = (text, label) => {
+  const n = listItems(text);
+  return n >= KEY_POINTS_MIN
+    ? null
+    : {
+        label: `„${label}“ nennt zu wenige Punkte`,
+        soll: `${KEY_POINTS_MIN} Kernaussagen, je eine pro Zeile oder Satz`,
+        ist: `${n} Punkt${n === 1 ? '' : 'e'}`,
+        fix: `Schreib in „${label}“ drei Kernaussagen, jede in einer eigenen Zeile oder einem eigenen Satz.`,
+      };
+};
+
 /** Plausibilität einzelner Felder je Vorlage; alle anderen Felder prüfen nur die allgemeinen Regeln. */
 const FIELD_CHECKS: Partial<Record<ResearchTemplateId, Record<string, FieldCheck>>> = {
   expose: { laenge: checkDuration, zielgruppe: checkAudience, gestaltung: checkFilmTerms, logline: checkSentence },
   drehplan: { datum: checkDate },
   kaufberatung: { budget: checkAmount },
   rechte: { link: checkLink },
+  geschichte: { zeitleiste: checkTimeline },
+  erklaer: { zielgruppe: checkAudience, kernaussagen: checkKeyPoints, visualisierung: checkFilmTerms },
+};
+
+/** Felder für den Themenbezug (die übrigen Vorlagen prüfen alle Pflichtfelder). */
+const MAIN_FIELDS: Partial<Record<ResearchTemplateId, string[]>> = {
+  expose: ['logline', 'inhalt'],
+  meinung: ['these', 'fazit'],
+  geschichte: ['ereignis', 'ursachen'],
+  erklaer: ['kernfrage', 'kernaussagen'],
 };
 
 /** Mindestwörter je Feld für die Kopie-Prüfung und Grenze der Ähnlichkeit. */
@@ -368,7 +453,8 @@ export function assessResearch(doc: ResearchDoc, template: ResearchTemplate, rul
   // Themenbezug: Mindestens ein Schlagwort des Auftrags in den Haupttextfeldern.
   const keywords = ctx?.keywords ?? [];
   if (keywords.length > 0) {
-    const main = template.id === 'expose' ? template.fields.filter(f => f.key === 'logline' || f.key === 'inhalt') : template.fields.filter(f => f.required);
+    const keys = MAIN_FIELDS[template.id];
+    const main = keys ? template.fields.filter(f => keys.includes(f.key)) : template.fields.filter(f => f.required);
     const text = main.map(f => sense.get(f.key) ?? '').join(' ');
     if (text.trim() !== '' && !containsAny(text, keywords)) {
       const where = quoted(main.map(f => f.label));
@@ -376,9 +462,11 @@ export function assessResearch(doc: ResearchDoc, template: ResearchTemplate, rul
         'researchOffTopic',
         {
           label: 'Kein Bezug zum Auftrag',
-          soll: `Kunde, Branche oder Anlass in ${where}`,
+          soll: ctx?.topic ? `Thema, Kunde oder Anlass in ${where}` : `Kunde, Branche oder Anlass in ${where}`,
           ist: 'kein Schlagwort gefunden',
-          fix: `Schreib in ${where}, für wen und worum es geht: Nenne den Kunden, die Branche oder den Anlass aus dem Briefing.`,
+          fix: ctx?.topic
+            ? `Schreib in ${where}, worum es geht: Nenne das Thema aus dem Briefing und den Kunden oder den Anlass.`
+            : `Schreib in ${where}, für wen und worum es geht: Nenne den Kunden, die Branche oder den Anlass aus dem Briefing.`,
         },
         r.offTopic,
       );

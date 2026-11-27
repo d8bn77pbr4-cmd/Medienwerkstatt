@@ -25,6 +25,9 @@ const TEMPLATE_LABEL: Record<ResearchTemplateId, string> = {
   rechte: 'Rechte-Recherche',
   kaufberatung: 'Technik-Kaufberatung',
   formatvergleich: 'Formatvergleich',
+  meinung: 'Kommentar',
+  geschichte: 'Dossier',
+  erklaer: 'Erklärvideo-Konzept',
 };
 /** Mit Artikel im Akkusativ („… braucht ⟨eine Shotlist⟩“). */
 const TEMPLATE_PHRASE: Record<ResearchTemplateId, string> = {
@@ -34,8 +37,12 @@ const TEMPLATE_PHRASE: Record<ResearchTemplateId, string> = {
   rechte: 'eine Rechte-Recherche',
   kaufberatung: 'eine Technik-Kaufberatung',
   formatvergleich: 'einen Formatvergleich',
+  meinung: 'einen Kommentar',
+  geschichte: 'ein Dossier',
+  erklaer: 'ein Erklärvideo-Konzept',
 };
-const TEMPLATES = Object.keys(TEMPLATE_LABEL) as ResearchTemplateId[];
+/** Vorlagen der Betriebs-Aufträge (Themen mit eigenem Katalog `recherche`). */
+const TEMPLATES: (keyof Catalogs['recherche'])[] = ['expose', 'drehplan', 'shotlist', 'rechte', 'kaufberatung', 'formatvergleich'];
 const KOMBI_TEMPLATES: ResearchTemplateId[] = ['shotlist', 'drehplan'];
 
 const SIZE_ORDER: ShotSize[] = ['totale', 'halbtotale', 'halbnah', 'nah', 'gross', 'detail'];

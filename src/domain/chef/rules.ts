@@ -71,6 +71,17 @@ export const RulesSchema = z.object({
   typeWeights: z.object({ video: z.number(), ton: z.number(), bild: z.number(), motion: z.number(), research: z.number() }),
   lengthTolerancePct: z.array(z.number()).length(5),
   kombiShareFromLevel2: z.number().min(0).max(1),
+  /** Gewichte der „Welten“ (Betrieb oder Themenbereich); mindestens eine Welt braucht ein Gewicht über 0. */
+  worldWeights: z
+    .object({
+      betrieb: z.number().min(0),
+      gesellschaft: z.number().min(0),
+      geschichte: z.number().min(0),
+      wissen: z.number().min(0),
+      medien: z.number().min(0),
+      nischen: z.number().min(0),
+    })
+    .refine(w => Object.values(w).some(x => x > 0), { message: 'worldWeights: mindestens ein Gewicht über 0' }),
   levels: z.array(z.object({ min: z.number(), name: z.string() })).length(5),
   maxScore: z.number(),
   deductions: z.object({

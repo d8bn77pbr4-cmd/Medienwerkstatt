@@ -3,6 +3,7 @@
   "typeWeights": { "video": 40, "ton": 15, "bild": 15, "motion": 10, "research": 20 },
   "lengthTolerancePct": [10, 7.5, 5, 3, 2],
   "kombiShareFromLevel2": 0.3,
+  "worldWeights": { "betrieb": 40, "gesellschaft": 20, "geschichte": 15, "wissen": 15, "medien": 5, "nischen": 5 },
   "levels": [
     { "min": 0, "name": "Probetag" },
     { "min": 300, "name": "Praktikum" },
