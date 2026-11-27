@@ -58,6 +58,11 @@ describe('evaluatePractice', () => {
     expect(e.total).toBeLessThan(100);
     expect(e.categories.auftrag.deductions).toEqual([]);
   });
+  it('ProRes-Export ist in Übungen kein „Falscher Codec“', () => {
+    const prores = { ...perfect, format: { ...perfect.format, videoCodec: 'prores' } } as VideoInput['measurements'];
+    const ids = practice(video({ measurements: prores, fileName: 'Mein-Film_v01_1080p25.mov' })).categories.technik.deductions.map((d) => d.ruleId);
+    expect(ids).not.toContain('codecOrFileName');
+  });
   it('falsche Auflösung gegenüber dem Projektformat wird bemängelt', () => {
     const small = { ...perfect, format: { ...perfect.format, width: 1280, height: 720 } } as VideoInput['measurements'];
     expect(practice(video({ measurements: small })).categories.technik.deductions.map((d) => d.ruleId)).toContain('resolution');

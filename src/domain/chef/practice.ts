@@ -15,12 +15,17 @@ function aspectOf(f: ProjectFormat): VideoSpec['aspect'] {
   return Math.abs(r - 1) < 0.01 ? '1:1' : r > 1 ? '16:9' : '9:16';
 }
 
+/** Bei Übungen ist der Codec frei wählbar: ProRes bleibt ProRes, alles andere wird an H.264 gemessen. */
+export function practiceCodec(measuredVideoCodec: string): VideoSpec['codec'] {
+  return /prores/i.test(measuredVideoCodec) ? 'prores' : 'h264';
+}
+
 /**
- * Vorgabe einer Übung aus dem Projektformat (nur im Speicher): −14 LUFS, True Peak −1, H.264, keine Pflichten
+ * Vorgabe einer Übung aus dem Projektformat (nur im Speicher): −14 LUFS, True Peak −1, keine Pflichten
  * (Einstellungsgrößen, J-Schnitt, Bauchbinde). Ein Dauer-Soll gibt es nicht: Die Länge der Datei ist das Soll,
- * die Längenregel greift also nie. Der Dateiname ist ebenfalls der der Datei.
+ * die Längenregel greift also nie. Dateiname und Codec (H.264 oder ProRes) sind ebenfalls die der Datei.
  */
-export function practiceSpec(format: ProjectFormat, measuredDurationSec: number, fileName: string): VideoSpec {
+export function practiceSpec(format: ProjectFormat, measuredDurationSec: number, fileName: string, codec: VideoSpec['codec'] = 'h264'): VideoSpec {
   return {
     aspect: aspectOf(format),
     width: format.width,
@@ -30,7 +35,7 @@ export function practiceSpec(format: ProjectFormat, measuredDurationSec: number,
     toleranceSec: 0,
     loudnessLufs: -14,
     truePeakMax: -1,
-    codec: 'h264',
+    codec,
     fileName,
     minShots: 0,
     requiredShotSizes: [],
@@ -48,7 +53,8 @@ export type PracticeInput = { freeProjectId: string; format: ProjectFormat; at: 
  */
 export function evaluatePractice(input: PracticeInput, rules: Rules): Evaluation {
   const { video } = input;
-  const spec = practiceSpec(input.format, video.measurements.format.durationSec, video.fileName);
+  const m = video.measurements.format;
+  const spec = practiceSpec(input.format, m.durationSec, video.fileName, practiceCodec(m.videoCodec));
   const d = rules.deductions;
   const technik = category(d.technik.max, technikRules(spec, video, rules, ''));
   const gestaltung = category(d.gestaltung.max, gestaltungRules(spec, video, NEUTRAL_HOOK, rules, ''));
