@@ -203,6 +203,7 @@ describe('Quellen', () => {
       expect(parseSource(p)?.placeholder, p).toBe(true);
     }
     expect(parseSource('https://www.test.de/Mikrofone-im-Test')?.placeholder).toBe(false);
+    expect(parseSource('https://www.xxxlutz.de/moebel')?.placeholder).toBe(false);
     expect(parseSource('www.zdf.de')).toBeNull();
   });
   it('gleiche Domain zählt einmal, Platzhalter gar nicht', () => {

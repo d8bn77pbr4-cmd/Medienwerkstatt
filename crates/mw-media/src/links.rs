@@ -113,12 +113,13 @@ pub fn resolve_public(netloc: &str) -> io::Result<Vec<SocketAddr>> {
     Ok(addrs)
 }
 
-/// HTTP-Status → Ergebnis: 2xx/3xx ok, 401/403/429 ok (die Seite gibt es, sie sperrt nur Programme),
-/// 404/410 nicht gefunden, alles andere nicht erreichbar.
+/// HTTP-Status → Ergebnis: 404/410 nicht gefunden; jede andere echte Antwort (200–599) heißt „den Server und
+/// die Seite gibt es“ – viele Seiten antworten Programmen mit 400, 403, 406, 429 oder 503, obwohl sie im Browser
+/// laufen. Nicht erreichbar sind nur Verbindungsfehler und unsinnige Statuscodes.
 pub fn classify(status: u16) -> LinkStatus {
     match status {
-        200..=399 | 401 | 403 | 429 => LinkStatus::Ok,
         404 | 410 => LinkStatus::NotFound,
+        200..=599 => LinkStatus::Ok,
         _ => LinkStatus::Unreachable,
     }
 }
@@ -352,12 +353,14 @@ mod tests {
 
     #[test]
     fn status_classes() {
-        for s in [200, 204, 301, 302, 304, 399, 401, 403, 429] {
+        for s in [
+            200, 204, 301, 302, 304, 399, 400, 401, 403, 405, 406, 418, 429, 500, 502, 503,
+        ] {
             assert_eq!(classify(s), LinkStatus::Ok, "{s}");
         }
         assert_eq!(classify(404), LinkStatus::NotFound);
         assert_eq!(classify(410), LinkStatus::NotFound);
-        for s in [400, 405, 418, 500, 502, 503, 199] {
+        for s in [0, 100, 199, 600, 999] {
             assert_eq!(classify(s), LinkStatus::Unreachable, "{s}");
         }
     }
@@ -462,7 +465,11 @@ mod tests {
         );
         assert_eq!(check("/nach-ftp"), LinkStatus::Unreachable);
         assert_eq!(check("/gesperrt"), LinkStatus::Ok);
-        assert_eq!(check("/kaputt"), LinkStatus::Unreachable);
+        assert_eq!(
+            check("/kaputt"),
+            LinkStatus::Ok,
+            "Serverfehler: die Seite gibt es, sie hakt nur gerade"
+        );
         // Gesendet: HEAD, bei 405 GET, eigener User-Agent, nichts Persönliches; drei Weiterleitungen beim Kreis.
         let seen: Vec<String> = requests.try_iter().collect();
         let lines: Vec<&str> = seen

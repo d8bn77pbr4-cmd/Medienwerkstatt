@@ -101,7 +101,7 @@ export function validSources(sources: string[]): string[] {
 /** Eine Quelle mit Host, ungefährer Domain (die letzten zwei Teile) und Platzhalter-Kennung. */
 export type SourceInfo = { url: string; host: string; domain: string; placeholder: boolean };
 
-/** Namen, die Platzhalter sind (`example.*`, `test.*` …), zusätzlich alles, was mit `xxx` beginnt. */
+/** Namen, die Platzhalter sind (`example.*`, `test.*` …), zusätzlich reine x-Folgen (`xxx.de`), nicht aber echte Namen wie xxxlutz.de. */
 const PLACEHOLDER_NAMES = new Set(['example', 'beispiel', 'test', 'domain', 'url', 'abc']);
 /** Echte Seiten mit Platzhalter-Namen: test.de ist die Stiftung Warentest. */
 const REAL_DESPITE_NAME = new Set(['test.de']);
@@ -128,7 +128,7 @@ export function parseSource(source: string): SourceInfo | null {
     host === 'localhost' ||
     host.endsWith('.localhost') ||
     host.endsWith('.local') ||
-    (!REAL_DESPITE_NAME.has(domain) && named.some(l => PLACEHOLDER_NAMES.has(l) || l.startsWith('xxx')));
+    (!REAL_DESPITE_NAME.has(domain) && named.some(l => PLACEHOLDER_NAMES.has(l) || /^x{3,}$/.test(l)));
   return { url, host, domain, placeholder };
 }
 
