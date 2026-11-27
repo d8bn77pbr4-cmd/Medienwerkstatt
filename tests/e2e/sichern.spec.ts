@@ -50,7 +50,8 @@ test('Ändern → ⌘S zeigt „Gespeichert“ → weiter schneiden → „Älte
   // ⌘S: sofort gespeichert, die Anzeige nennt die Uhrzeit.
   await page.keyboard.press('Meta+s');
   await expect(status(page)).toHaveText('Gespeichert · 12:00');
-  await expect(status(page)).toHaveAttribute('aria-live', 'polite');
+  // Ohne Fehler wird nichts vorgelesen (sonst meldet sich die Anzeige beim Schneiden alle paar Sekunden).
+  await expect(status(page)).toHaveAttribute('aria-live', 'off');
 
   // Weiter schneiden: ein zweiter Block.
   await page.keyboard.press(',');

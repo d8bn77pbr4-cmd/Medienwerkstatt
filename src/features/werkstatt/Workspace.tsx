@@ -72,8 +72,10 @@ function SaveStatus() {
   else if (pending) text = 'Speichert …';
   else if (savedAt !== null) text = `Gespeichert · ${new Date(savedAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`;
   else text = 'Gespeichert';
+  // Vorgelesen werden nur Fehler – „Speichert …“ wechselt beim Schneiden alle paar Sekunden und soll nicht stören.
+  const failed = saveError || versionError;
   return (
-    <span className={`ws-save${saveError || versionError ? ' is-error' : ''}`} aria-live="polite" data-testid="save-status">
+    <span className={`ws-save${failed ? ' is-error' : ''}`} aria-live={failed ? 'polite' : 'off'} data-testid="save-status">
       {text}
     </span>
   );
