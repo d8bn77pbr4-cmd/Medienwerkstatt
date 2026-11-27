@@ -49,7 +49,7 @@ describe('init', () => {
     expect(a.issuedAt).toBe(t0);
     expect(a.deadline).toBeGreaterThan(t0);
     expect(st().schedule.nextNumber).toBe(2);
-    expect(st().settings).toEqual({ theme: 'auto', gemini: { enabled: false, model: null }, devTimeOffsetMs: 0 });
+    expect(st().settings).toEqual({ theme: 'auto', autosaveMinutes: 10, gemini: { enabled: false, model: null }, devTimeOffsetMs: 0 });
   });
 
   it('nimmt eine vorgegebene installId (Seed) und erzeugt daraus denselben Auftrag', async () => {

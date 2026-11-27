@@ -23,8 +23,18 @@ export type MediaInfo = {
 
 export type LoadResult<T> = { value: T | null; restoredFromBackup: boolean };
 
+/** Takt der Sicherungsversionen in Minuten. */
+export const AUTOSAVE_CHOICES = [5, 10, 15, 30] as const;
+export type AutosaveMinutes = (typeof AUTOSAVE_CHOICES)[number];
+export const DEFAULT_AUTOSAVE_MINUTES: AutosaveMinutes = 10;
+
+/** Eine Sicherungsversion im Ordner `Auto-Save/` (`savedAt` in ms seit 1970, `bytes` = Dateigröße). */
+export type VersionInfo = { name: string; savedAt: number; bytes: number };
+
 export type Settings = {
   theme: 'auto' | 'light' | 'dark';
+  /** Alle so viele Minuten entsteht eine Sicherungsversion (nur bei Änderungen). Fehlt in älteren Ständen (= 10). */
+  autosaveMinutes: AutosaveMinutes;
   gemini: { enabled: boolean; model: string | null };
   /** Entwickler-Zeitsimulation: wird auf die Systemuhr addiert. */
   devTimeOffsetMs: number;

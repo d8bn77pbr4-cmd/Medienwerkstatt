@@ -41,7 +41,7 @@ const asAssignment = (a: Assignment): OpenTarget => ({ kind: 'assignment', assig
 function oldState(): AppState {
   return {
     version: 1, installId: 'alt', createdAt: t0 - 1000, schedule: { nextIssueAt: t0 + 72 * 60 * MIN, nextNumber: 2, vacations: [] },
-    assignments: [assignment('A01')], evaluations: [], showreel: [], settings: { theme: 'dark', gemini: { enabled: false, model: null }, devTimeOffsetMs: 0 },
+    assignments: [assignment('A01')], evaluations: [], showreel: [], settings: { theme: 'dark', autosaveMinutes: 10, gemini: { enabled: false, model: null }, devTimeOffsetMs: 0 },
     checklist: { A01: ['x'] }, research: {},
   };
 }

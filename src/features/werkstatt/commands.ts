@@ -9,6 +9,7 @@ import {
   toggleLink,
 } from '../../domain/timeline/ops';
 import type { MediaItem, Sequence, TrackId } from '../../domain/timeline/types';
+import { saveNow } from '../../state/autosave';
 import { useProject } from '../../state/projectStore';
 import type { CommandId } from './keymap';
 import { fitZoom } from './timelineCanvas';
@@ -209,6 +210,7 @@ export const COMMANDS: Record<CommandId, (ctx: CommandCtx) => void> = {
   },
   'history.undo': () => project().undo(),
   'history.redo': () => project().redo(),
+  'file.save': () => void saveNow('project'),
   'export.open': () => ui().setExportOpen(true),
   'help.shortcuts': () => ui().setShortcutsOpen(!ui().shortcutsOpen),
 };

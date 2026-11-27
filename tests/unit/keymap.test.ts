@@ -69,6 +69,8 @@ describe('KEYMAP', () => {
     expect(matchKey(key('z', { metaKey: true }))?.command).toBe('history.undo');
     expect(matchKey(key('z', { metaKey: true, shiftKey: true }))?.command).toBe('history.redo');
     expect(matchKey(key('m', { metaKey: true }))?.command).toBe('export.open');
+    expect(matchKey(key('s', { metaKey: true }))?.command).toBe('file.save');
+    expect(matchKey(key('s'))?.command).toBe('timeline.snap'); // S allein bleibt Einrasten
     expect(matchKey(key('/', { metaKey: true }))?.command).toBe('help.shortcuts');
     expect(matchKey(key('/', { metaKey: true, shiftKey: true }))?.command).toBe('help.shortcuts'); // deutsche Tastatur: ⇧7
     expect(matchKey(key('Backspace', { shiftKey: true }))?.command).toBe('edit.rippleDelete');

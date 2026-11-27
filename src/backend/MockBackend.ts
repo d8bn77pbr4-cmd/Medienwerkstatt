@@ -1,6 +1,6 @@
 import type { Backend } from './Backend';
 import { isValidState } from './schema';
-import type { AppState, LoadResult, Measurements, MediaItem, Project, Segment } from './types';
+import type { AppState, LoadResult, Measurements, MediaItem, Project, Segment, VersionInfo } from './types';
 import { uuid } from '../domain/uuid';
 
 /**
@@ -40,6 +40,22 @@ function limitFromUrl(): boolean {
     return false;
   }
 }
+/** Wie in Rust: `^\d{4}-\d{2}-\d{2} \d{2}-\d{2}-\d{2}\.json$`, die neuesten 20 bleiben. */
+const VERSION_NAME = /^\d{4}-\d{2}-\d{2} \d{2}-\d{2}-\d{2}\.json$/;
+const KEEP_VERSIONS = 20;
+type StoredVersion = { savedAt: number; json: string };
+function checkVersionName(name: string): void {
+  if (!VERSION_NAME.test(name)) throw { code: 'invalid_path', message: `Ungültiger Versionsname: ${name}` };
+}
+/** Legt die Version ab und kürzt auf die neuesten `KEEP_VERSIONS` (nach Name). */
+function putVersion(map: Map<string, StoredVersion>, name: string, json: string): void {
+  map.set(name, { savedAt: Date.now(), json });
+  for (const old of [...map.keys()].sort().reverse().slice(KEEP_VERSIONS)) map.delete(old);
+}
+function versionList(map: Map<string, StoredVersion> | undefined): VersionInfo[] {
+  return [...(map ?? [])].sort(([a], [b]) => (a < b ? 1 : a > b ? -1 : 0)).map(([name, v]) => ({ name, savedAt: v.savedAt, bytes: v.json.length }));
+}
+
 const PROXY_STEPS = [0.25, 0.5, 0.75, 1];
 const PROXY_STEP_MS = 40;
 /** Export im Mock-Modus: Fortschritt über etwa 1 s. */
@@ -86,6 +102,9 @@ export class MockBackend implements Backend {
   /** Nur Rückfall, wenn localStorage nicht zur Verfügung steht. */
   private memory: AppState | null = null;
   private projects = new Map<string, Project>();
+  /** Sicherungsversionen im Speicher (Projekt je Ordner, App-Zustand). */
+  private projectVersions = new Map<string, Map<string, StoredVersion>>();
+  private stateVersions = new Map<string, StoredVersion>();
   private geminiKey: string | null = null;
   /** Einmal beim Start gelesen: Navigation in der App verliert den Suchparameter. */
   private messung: MockMeasurement = measurementFromUrl();
@@ -130,6 +149,33 @@ export class MockBackend implements Backend {
     // Synchron vor dem ersten await: Sichern beim Verlassen der Seite (pagehide) greift sofort.
     this.projects.set(dir, p);
     writeItem(PROJECT_KEY(dir), JSON.stringify(p));
+  }
+  async saveProjectVersion(dir: string, name: string): Promise<void> {
+    checkVersionName(name);
+    const cur = this.projects.get(dir);
+    if (!cur) throw { code: 'io', message: 'Kein gespeichertes Projekt' };
+    const map = this.projectVersions.get(dir) ?? new Map<string, StoredVersion>();
+    this.projectVersions.set(dir, map);
+    putVersion(map, name, JSON.stringify(cur));
+  }
+  async listProjectVersions(dir: string): Promise<VersionInfo[]> {
+    return versionList(this.projectVersions.get(dir));
+  }
+  async restoreProjectVersion(dir: string, name: string): Promise<Project> {
+    checkVersionName(name);
+    const v = this.projectVersions.get(dir)?.get(name);
+    if (!v) throw { code: 'io', message: 'Version nicht gefunden' };
+    return JSON.parse(v.json) as Project;
+  }
+  async saveStateVersion(name: string): Promise<void> {
+    checkVersionName(name);
+    const cur = this.memory ?? parseState(readItem(KEY));
+    if (!cur) throw { code: 'io', message: 'Kein gespeicherter Zustand' };
+    putVersion(this.stateVersions, name, JSON.stringify(cur));
+  }
+  /** Nur Tests: Versionen des App-Zustands (neueste zuerst). */
+  listStateVersions(): VersionInfo[] {
+    return versionList(this.stateVersions);
   }
   async pickMediaFiles(): Promise<string[]> {
     return [...FIXTURES];

@@ -2,7 +2,7 @@ import { convertFileSrc, invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import type { Backend } from './Backend';
 import { isValidState } from './schema';
-import type { AppState, LoadResult, Measurements, MediaItem, Project, Segment } from './types';
+import type { AppState, LoadResult, Measurements, MediaItem, Project, Segment, VersionInfo } from './types';
 import { uuid } from '../domain/uuid';
 
 /** Fehler eines Tauri-Befehls: `code` ist einer von tool_missing, tool_failed, io, parse, invalid_key, rate_limited, offline, invalid_path. */
@@ -69,6 +69,18 @@ export class TauriBackend implements Backend {
   }
   saveProject(dir: string, p: Project): Promise<void> {
     return call('save_project', { dir, project: p });
+  }
+  saveProjectVersion(dir: string, name: string): Promise<void> {
+    return call('save_project_version', { dir, name });
+  }
+  listProjectVersions(dir: string): Promise<VersionInfo[]> {
+    return call('list_project_versions', { dir });
+  }
+  restoreProjectVersion(dir: string, name: string): Promise<Project> {
+    return call('restore_project_version', { dir, name });
+  }
+  saveStateVersion(name: string): Promise<void> {
+    return call('save_state_version', { name });
   }
   pickMediaFiles(): Promise<string[]> {
     return call('pick_media_files');

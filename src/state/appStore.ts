@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { Backend } from '../backend/Backend';
 import { isValidState } from '../backend/schema';
-import type { AppState, Assignment } from '../backend/types';
+import { AUTOSAVE_CHOICES, DEFAULT_AUTOSAVE_MINUTES, type AppState, type Assignment, type AutosaveMinutes } from '../backend/types';
 import { AVAILABLE_TYPES, generateAssignment, loadCatalogs } from '../domain/assignments/generator';
 import { canAddVacation, tick, type ScheduleState, type Vacation } from '../domain/assignments/schedule';
 import { account, type AccountResult } from '../domain/chef/account';
@@ -37,6 +37,12 @@ export interface AppStore {
   saveError: boolean;
   /** Laden ist fehlgeschlagen; „Neu starten“ legt einen frischen Zustand an. */
   initError: string | null;
+  /** Die letzte Sicherungsversion des App-Zustands ließ sich nicht anlegen (neuer Versuch im nächsten Takt). */
+  versionError: boolean;
+  /** Zählt jede Änderung des Zustands hoch (nie zurückgesetzt); der Sicherungstakt vergleicht damit. */
+  rev: number;
+  /** Der Stand `rev`, der zuletzt als Sicherungsversion angelegt wurde (oder beim Start vorlag). */
+  versionedRev: number;
   clock: Clock | null;
   init(backend: Backend, clock: Clock, opts?: InitOptions): Promise<void>;
   /** Fällige Aufträge ausgeben, Fristen prüfen. Jede Minute und beim Fokussieren des Fensters. */
@@ -62,6 +68,7 @@ export interface AppStore {
   /** Urlaub mit diesem Beginn entfernen – nur künftige (bereits begonnene bleiben). */
   removeVacation(start: number): void;
   setTheme(theme: AppState['settings']['theme']): void;
+  setAutosaveMinutes(minutes: AutosaveMinutes): void;
   setGeminiEnabled(enabled: boolean): void;
   setGeminiModel(model: string | null): void;
   toggleChecklist(assignmentId: string, itemId: string): void;
@@ -77,6 +84,11 @@ export interface AppStore {
   restart(): Promise<void>;
   /** Sofort speichern (Debounce-Timer entfällt). */
   flush(): Promise<void>;
+  /**
+   * Sichert den Zustand (erst `flush`) und legt danach die Sicherungsversion `name` an. `false`, wenn eins von beiden
+   * fehlschlägt: `versionError` bzw. `saveError` ist dann gesetzt und der Aufrufer versucht es später noch einmal.
+   */
+  saveVersion(name: string): Promise<boolean>;
 }
 
 export const researchKey = (assignmentId: string, deliverableId: string) => `${assignmentId}/${deliverableId}`;
@@ -84,6 +96,8 @@ export const researchKey = (assignmentId: string, deliverableId: string) => `${a
 let backend: Backend | null = null;
 let timer: ReturnType<typeof setTimeout> | null = null;
 let dirty = false;
+/** Das laufende Speichern (für `persisted`). */
+let saving: Promise<unknown> | null = null;
 /** Laufende Übungsbewertungen je freiem Projekt (Schutz gegen Doppelklick). */
 const practiceInFlight = new Map<string, Promise<Evaluation>>();
 let initInFlight: { backend: Backend; promise: Promise<void> } | null = null;
@@ -106,6 +120,7 @@ function normalize(s: AppState): AppState {
     projects: freeProjectsOf(s.projects),
     settings: {
       theme: s.settings?.theme ?? 'auto',
+      autosaveMinutes: AUTOSAVE_CHOICES.find((n) => n === s.settings?.autosaveMinutes) ?? DEFAULT_AUTOSAVE_MINUTES,
       gemini: { enabled: s.settings?.gemini?.enabled ?? false, model: s.settings?.gemini?.model ?? null },
       devTimeOffsetMs: s.settings?.devTimeOffsetMs ?? 0,
     },
@@ -124,7 +139,7 @@ function freshState(installId: string, now: number): AppState {
     assignments: [],
     evaluations: [],
     showreel: [],
-    settings: { theme: 'auto', gemini: { enabled: false, model: null }, devTimeOffsetMs: 0 },
+    settings: { theme: 'auto', autosaveMinutes: DEFAULT_AUTOSAVE_MINUTES, gemini: { enabled: false, model: null }, devTimeOffsetMs: 0 },
     checklist: {},
     research: {},
     projects: [],
@@ -154,7 +169,9 @@ export const useApp = create<AppStore>()((set, get) => {
     if (!dirty || !backend || !s) return;
     dirty = false;
     try {
-      await backend.saveState(s);
+      const writing = backend.saveState(s);
+      saving = writing;
+      await writing;
       if (get().saveError) set({ saveError: false });
     } catch {
       // Änderungen nicht verlieren: Zustand bleibt „unsaved“, neuer Versuch nach der Entprellzeit.
@@ -166,6 +183,7 @@ export const useApp = create<AppStore>()((set, get) => {
   };
   const scheduleSave = () => {
     dirty = true;
+    set({ rev: get().rev + 1 });
     cancelTimer();
     timer = setTimeout(() => void flush(), SAVE_DEBOUNCE_MS);
   };
@@ -248,6 +266,8 @@ export const useApp = create<AppStore>()((set, get) => {
       return;
     }
     set({ state, ready: true, restoredFromBackup: loaded.restoredFromBackup });
+    // Ein reiner Start ist keine Änderung: Der Sicherungstakt legt erst nach einer echten Änderung eine Version an.
+    set({ versionedRev: get().rev });
     if (fresh) {
       // Die Installations-ID muss ein sofortiges Neuladen überleben.
       dirty = true;
@@ -262,6 +282,9 @@ export const useApp = create<AppStore>()((set, get) => {
     ready: false,
     restoredFromBackup: false,
     saveError: false,
+    versionError: false,
+    rev: 0,
+    versionedRev: 0,
     initError: null,
     clock: null,
 
@@ -380,6 +403,10 @@ export const useApp = create<AppStore>()((set, get) => {
       });
     },
 
+    setAutosaveMinutes(minutes) {
+      commit((s) => (s.settings.autosaveMinutes === minutes ? s : { ...s, settings: { ...s.settings, autosaveMinutes: minutes } }));
+    },
+
     setTheme(theme) {
       commit((s) => (s.settings.theme === theme ? s : { ...s, settings: { ...s.settings, theme } }));
     },
@@ -459,8 +486,34 @@ export const useApp = create<AppStore>()((set, get) => {
     },
 
     flush,
+
+    async saveVersion(name) {
+      const b = backend;
+      if (!b || !get().state) return false;
+      await flush();
+      if (!(await persisted())) return false;
+      const rev = get().rev;
+      try {
+        await b.saveStateVersion(name);
+      } catch {
+        set({ versionError: true });
+        return false;
+      }
+      set({ versionedRev: rev, versionError: false });
+      return true;
+    },
   };
 });
+
+/** Wartet auf ein laufendes Speichern: `true`, wenn danach nichts Ungesichertes bleibt (kein Fehler, nichts Neues). */
+async function persisted(): Promise<boolean> {
+  try {
+    await saving;
+  } catch {
+    /* der Fehler steht in `saveError` */
+  }
+  return !dirty && !useApp.getState().saveError;
+}
 
 /** Nur für Tests: Zustand und Zeitgeber zurücksetzen. */
 export function resetAppForTests(): void {
@@ -468,7 +521,8 @@ export function resetAppForTests(): void {
   dirty = false;
   backend = null;
   initInFlight = null;
-  useApp.setState({ state: null, ready: false, restoredFromBackup: false, saveError: false, initError: null, clock: null });
+  saving = null;
+  useApp.setState({ state: null, ready: false, restoredFromBackup: false, saveError: false, versionError: false, initError: null, clock: null });
 }
 
 // ---------- Selektoren (reine Funktionen; in Komponenten per useMemo über `state` nutzen) ----------

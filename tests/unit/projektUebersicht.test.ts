@@ -23,7 +23,7 @@ const free = (name: string, id: string) => newFreeProject(name, PROJECT_FORMATS[
 function oldState(): AppState {
   return {
     version: 1, installId: 'x', createdAt: t0, schedule: { nextIssueAt: t0, nextNumber: 3, vacations: [] },
-    assignments: [], evaluations: [], showreel: [], settings: { theme: 'auto', gemini: { enabled: false, model: null }, devTimeOffsetMs: 0 },
+    assignments: [], evaluations: [], showreel: [], settings: { theme: 'auto', autosaveMinutes: 10, gemini: { enabled: false, model: null }, devTimeOffsetMs: 0 },
     checklist: {}, research: {},
   };
 }

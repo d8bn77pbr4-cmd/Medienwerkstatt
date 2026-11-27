@@ -97,6 +97,21 @@ describe('TauriBackend', () => {
     expect(calls[14].args).toEqual({ key: null });
   });
 
+  it('Sicherungsversionen: je Methode ein Befehl mit dem Namen', async () => {
+    handler = () => null;
+    const b = new TauriBackend();
+    await b.saveProjectVersion('/p', '2026-11-24 18-42-07.json');
+    await b.listProjectVersions('/p');
+    await b.restoreProjectVersion('/p', '2026-11-24 18-42-07.json');
+    await b.saveStateVersion('2026-11-24 18-42-07.json');
+    expect(calls).toEqual([
+      { cmd: 'save_project_version', args: { dir: '/p', name: '2026-11-24 18-42-07.json' } },
+      { cmd: 'list_project_versions', args: { dir: '/p' } },
+      { cmd: 'restore_project_version', args: { dir: '/p', name: '2026-11-24 18-42-07.json' } },
+      { cmd: 'save_state_version', args: { name: '2026-11-24 18-42-07.json' } },
+    ]);
+  });
+
   it('ruft Gemini-Befehle nur über die gemini-Methoden auf', async () => {
     handler = () => [];
     const b = new TauriBackend();

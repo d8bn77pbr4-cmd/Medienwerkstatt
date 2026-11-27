@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { getBackend } from '../backend';
 import type { Backend } from '../backend/Backend';
+import type { VersionInfo } from '../backend/types';
 import { projectFolderFor } from '../domain/assignments/naming';
 import type { Assignment, ShotSize } from '../domain/assignments/types';
 import { folderOf, type FreeProject, type OpenedRef } from '../domain/projects';
@@ -57,6 +58,16 @@ export interface ProjectStore {
   canRedo: boolean;
   /** Letztes Speichern ist fehlgeschlagen (neuer Versuch folgt). */
   saveError: boolean;
+  /** Es gibt Änderungen, die noch nicht auf der Platte sind (Entprellzeit läuft oder Schreiben läuft). */
+  savePending: boolean;
+  /** Zeitpunkt (ms) des letzten erfolgreichen Speicherns in dieser Sitzung des Projekts. */
+  savedAt: number | null;
+  /** Die letzte Sicherungsversion ließ sich nicht anlegen (neuer Versuch im nächsten Takt). */
+  versionError: boolean;
+  /** Zählt jede Änderung am Projekt hoch (nie zurückgesetzt, auch nicht beim Öffnen); der Sicherungstakt vergleicht damit. */
+  rev: number;
+  /** Der Stand `rev`, der zuletzt als Sicherungsversion angelegt wurde (oder beim Öffnen vorlag). `rev !== versionedRev` = seither geändert. */
+  versionedRev: number;
   loadError: string | null;
   restoredFromBackup: boolean;
   /** Proxy-Fortschritt 0–1 je Medium, solange er läuft. */
@@ -92,6 +103,18 @@ export interface ProjectStore {
   redo(): void;
   /** Sofort speichern. */
   flush(): Promise<void>;
+  /**
+   * Sichert das offene Projekt (erst `flush`) und legt danach die Sicherungsversion `name` an. `false`, wenn kein Projekt
+   * offen ist oder eins von beiden fehlschlägt (`saveError` bzw. `versionError` ist dann gesetzt; der Aufrufer versucht es später noch einmal).
+   */
+  saveVersion(name: string): Promise<boolean>;
+  /** Versionen des offenen Projekts, neueste zuerst. */
+  listVersions(): Promise<VersionInfo[]>;
+  /**
+   * Holt die Version `name` zurück: sichert zuerst den aktuellen Stand als Version `backupName`, ersetzt dann das offene Projekt
+   * (Verlauf zurückgesetzt) und speichert es. Wirft einen Error mit deutscher Meldung; dann bleibt der aktuelle Stand unverändert.
+   */
+  restoreVersion(name: string, backupName: string): Promise<void>;
   dismissRestored(): void;
 }
 
@@ -100,6 +123,8 @@ let backend: Backend | null = null;
 let history: History<Sequence[]> | null = null;
 let timer: ReturnType<typeof setTimeout> | null = null;
 let dirty = false;
+/** Das laufende Schreiben des Projekts (für `persisted`). */
+let saving: Promise<unknown> | null = null;
 let gesture: string | null = null;
 let inFlight: { key: string; promise: Promise<boolean> } | null = null;
 /** Zählt Öffnungen hoch: verspätete Ergebnisse eines älteren `open` werden verworfen. */
@@ -146,6 +171,9 @@ const EMPTY = {
   canUndo: false,
   canRedo: false,
   saveError: false,
+  savePending: false,
+  savedAt: null as number | null,
+  versionError: false,
   loadError: null,
   restoredFromBackup: false,
   proxyProgress: {},
@@ -161,7 +189,10 @@ export const useProject = create<ProjectStore>()((set, get) => {
     if (!dirty || !backend || !project || !dir) return;
     dirty = false;
     try {
-      await backend.saveProject(dir, project);
+      const writing = backend.saveProject(dir, project);
+      saving = writing;
+      await writing;
+      set({ savedAt: Date.now(), savePending: dirty });
       if (get().saveError) set({ saveError: false });
     } catch {
       // Nichts verlieren: neuer Versuch nach der Entprellzeit.
@@ -173,6 +204,7 @@ export const useProject = create<ProjectStore>()((set, get) => {
   };
   const scheduleSave = () => {
     dirty = true;
+    set({ rev: get().rev + 1, savePending: true });
     cancelTimer();
     timer = setTimeout(() => void flush(), PROJECT_SAVE_DEBOUNCE_MS);
   };
@@ -205,7 +237,7 @@ export const useProject = create<ProjectStore>()((set, get) => {
     history = null;
     backend = b;
     proxyJobs = [];
-    set({ ...EMPTY, status: 'loading', target: t });
+    set({ ...EMPTY, status: 'loading', target: t, versionedRev: get().rev });
     const fresh = freshProject(t);
     if (!fresh) {
       set({ status: 'noVideo' });
@@ -245,6 +277,8 @@ export const useProject = create<ProjectStore>()((set, get) => {
 
   return {
     ...EMPTY,
+    rev: 0,
+    versionedRev: 0,
 
     open(t, b = getBackend()) {
       const cur = get();
@@ -376,6 +410,53 @@ export const useProject = create<ProjectStore>()((set, get) => {
 
     flush,
 
+    async saveVersion(name) {
+      const { dir, project } = get();
+      const b = backend;
+      if (!b || !dir || !project) return false;
+      await flush();
+      if (get().dir !== dir || !(await persisted())) return false;
+      // Alles bis hier ist auf der Platte; spätere Änderungen zählen als „seither geändert“.
+      const rev = get().rev;
+      try {
+        await b.saveProjectVersion(dir, name);
+      } catch {
+        set({ versionError: true });
+        return false;
+      }
+      if (get().dir === dir) set({ versionedRev: rev, versionError: false });
+      return true;
+    },
+
+    async listVersions() {
+      const { dir } = get();
+      return backend && dir ? backend.listProjectVersions(dir) : [];
+    },
+
+    async restoreVersion(name, backupName) {
+      const { dir, project } = get();
+      const b = backend;
+      if (!b || !dir || !project) throw new Error('Es ist kein Projekt offen.');
+      const token = openToken;
+      const stillHere = () => token === openToken && get().dir === dir;
+      // Die gewählte Version zuerst lesen: Trägt die Sicherung des aktuellen Standes denselben Namen, überschreibt sie sie sonst.
+      let restored: unknown;
+      try {
+        restored = await b.restoreProjectVersion(dir, name);
+      } catch {
+        throw new Error('Diese Version ließ sich nicht lesen. Es wurde nichts verändert.');
+      }
+      if (!isProject(restored)) throw new Error('Diese Version ist beschädigt. Es wurde nichts verändert.');
+      // Dann den aktuellen Stand als Version sichern, damit sich das Zurückholen umkehren lässt.
+      if (!(await get().saveVersion(backupName))) throw new Error('Der aktuelle Stand ließ sich nicht sichern. Es wurde nichts verändert.');
+      if (!stillHere()) throw new Error('Das Projekt wurde inzwischen gewechselt. Es wurde nichts verändert.');
+      gesture = null;
+      history = new History(restored.sequences);
+      set({ project: restored, seq: activeOf(restored), canUndo: false, canRedo: false });
+      scheduleSave();
+      await flush();
+    },
+
     dismissRestored() {
       set({ restoredFromBackup: false });
     },
@@ -419,6 +500,16 @@ export const useProject = create<ProjectStore>()((set, get) => {
   }
 });
 
+/** Wartet auf ein laufendes Schreiben: `true`, wenn danach nichts Ungesichertes bleibt (kein Fehler, nichts Neues). */
+async function persisted(): Promise<boolean> {
+  try {
+    await saving;
+  } catch {
+    /* der Fehler steht in `saveError` */
+  }
+  return !dirty && !useProject.getState().saveError;
+}
+
 /** Nur für Tests: Store, Verlauf und Zeitgeber zurücksetzen. */
 export function resetProjectForTests(): void {
   cancelTimer();
@@ -431,5 +522,6 @@ export function resetProjectForTests(): void {
   proxyJobs = [];
   proxyRunning = 0;
   proxyGen++;
+  saving = null;
   useProject.setState({ ...EMPTY });
 }

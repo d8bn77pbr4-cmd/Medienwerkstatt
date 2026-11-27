@@ -13,7 +13,10 @@ export const AppStateSchema = z.looseObject({
   }),
   assignments: z.array(z.looseObject({ id: z.string(), number: z.number() })),
   evaluations: z.array(z.looseObject({ practice: z.boolean().optional(), freeProjectId: z.string().optional() })),
-  settings: z.looseObject({}),
+  settings: z.looseObject({
+    // Phase 1.1: optional; ein unbekannter Wert macht den Stand nicht unlesbar (die App setzt dann den Standard).
+    autosaveMinutes: z.union([z.literal(5), z.literal(10), z.literal(15), z.literal(30)]).optional().catch(undefined),
+  }),
   // Phase 1.1: optional, damit ältere Stände weiter laden (Standard: keine freien Projekte).
   projects: z.array(z.looseObject({ id: z.string(), name: z.string() })).optional(),
   lastOpened: z.looseObject({ kind: z.enum(['free', 'assignment']), id: z.string() }).optional(),

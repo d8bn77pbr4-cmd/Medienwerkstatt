@@ -1,4 +1,4 @@
-import type { AppState, LoadResult, Measurements, MediaItem, Project, Segment } from './types';
+import type { AppState, LoadResult, Measurements, MediaItem, Project, Segment, VersionInfo } from './types';
 
 export interface Backend {
   loadState(): Promise<LoadResult<AppState>>;
@@ -7,6 +7,14 @@ export interface Backend {
   projectDir(folder: string): Promise<string>;
   loadProject(dir: string): Promise<LoadResult<Project>>;
   saveProject(dir: string, p: Project): Promise<void>;
+  /** Kopiert das gespeicherte Projekt nach `Auto-Save/<name>` (Name `JJJJ-MM-TT HH-MM-SS.json`, Ortszeit); die neuesten 20 bleiben. */
+  saveProjectVersion(dir: string, name: string): Promise<void>;
+  /** Versionen des Projekts, neueste zuerst. */
+  listProjectVersions(dir: string): Promise<VersionInfo[]>;
+  /** Liest eine Version (schreibt nichts). */
+  restoreProjectVersion(dir: string, name: string): Promise<Project>;
+  /** Wie `saveProjectVersion` für den App-Zustand (Ordner `Auto-Save/` neben der Zustandsdatei). */
+  saveStateVersion(name: string): Promise<void>;
   pickMediaFiles(): Promise<string[]>;
   importMedia(dir: string, paths: string[], mode: 'copy' | 'link'): Promise<MediaItem[]>;
   createProxy(dir: string, m: MediaItem, onProgress: (p: number) => void): Promise<string>;

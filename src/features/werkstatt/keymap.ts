@@ -12,7 +12,7 @@ export const COMMAND_IDS = [
   'edit.insert', 'edit.overwrite', 'edit.addEdit', 'edit.rippleTrimPrev', 'edit.rippleTrimNext',
   'edit.rippleDelete', 'edit.lift', 'edit.link', 'edit.dissolve', 'edit.audioFade',
   'timeline.snap', 'timeline.marker', 'zoom.in', 'zoom.out', 'zoom.fit',
-  'history.undo', 'history.redo', 'export.open', 'help.shortcuts',
+  'history.undo', 'history.redo', 'file.save', 'export.open', 'help.shortcuts',
 ] as const;
 export type CommandId = (typeof COMMAND_IDS)[number];
 
@@ -69,6 +69,7 @@ export const KEYMAP: readonly KeyBinding[] = [
   T('zoom.fit', ['\\'], '\\', 'Ganze Sequenz zeigen (Zoom to Sequence)', 'Zoom to Sequence', { loose: true }),
   T('history.undo', ['z'], '⌘Z', 'Rückgängig (Undo)', 'Undo', { meta: true, repeat: true }),
   T('history.redo', ['z'], '⇧⌘Z', 'Wiederholen (Redo)', 'Redo', { meta: true, shift: true, repeat: true }),
+  T('file.save', ['s'], '⌘S', 'Sichern: speichert sofort und legt eine Version an (Save)', 'Save', { meta: true }),
   T('export.open', ['m'], '⌘M', 'Exportieren (Export)', 'Export Media', { meta: true }),
   T('help.shortcuts', ['/'], '⌘/', 'Tastenkürzel-Übersicht', 'Keyboard Shortcuts', { meta: true, loose: true }),
 ];
