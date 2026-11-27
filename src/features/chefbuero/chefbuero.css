@@ -95,3 +95,7 @@
 @media (prefers-reduced-motion: reduce) { .stage-chevron { transition: none; } }
 .kurz-note { margin-top: 10px; padding: 8px 12px; background: var(--surface-2); border-radius: var(--r-sm); font-size: var(--fs-sub); color: var(--ink-2); max-width: 52ch; }
 .submit-note .note-icon { width: 16px; height: 16px; vertical-align: -3px; color: var(--sig-care); }
+
+/* Übungen aus freien Projekten: zählen nicht fürs Konto */
+.verlauf-uebung { font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.badge-uebung { display: inline-block; margin: 0 0 14px; padding: 6px 12px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--surface-2); color: var(--ink); font-size: var(--fs-sub); font-weight: 600; }

@@ -1,6 +1,6 @@
 import type { Assignment } from '../assignments/types';
 import type { Level, Rules } from './rules';
-import { allDeductions, type Evaluation } from './types';
+import { allDeductions, countedEvaluations, type Evaluation } from './types';
 
 export type AccountResult = {
   points: number;
@@ -13,7 +13,7 @@ export type AccountResult = {
 /** Punktekonto (Spec §9.4): beste Bewertung je Auftrag, verfallene Aufträge −20, Stufe aus `rules.levels`. */
 export function account(evaluations: Evaluation[], assignments: Assignment[], rules: Rules): AccountResult {
   const best = new Map<string, Evaluation>();
-  for (const e of evaluations) {
+  for (const e of countedEvaluations(evaluations)) {
     const cur = best.get(e.assignmentId);
     if (!cur || e.total > cur.total) best.set(e.assignmentId, e);
   }

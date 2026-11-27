@@ -13,11 +13,11 @@ import { useWerkstatt } from '../werkstatt/uiStore';
 export const signed = (n: number): string => (n > 0 ? `+${fmtDe(n, 0)}` : fmtDe(n, 0));
 
 /** Springt in das Werkzeug-Panel, das den Abzug behebt (Werkstatt des Auftrags). */
-export function useJumpToTool(assignmentId?: string) {
+export function useJumpToTool(assignmentId?: string, projectId?: string) {
   const navigate = useNavigate();
   return (panel: NonNullable<Deduction['tool']>['panel']) => {
     useWerkstatt.getState().focusPanel(panel);
-    navigate('/', assignmentId ? { state: { assignmentId } } : undefined);
+    navigate('/', assignmentId ? { state: { assignmentId } } : projectId ? { state: { projectId } } : undefined);
   };
 }
 
@@ -79,7 +79,7 @@ export type ProtokollProps = {
 
 /** Abnahmeprotokoll in drei Stufen (Spec §10.2): Kurz gesagt · Verstehen · Für Profis. */
 export function Protokoll({ evaluation: e, assignment, fresh }: ProtokollProps) {
-  const jump = useJumpToTool(assignment?.id);
+  const jump = useJumpToTool(assignment?.id, e.freeProjectId);
   const cats = applicableCategories(e);
   const bonusSum = e.bonus.reduce((s, b) => s + b.points, 0);
   return (
@@ -88,7 +88,7 @@ export function Protokoll({ evaluation: e, assignment, fresh }: ProtokollProps) 
         <h2 id="kurz-h">Kurz gesagt</h2>
         <p className="kurz-total">
           <CountUp id={e.id} value={e.total} animate={fresh} />
-          <span className="kurz-of"> von {loadRules().maxScore} Punkten</span>
+          <span className="kurz-of"> von {loadRules().maxScore} Punkten{e.practice ? ' – Übung, zählt nicht' : ''}</span>
         </p>
         <p className="kurz-phrase">{e.phrase}</p>
         {e.geminiNote && (

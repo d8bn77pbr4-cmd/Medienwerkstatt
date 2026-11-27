@@ -51,9 +51,17 @@ export type EvaluationInput = {
 
 export type CategoryResult = { max: number; points: number; deductions: Deduction[] };
 
+/** Platzhalter-`assignmentId` der Übungsbewertungen (freie Projekte haben keinen Auftrag). */
+export const PRACTICE_ASSIGNMENT_ID = 'uebung';
+
 export type Evaluation = {
   id: string;
+  /** Übungsbewertungen (`practice`): `PRACTICE_ASSIGNMENT_ID`. */
   assignmentId: string;
+  /** Übung im freien Projekt: zählt nicht fürs Punktekonto, den Rang, das Showreel und die Korrektur. */
+  practice?: true;
+  /** Das freie Projekt, aus dem die Übung stammt (nur mit `practice`). */
+  freeProjectId?: string;
   at: number;
   categories: Record<'technik' | 'gestaltung' | 'auftrag', CategoryResult>;
   bonus: Deduction[];
@@ -68,6 +76,14 @@ export type Evaluation = {
   /** Die abgegebenen Dateien (für Showreel-Merkliste und „Im Finder zeigen“). */
   exports?: { deliverableId: string; fileName: string; path: string }[];
 };
+
+/** Zählt die Bewertung fürs Konto, den Rang, das Showreel und die Korrektur? (Übungen nicht.) */
+export const countsForAccount = (e: Pick<Evaluation, 'practice'>): boolean => !e.practice;
+
+/** Nur die Bewertungen, die zählen (ohne Übungen). */
+export function countedEvaluations<T extends Pick<Evaluation, 'practice'>>(evaluations: T[]): T[] {
+  return evaluations.filter(countsForAccount);
+}
 
 export type ScoredCategory = 'technik' | 'gestaltung' | 'auftrag';
 const SCORED: ScoredCategory[] = ['technik', 'gestaltung', 'auftrag'];

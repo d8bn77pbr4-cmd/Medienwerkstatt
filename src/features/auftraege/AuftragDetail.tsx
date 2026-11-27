@@ -4,6 +4,7 @@ import { getBackend } from '../../backend';
 import { researchKey, useApp } from '../../state/appStore';
 import { loadProjectFor } from '../../state/projectAccess';
 import { SubmitSheet } from '../chefbuero/SubmitSheet';
+import { countedEvaluations } from '../../domain/chef/types';
 import { RESEARCH_TEMPLATES, validSources } from '../../domain/chef/research';
 import { formatDeadline } from './format';
 import { StatusBadge } from './StatusBadge';
@@ -59,7 +60,7 @@ export function AuftragDetail() {
   const firstResearch = assignment.deliverables.find((d) => d.kind === 'research');
   const researchPath = firstResearch ? `/auftraege/${assignment.id}/recherche/${firstResearch.id}` : null;
   const canSubmit = assignment.status === 'open' && (!hasVideo || exportCount > 0);
-  const lastEvaluation = [...(evaluations ?? [])].filter((e) => e.assignmentId === assignment.id).sort((a, b) => b.at - a.at)[0];
+  const lastEvaluation = countedEvaluations(evaluations ?? []).filter((e) => e.assignmentId === assignment.id).sort((a, b) => b.at - a.at)[0];
   const ticked = new Set(checked ?? []);
   const total = groups.reduce((n, g) => n + g.items.length, 0);
 

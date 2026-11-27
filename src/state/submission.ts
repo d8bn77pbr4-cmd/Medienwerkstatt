@@ -2,6 +2,8 @@ import type { Backend } from '../backend/Backend';
 import type { Segment } from '../backend/types';
 import type { Assignment } from '../domain/assignments/types';
 import { evaluate } from '../domain/chef/evaluate';
+import { evaluatePractice } from '../domain/chef/practice';
+import type { ProjectFormat } from '../domain/projects';
 import type { ResearchDoc } from '../domain/chef/research';
 import type { Rules } from '../domain/chef/rules';
 import type { Evaluation, ProjectFacts, VideoInput } from '../domain/chef/types';
@@ -10,6 +12,9 @@ import { projectFacts } from '../domain/timeline/facts';
 import { sequenceHash } from './hash';
 import { geminiReview, type GeminiRun } from './gemini';
 import type { ExportRecord, MediaItem, Project, Sequence } from '../domain/timeline/types';
+
+/** Abgabe-ID der Export-Einträge freier Projekte (Versionen zählen darüber hoch). */
+export const FREE_DELIVERABLE_ID = 'frei';
 
 export type TimeRange = { start: number; end: number };
 
@@ -130,4 +135,29 @@ export async function runSubmission(r: SubmissionRequest): Promise<Evaluation> {
     e = await geminiReview({ backend: r.backend, rules: r.rules, assignment: a, input, evaluation: e, run: r.gemini });
   }
   return files.length > 0 ? { ...e, exports: files } : e;
+}
+
+export type PracticeRequest = {
+  backend: Backend;
+  rules: Rules;
+  freeProjectId: string;
+  format: ProjectFormat;
+  project: Project | null;
+  at: number;
+  onProgress?: (message: string) => void;
+};
+
+/**
+ * Übung im freien Projekt: neueste Export-Datei messen (wie bei Abgaben), dann nur Technik und Gestaltung
+ * bewerten. Keine Auftrags-Kategorie, keine Frist, kein Gemini (die Übung bleibt reine Regelprüfung).
+ */
+export async function runPractice(r: PracticeRequest): Promise<Evaluation> {
+  const rec = latestExport(r.project, FREE_DELIVERABLE_ID);
+  if (!rec || !r.project) throw new Error('Exportiere zuerst einen Film, dann kann der Chef ihn ansehen.');
+  const { facts, segments } = exportSnapshot(r.project, rec);
+  r.onProgress?.('Messe Ton …');
+  const measurements = await r.backend.analyze(rec.path, segments);
+  r.onProgress?.('Bewerte …');
+  const e = evaluatePractice({ freeProjectId: r.freeProjectId, format: r.format, at: r.at, video: { measurements, facts, fileName: rec.fileName } }, r.rules);
+  return { ...e, exports: [{ deliverableId: FREE_DELIVERABLE_ID, fileName: rec.fileName, path: rec.path }] };
 }

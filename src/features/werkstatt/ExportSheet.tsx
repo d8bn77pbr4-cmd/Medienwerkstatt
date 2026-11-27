@@ -15,6 +15,7 @@ import { projectSetting, useProject } from '../../state/projectStore';
 import { LIMITER_LABEL } from '../../domain/chef/rules/technik';
 import { latestExport } from '../../state/submission';
 import { Sheet } from '../../shell/Sheet';
+import { useWerkstatt } from './uiStore';
 import './exportSheet.css';
 
 /** Voreinstellung aus der Vorgabe: das Preset, das in Größe, Codec, Container und Lautheitsziel genau passt. */
@@ -241,6 +242,18 @@ export function FreeExportSheet({ freeProject, onClose }: { freeProject: FreePro
           {done && !busy && (
             <button type="button" className="btn" onClick={() => void getBackend().revealInFinder(done.path)}>
               <FolderSearch aria-hidden="true" /> Im Finder zeigen
+            </button>
+          )}
+          {done && !busy && (
+            <button
+              type="button"
+              className="btn"
+              onClick={() => {
+                useWerkstatt.getState().setExportOpen(false);
+                useWerkstatt.getState().setPracticeOpen(true);
+              }}
+            >
+              Chef ansehen lassen (ohne Punkte)
             </button>
           )}
           <button type="button" className="btn btn-primary" data-autofocus disabled={busy || sequences.length === 0} onClick={() => void run()}>

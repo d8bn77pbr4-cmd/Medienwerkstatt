@@ -7,6 +7,7 @@ import { canAddVacation, tick, type ScheduleState, type Vacation } from '../doma
 import { account, type AccountResult } from '../domain/chef/account';
 import { canCorrect, type CorrectionRefusal } from '../domain/chef/correction';
 import type { Evaluation } from '../domain/chef/types';
+import type { Project } from '../domain/timeline/types';
 import type { ResearchDoc } from '../domain/chef/research';
 import { loadRules } from '../domain/chef/rules';
 import type { Clock } from '../domain/time';
@@ -14,7 +15,7 @@ import { checkProjectName, freeProjectsOf, newFreeProject, type FreeProject, typ
 import { prepareFrames, type GeminiPreparation } from './geminiFrames';
 import type { GeminiChoice } from './gemini';
 import { loadProjectFor } from './projectAccess';
-import { runSubmission } from './submission';
+import { runPractice, runSubmission } from './submission';
 import { uuid } from '../domain/uuid';
 
 export const SAVE_DEBOUNCE_MS = 2000;
@@ -50,6 +51,11 @@ export interface AppStore {
   prepareGemini(assignmentId: string): Promise<GeminiPreparation | null>;
   /** Nachbessern (Spec §9.3): einmal, innerhalb von 24 h nach der ersten Bewertung, gedeckelt. */
   correction(assignmentId: string, selfChecks: SelfChecks, onProgress?: (message: string) => void, gemini?: GeminiChoice): Promise<CorrectionResult>;
+  /**
+   * „Chef ansehen lassen (ohne Punkte)“: die neueste Export-Datei des freien Projekts messen und als Übung bewerten.
+   * Die Bewertung wird nur in `evaluations` abgelegt (`practice: true`); Aufträge, Konto, Showreel bleiben unberührt.
+   */
+  reviewPractice(freeProjectId: string, project: Project | null, onProgress?: (message: string) => void): Promise<Evaluation>;
   /** Bewertung ab `showreelMinScore` in die Showreel-Merkliste legen oder wieder herausnehmen. */
   toggleShowreel(evaluationId: string): void;
   addVacation(v: Vacation): ReturnType<typeof canAddVacation>;
@@ -78,6 +84,8 @@ export const researchKey = (assignmentId: string, deliverableId: string) => `${a
 let backend: Backend | null = null;
 let timer: ReturnType<typeof setTimeout> | null = null;
 let dirty = false;
+/** Laufende Übungsbewertungen je freiem Projekt (Schutz gegen Doppelklick). */
+const practiceInFlight = new Map<string, Promise<Evaluation>>();
 let initInFlight: { backend: Backend; promise: Promise<void> } | null = null;
 
 function cancelTimer() {
@@ -316,10 +324,32 @@ export const useApp = create<AppStore>()((set, get) => {
       );
     },
 
+    reviewPractice(freeProjectId, project, onProgress) {
+      const running = practiceInFlight.get(freeProjectId);
+      if (running) return running;
+      const s = get().state;
+      const clock = get().clock;
+      const free = s?.projects?.find((p) => p.id === freeProjectId);
+      if (!s || !clock || !backend || !free) return Promise.reject(new Error('Das Projekt wurde nicht gefunden.'));
+      const b = backend;
+      const p = (async () => {
+        const evaluation = await runPractice({ backend: b, rules: loadRules(), freeProjectId, format: free.format, project, at: clock.now(), onProgress });
+        commit((cur) => ({ ...cur, evaluations: [...cur.evaluations, evaluation] }));
+        await flush();
+        return evaluation;
+      })();
+      practiceInFlight.set(freeProjectId, p);
+      const clear = () => {
+        if (practiceInFlight.get(freeProjectId) === p) practiceInFlight.delete(freeProjectId);
+      };
+      p.then(clear, clear);
+      return p;
+    },
+
     toggleShowreel(evaluationId) {
       commit((s) => {
         const e = s.evaluations.find((x) => x.id === evaluationId);
-        if (!e) return s;
+        if (!e || e.practice) return s;
         if (s.showreel.includes(evaluationId)) return { ...s, showreel: s.showreel.filter((x) => x !== evaluationId) };
         if (e.total < loadRules().showreelMinScore) return s;
         return { ...s, showreel: [...s.showreel, evaluationId] };

@@ -4,10 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import { getBackend } from '../../backend';
 import { newSequence } from '../../domain/timeline/sequence';
 import type { MediaItem, Sequence } from '../../domain/timeline/types';
+import { FREE_DELIVERABLE_ID, exportStale, latestExport } from '../../state/submission';
 import { targetKey, useProject, type OpenTarget } from '../../state/projectStore';
 import { COMMANDS, type CommandCtx } from './commands';
 import { SubmitSheet } from '../chefbuero/SubmitSheet';
 import { ExportSheet, FreeExportSheet } from './ExportSheet';
+import { PracticeSheet } from './PracticeSheet';
 import { Inspector } from './Inspector';
 import { onKind, primaryClip } from './inspectorParts';
 import { COMMAND_IDS, bindingFor, tooltipFor, type CommandId } from './keymap';
@@ -87,6 +89,8 @@ export function Workspace({ target, heading }: { target: OpenTarget; heading: st
   const focusRequest = useWerkstatt((s) => s.focusRequest);
   const exportOpen = useWerkstatt((s) => s.exportOpen);
   const submitOpen = useWerkstatt((s) => s.submitOpen);
+  const practiceOpen = useWerkstatt((s) => s.practiceOpen);
+  const project = useProject((s) => s.project);
   const navigate = useNavigate();
   const [engines, setEngines] = useState<{ program: PlaybackEngine; source: SourceEngine } | null>(null);
   const [loaded, setLoaded] = useState<MediaItem | null>(null);
@@ -96,6 +100,9 @@ export function Workspace({ target, heading }: { target: OpenTarget; heading: st
   const assignment = target.kind === 'assignment' ? target.assignment : null;
   const spec = assignment?.deliverables.find((d) => d.kind === 'video' && d.videoSpec)?.videoSpec ?? null;
   const key = targetKey(target);
+  // Freies Projekt mit aktuellem Export: der Chef darf ihn ansehen (ohne Punkte).
+  const practiceExport = target.kind === 'free' ? latestExport(project, FREE_DELIVERABLE_ID) : null;
+  const canPractice = !!practiceExport && !exportStale(project, practiceExport);
 
   useEffect(() => {
     const backend = getBackend();
@@ -189,6 +196,11 @@ export function Workspace({ target, heading }: { target: OpenTarget; heading: st
             </button>
           </div>
           <SequenceSwitcher />
+          {target.kind === 'free' && canPractice && (
+            <button type="button" className="btn btn-small" onClick={() => useWerkstatt.getState().setPracticeOpen(true)}>
+              Chef ansehen lassen (ohne Punkte)
+            </button>
+          )}
           <span className="ws-format" data-testid="seq-format">
             {seq.width}×{seq.height} · {seq.fps} fps
           </span>
@@ -258,6 +270,7 @@ export function Workspace({ target, heading }: { target: OpenTarget; heading: st
       </div>
       {shortcutsOpen && <ShortcutOverlay onClose={() => useWerkstatt.getState().setShortcutsOpen(false)} />}
       {exportOpen && target.kind === 'free' && <FreeExportSheet freeProject={target.project} onClose={() => useWerkstatt.getState().setExportOpen(false)} />}
+      {practiceOpen && target.kind === 'free' && <PracticeSheet freeProject={target.project} onClose={() => useWerkstatt.getState().setPracticeOpen(false)} />}
       {exportOpen && assignment && (
         <ExportSheet
           assignment={assignment}

@@ -1,6 +1,6 @@
 import type { Assignment } from '../assignments/types';
 import type { Rules } from './rules';
-import type { Evaluation } from './types';
+import { countedEvaluations, type Evaluation } from './types';
 
 const HOUR_MS = 3_600_000;
 
@@ -12,7 +12,7 @@ export type CorrectionCheck = { ok: true } | { ok: false; reason: CorrectionRefu
  * `rules.correction.windowHours` nach der ERSTEN Bewertung. „Schon genutzt“ hat Vorrang vor „Frist“.
  */
 export function canCorrect(a: Assignment, evaluations: Evaluation[], now: number, rules: Rules): CorrectionCheck {
-  const mine = evaluations.filter((e) => e.assignmentId === a.id);
+  const mine = countedEvaluations(evaluations).filter((e) => e.assignmentId === a.id);
   const used = Math.max(a.submissions.filter((s) => s.isCorrection).length, mine.length - 1);
   if (used >= rules.correction.loops) return { ok: false, reason: 'used' };
   if (mine.length === 0) return { ok: false, reason: 'window' };
@@ -23,7 +23,7 @@ export function canCorrect(a: Assignment, evaluations: Evaluation[], now: number
 
 /** Wann das Nachbessern endet (Epoch-ms), `null` ohne Bewertung. */
 export function correctionDeadline(a: Assignment, evaluations: Evaluation[], rules: Rules): number | null {
-  const mine = evaluations.filter((e) => e.assignmentId === a.id);
+  const mine = countedEvaluations(evaluations).filter((e) => e.assignmentId === a.id);
   return mine.length === 0 ? null : Math.min(...mine.map((e) => e.at)) + rules.correction.windowHours * HOUR_MS;
 }
 

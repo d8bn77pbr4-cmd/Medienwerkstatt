@@ -3,6 +3,7 @@ import type { Assignment, Deliverable } from '../domain/assignments/types';
 import type { ExportPresetId, ExportRecord } from '../domain/timeline/types';
 import { exportDeliverable, type ExportDeps } from './exporter';
 import { useProject } from './projectStore';
+import { FREE_DELIVERABLE_ID } from './submission';
 
 export type ExportRow = { deliverable: Deliverable; sequenceId: string; presetId: ExportPresetId };
 export type ExportRunDeps = Omit<ExportDeps, 'assignment' | 'fileName' | 'onProgress'> & { onProgress?: (deliverableId: string, p: number) => void };
@@ -28,8 +29,7 @@ export async function exportRows(assignment: Assignment, rows: ExportRow[], deps
   return out;
 }
 
-/** Abgabe-ID der Export-Einträge freier Projekte (Versionen zählen darüber hoch). */
-export const FREE_DELIVERABLE_ID = 'frei';
+export { FREE_DELIVERABLE_ID };
 
 /**
  * Freies Projekt exportieren: dieselbe Pipeline wie bei Aufträgen, aber mit einer Abgabe nur im Speicher

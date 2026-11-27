@@ -6,7 +6,8 @@ import type { Assignment } from '../../domain/assignments/types';
 import { account } from '../../domain/chef/account';
 import { canCorrect, correctionBlockedText, correctionDeadline } from '../../domain/chef/correction';
 import { loadRules } from '../../domain/chef/rules';
-import { allDeductions, applicableCategories, type Deduction, type Evaluation } from '../../domain/chef/types';
+import { allDeductions, applicableCategories, countedEvaluations, type Deduction, type Evaluation } from '../../domain/chef/types';
+import type { FreeProject } from '../../domain/projects';
 import { formatDeadline } from '../auftraege/format';
 import { useApp } from '../../state/appStore';
 import { useNow } from '../../state/useNow';
@@ -70,7 +71,7 @@ function Konto({ evaluations, assignments }: { evaluations: Evaluation[]; assign
   const top = acc.frequent[0];
   const topTool = useMemo<Deduction | undefined>(() => {
     if (!top) return undefined;
-    for (const e of evaluations) for (const d of allDeductions(e)) if (d.ruleId === top.ruleId && d.tool) return d;
+    for (const e of countedEvaluations(evaluations)) for (const d of allDeductions(e)) if (d.ruleId === top.ruleId && d.tool) return d;
     return undefined;
   }, [evaluations, top]);
   const next = acc.nextAt === null ? null : rules.levels[acc.level];
@@ -113,7 +114,7 @@ function Konto({ evaluations, assignments }: { evaluations: Evaluation[]; assign
 }
 
 function Verlauf({ evaluations, assignments }: { evaluations: Evaluation[]; assignments: Assignment[] }) {
-  const last = useMemo(() => [...evaluations].sort((a, b) => b.at - a.at).slice(0, 10), [evaluations]);
+  const last = useMemo(() => countedEvaluations(evaluations).sort((a, b) => b.at - a.at).slice(0, 10), [evaluations]);
   return (
     <ol className="verlauf" aria-label="Verlauf der letzten Abgaben">
       {last.map((e) => {
@@ -144,7 +145,7 @@ function Verlauf({ evaluations, assignments }: { evaluations: Evaluation[]; assi
 function Showreel({ evaluations, assignments, marked }: { evaluations: Evaluation[]; assignments: Assignment[]; marked: string[] }) {
   const min = loadRules().showreelMinScore;
   const toggle = useApp((s) => s.toggleShowreel);
-  const eligible = useMemo(() => evaluations.filter((e) => e.total >= min).sort((a, b) => b.at - a.at), [evaluations, min]);
+  const eligible = useMemo(() => countedEvaluations(evaluations).filter((e) => e.total >= min).sort((a, b) => b.at - a.at), [evaluations, min]);
   if (eligible.length === 0) return <p className="muted">Ab {min} Punkten kannst du eine Abgabe fürs Showreel merken. Noch ist keine so weit.</p>;
   return (
     <ul className="showreel">
@@ -176,23 +177,63 @@ function Showreel({ evaluations, assignments, marked }: { evaluations: Evaluatio
   );
 }
 
+/** Übungen aus freien Projekten: eigener Abschnitt, zählt nicht fürs Konto. */
+function Uebungen({ practice, projects }: { practice: Evaluation[]; projects: FreeProject[] }) {
+  const list = useMemo(() => [...practice].sort((a, b) => b.at - a.at), [practice]);
+  return (
+    <section className="card" aria-labelledby="uebungen-h" data-testid="uebungen">
+      <h2 id="uebungen-h">Übungen</h2>
+      <p className="muted">Hier zeigt dir der Chef, wie deine freien Projekte ankommen. Übungen zählen nicht fürs Punktekonto, nicht für deinen Rang und nicht fürs Showreel.</p>
+      <ol className="verlauf" aria-label="Übungen aus freien Projekten">
+        {list.map((e) => {
+          const p = projects.find((x) => x.id === e.freeProjectId);
+          return (
+            <li key={e.id} className="verlauf-item">
+              <Link to={`/chefbuero/${encodeURIComponent(e.id)}`} className="verlauf-link pressable">
+                <span className="verlauf-main">
+                  <span className="verlauf-date">{dateOf(e.at)}</span>
+                  <span className="verlauf-title">{p ? p.name : 'Freies Projekt'}</span>
+                </span>
+                <span className="verlauf-uebung">
+                  {e.total}/{loadRules().maxScore} – Übung, zählt nicht
+                </span>
+              </Link>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+}
+
 function ProtokollPage({ evaluation, fresh }: { evaluation: Evaluation; fresh: boolean }) {
   const navigate = useNavigate();
   const assignments = useApp((s) => s.state?.assignments ?? []);
   const evaluations = useApp((s) => s.state?.evaluations ?? []);
-  const assignment = assignments.find((a) => a.id === evaluation.assignmentId);
+  const projects = useApp((s) => s.state?.projects ?? []);
+  const practice = evaluation.practice === true;
+  const assignment = practice ? undefined : assignments.find((a) => a.id === evaluation.assignmentId);
+  const free = practice ? projects.find((p) => p.id === evaluation.freeProjectId) : undefined;
   const now = useNow();
   const rules = loadRules();
   const check = assignment ? canCorrect(assignment, evaluations, now, rules) : null;
   const until = assignment ? correctionDeadline(assignment, evaluations, rules) : null;
   return (
-    <Shell kicker="Chefbüro · Abnahmeprotokoll" title={assignment ? `Auftrag #${assignment.number}: ${assignment.title}` : 'Abnahmeprotokoll'}>
+    <Shell
+      kicker={practice ? 'Chefbüro · Übungsprotokoll' : 'Chefbüro · Abnahmeprotokoll'}
+      title={practice ? (free?.name ?? 'Freies Projekt') : assignment ? `Auftrag #${assignment.number}: ${assignment.title}` : 'Abnahmeprotokoll'}
+    >
       <p className="back-row">
         <Link to="/chefbuero" className="crumb">
           <ArrowLeft aria-hidden="true" className="crumb-icon" /> Zurück zum Chefbüro
         </Link>
         <span className="muted"> · {dateOf(evaluation.at)}</span>
       </p>
+      {practice && (
+        <p className="badge-uebung" data-testid="uebung-badge">
+          Übung – zählt nicht fürs Konto
+        </p>
+      )}
       <Protokoll evaluation={evaluation} assignment={assignment} fresh={fresh} />
       {assignment && check && (
         <div className="actions nach">
@@ -220,9 +261,12 @@ export function ChefbueroView({ lead }: { lead: string }) {
   const evaluations = useApp((s) => s.state?.evaluations);
   const assignments = useApp((s) => s.state?.assignments);
   const showreel = useApp((s) => s.state?.showreel);
+  const projects = useApp((s) => s.state?.projects);
 
   if (!ready) return <Shell kicker="Chefbüro" title="Chefbüro" lead="Wird geladen …"><span /></Shell>;
   const all = evaluations ?? [];
+  const counted = countedEvaluations(all);
+  const practice = all.filter((e) => e.practice);
   if (evaluationId) {
     const e = all.find((x) => x.id === decodeURIComponent(evaluationId));
     if (!e) {
@@ -240,21 +284,22 @@ export function ChefbueroView({ lead }: { lead: string }) {
   }
   return (
     <Shell kicker="Chefbüro" title="Chefbüro" lead={lead}>
-      {all.length === 0 ? (
+      {counted.length === 0 ? (
         <Empty />
       ) : (
         <>
-          <Konto evaluations={all} assignments={assignments ?? []} />
+          <Konto evaluations={counted} assignments={assignments ?? []} />
           <Stage id="chef-verstehen" title="Verstehen" defaultOpen>
             <h3 className="stage-sub">Verlauf der letzten 10 Abgaben</h3>
-            <Verlauf evaluations={all} assignments={assignments ?? []} />
+            <Verlauf evaluations={counted} assignments={assignments ?? []} />
           </Stage>
           <Stage id="chef-profis" title="Für Profis">
             <h3 className="stage-sub">Showreel-Merkliste</h3>
-            <Showreel evaluations={all} assignments={assignments ?? []} marked={showreel ?? []} />
+            <Showreel evaluations={counted} assignments={assignments ?? []} marked={showreel ?? []} />
           </Stage>
         </>
       )}
+      {practice.length > 0 && <Uebungen practice={practice} projects={projects ?? []} />}
     </Shell>
   );
 }

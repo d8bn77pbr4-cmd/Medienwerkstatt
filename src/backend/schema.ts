@@ -12,7 +12,7 @@ export const AppStateSchema = z.looseObject({
     vacations: z.array(z.looseObject({ start: z.number(), end: z.number() })),
   }),
   assignments: z.array(z.looseObject({ id: z.string(), number: z.number() })),
-  evaluations: z.array(z.looseObject({})),
+  evaluations: z.array(z.looseObject({ practice: z.boolean().optional(), freeProjectId: z.string().optional() })),
   settings: z.looseObject({}),
   // Phase 1.1: optional, damit ältere Stände weiter laden (Standard: keine freien Projekte).
   projects: z.array(z.looseObject({ id: z.string(), name: z.string() })).optional(),

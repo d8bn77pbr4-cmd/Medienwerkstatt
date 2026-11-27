@@ -29,7 +29,7 @@ export function totalOf(categories: Evaluation['categories'], bonus: Deduction[]
   return isCorrection ? Math.min(total, rules.correction.maxScore) : total;
 }
 
-function category(max: number, deductions: Deduction[]): CategoryResult {
+export function category(max: number, deductions: Deduction[]): CategoryResult {
   return { max, points: Math.max(0, max + deductions.reduce((s, d) => s + d.points, 0)), deductions };
 }
 

@@ -33,6 +33,8 @@ export interface WerkstattUi {
   exportOpen: boolean;
   /** Abgabe-Blatt offen. */
   submitOpen: boolean;
+  /** „Chef ansehen lassen (ohne Punkte)“ läuft bzw. ist offen (freies Projekt). */
+  practiceOpen: boolean;
   /** Sprungziel (z. B. „So behebst du es“ aus dem Protokoll); `n` zählt hoch, damit gleiche Ziele erneut wirken. */
   focusRequest: { panel: Panel; n: number } | null;
   notice: string | null;
@@ -53,6 +55,7 @@ export interface WerkstattUi {
   setShortcutsOpen(open: boolean): void;
   setExportOpen(open: boolean): void;
   setSubmitOpen(open: boolean): void;
+  setPracticeOpen(open: boolean): void;
   /** Springt zum Bereich `panel` ('audio' | 'farbe' | 'export' | 'timeline' | 'medien'). */
   focusPanel(panel: Panel): void;
   showNotice(text: string | null): void;
@@ -79,6 +82,7 @@ const initial = () => ({
   shortcutsOpen: false,
   exportOpen: false,
   submitOpen: false,
+  practiceOpen: false,
   focusRequest: null,
   notice: null,
 });
@@ -109,6 +113,7 @@ export const useWerkstatt = create<WerkstattUi>()((set, get) => ({
   setShortcutsOpen: (shortcutsOpen) => set({ shortcutsOpen }),
   setExportOpen: (exportOpen) => set({ exportOpen }),
   setSubmitOpen: (submitOpen) => set({ submitOpen }),
+  setPracticeOpen: (practiceOpen) => set({ practiceOpen }),
   focusPanel: (panel) => {
     const tab = TAB_FOR_PANEL[panel];
     set({ focusRequest: { panel, n: (get().focusRequest?.n ?? 0) + 1 }, ...(tab ? { inspectorTab: tab } : {}) });
