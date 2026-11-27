@@ -97,6 +97,13 @@ describe('TauriBackend', () => {
     expect(calls[14].args).toEqual({ key: null });
   });
 
+  it('Link-Prüfung: ein Befehl check_urls mit der Liste, Ergebnis unverändert', async () => {
+    handler = cmd => (cmd === 'check_urls' ? [{ url: 'https://a.de', result: 'ok' }] : null);
+    const b = new TauriBackend();
+    expect(await b.checkUrls(['https://a.de'])).toEqual([{ url: 'https://a.de', result: 'ok' }]);
+    expect(calls).toEqual([{ cmd: 'check_urls', args: { urls: ['https://a.de'] } }]);
+  });
+
   it('Sicherungsversionen: je Methode ein Befehl mit dem Namen', async () => {
     handler = () => null;
     const b = new TauriBackend();

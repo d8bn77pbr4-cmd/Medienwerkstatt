@@ -7,7 +7,7 @@ use base64::Engine;
 use mw_media::{
     analyze as mw_analyze, default_h264_encoder, extract_frames as mw_extract_frames, gemini,
     probe, proxy_args, read_with_backup, run_ffmpeg as mw_run_ffmpeg, write_atomic, Measurements,
-    MediaInfo, Segment, Tools,
+    MediaInfo, Segment, Tools, UrlCheck,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -533,6 +533,14 @@ pub async fn gemini_generate(
         Ok(gemini::gemini_generate(&require_key()?, &model, &body)?)
     })
     .await
+}
+
+// ---------- Link-Prüfung (nur beim Abgeben einer Recherche) ----------
+
+/// Prüft höchstens sechs Recherche-Links (nur http(s), keine lokalen oder privaten Adressen); siehe `mw_media::links`.
+#[tauri::command]
+pub async fn check_urls(urls: Vec<String>) -> CmdResult<Vec<UrlCheck>> {
+    blocking(move || Ok(mw_media::check_urls(&urls))).await
 }
 
 // ---------- Finder ----------

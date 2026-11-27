@@ -31,6 +31,7 @@ fn main() {
             commands::set_gemini_key,
             commands::gemini_list_models,
             commands::gemini_generate,
+            commands::check_urls,
             commands::reveal_in_finder,
         ])
         .run(tauri::generate_context!())

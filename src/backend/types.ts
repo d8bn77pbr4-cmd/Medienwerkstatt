@@ -31,6 +31,9 @@ export const DEFAULT_AUTOSAVE_MINUTES: AutosaveMinutes = 10;
 /** Eine Sicherungsversion im Ordner `Auto-Save/` (`savedAt` in ms seit 1970, `bytes` = Dateigröße). */
 export type VersionInfo = { name: string; savedAt: number; bytes: number };
 
+/** Ergebnis der Link-Prüfung (`check_urls`): erreichbar, Seite fehlt (404/410) oder keine Antwort. */
+export type UrlCheck = { url: string; result: 'ok' | 'notFound' | 'unreachable' };
+
 export type Settings = {
   theme: 'auto' | 'light' | 'dark';
   /** Alle so viele Minuten entsteht eine Sicherungsversion (nur bei Änderungen). Fehlt in älteren Ständen (= 10). */

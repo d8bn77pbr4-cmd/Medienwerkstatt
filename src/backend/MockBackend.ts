@@ -1,6 +1,6 @@
 import type { Backend } from './Backend';
 import { isValidState } from './schema';
-import type { AppState, LoadResult, Measurements, MediaItem, Project, Segment, VersionInfo } from './types';
+import type { AppState, LoadResult, Measurements, MediaItem, Project, Segment, UrlCheck, VersionInfo } from './types';
 import { uuid } from '../domain/uuid';
 
 /**
@@ -40,6 +40,33 @@ function limitFromUrl(): boolean {
     return false;
   }
 }
+/** `?links=offline`: Die Link-Prüfung findet kein Netz (alle Links `unreachable`). */
+function linksOfflineFromUrl(): boolean {
+  try {
+    return new URLSearchParams(window.location.search).get('links') === 'offline';
+  } catch {
+    return false;
+  }
+}
+/** Wie `check_urls` in Rust: höchstens so viele Links. */
+const MAX_CHECKED_URLS = 6;
+/**
+ * Link-Prüfung im Mock-Modus (kein Netz): `/404` im Link → `notFound`, Host mit „offline“ → `unreachable`,
+ * kein http(s) → `unreachable`, sonst `ok`. `offline`: alles `unreachable`.
+ */
+export function mockUrlCheck(url: string, offline: boolean): UrlCheck['result'] {
+  let host: string;
+  try {
+    const u = new URL(url.trim());
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return 'unreachable';
+    host = u.hostname;
+  } catch {
+    return 'unreachable';
+  }
+  if (offline || host.includes('offline')) return 'unreachable';
+  return url.includes('/404') ? 'notFound' : 'ok';
+}
+
 /** Wie in Rust: `^\d{4}-\d{2}-\d{2} \d{2}-\d{2}-\d{2}\.json$`, die neuesten 20 bleiben. */
 const VERSION_NAME = /^\d{4}-\d{2}-\d{2} \d{2}-\d{2}-\d{2}\.json$/;
 const KEEP_VERSIONS = 20;
@@ -110,9 +137,15 @@ export class MockBackend implements Backend {
   private messung: MockMeasurement = measurementFromUrl();
   /** `?gemini=limit`: Gemini antwortet mit „Limit erreicht“. */
   private geminiLimit = limitFromUrl();
+  /** `?links=offline` oder `setLinksOffline(true)`: Die Link-Prüfung läuft wie ohne Netz. */
+  private linksOffline = linksOfflineFromUrl();
 
   setMeasurement(m: MockMeasurement): void {
     this.messung = m;
+  }
+  /** Schalter „alles offline“ für die Link-Prüfung. */
+  setLinksOffline(on: boolean): void {
+    this.linksOffline = on;
   }
 
   async loadState(): Promise<LoadResult<AppState>> {
@@ -254,6 +287,9 @@ export class MockBackend implements Backend {
       return JSON.stringify(MOCK_GEMINI_RESULT);
     },
   };
+  async checkUrls(urls: string[]): Promise<UrlCheck[]> {
+    return urls.slice(0, MAX_CHECKED_URLS).map((url) => ({ url, result: mockUrlCheck(url, this.linksOffline) }));
+  }
   async revealInFinder(): Promise<void> {}
   onFileDrop(): () => void {
     return () => {};

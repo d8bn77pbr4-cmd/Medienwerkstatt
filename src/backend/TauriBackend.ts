@@ -2,7 +2,7 @@ import { convertFileSrc, invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import type { Backend } from './Backend';
 import { isValidState } from './schema';
-import type { AppState, LoadResult, Measurements, MediaItem, Project, Segment, VersionInfo } from './types';
+import type { AppState, LoadResult, Measurements, MediaItem, Project, Segment, UrlCheck, VersionInfo } from './types';
 import { uuid } from '../domain/uuid';
 
 /** Fehler eines Tauri-Befehls: `code` ist einer von tool_missing, tool_failed, io, parse, invalid_key, rate_limited, offline, invalid_path. */
@@ -113,6 +113,9 @@ export class TauriBackend implements Backend {
     generate: (model: string, prompt: string, imagePaths: string[], schema: object): Promise<string> =>
       call('gemini_generate', { model, prompt, imagePaths, schema }),
   };
+  checkUrls(urls: string[]): Promise<UrlCheck[]> {
+    return call('check_urls', { urls });
+  }
   revealInFinder(path: string): Promise<void> {
     return call('reveal_in_finder', { path });
   }

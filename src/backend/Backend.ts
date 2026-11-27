@@ -1,4 +1,4 @@
-import type { AppState, LoadResult, Measurements, MediaItem, Project, Segment, VersionInfo } from './types';
+import type { AppState, LoadResult, Measurements, MediaItem, Project, Segment, UrlCheck, VersionInfo } from './types';
 
 export interface Backend {
   loadState(): Promise<LoadResult<AppState>>;
@@ -29,6 +29,11 @@ export interface Backend {
     listModels(): Promise<string[]>;
     generate(model: string, prompt: string, imagePaths: string[], schema: object): Promise<string>;
   };
+  /**
+   * Prüft Recherche-Links online (nur beim Abgeben): nur http(s), höchstens 6 (der Rest fällt weg), keine privaten
+   * oder lokalen Adressen. Reihenfolge wie übergeben. Kein Netz: alle `unreachable`.
+   */
+  checkUrls(urls: string[]): Promise<UrlCheck[]>;
   revealInFinder(path: string): Promise<void>;
   /** Dateien per Drag & Drop aufs Fenster (nur im Tauri-Fenster; im Browser nie). Gibt den Abmelder zurück. */
   onFileDrop(h: { over(on: boolean): void; drop(paths: string[]): void }): () => void;
